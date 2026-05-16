@@ -31,7 +31,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-[#4FC3FC]/10 via-[#DDE3EA]/30 to-white">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-linear-to-br from-[#4FC3FC]/10 via-[#DDE3EA]/30 to-white">
       {/* ── Landscape card (desktop) ── */}
       <div
         className="hidden md:flex w-full max-w-3xl shadow-xl rounded-xl overflow-hidden bg-white dark:bg-gray-800"
@@ -148,7 +148,7 @@ export default function Login() {
             </button>
 
             <p className="text-center text-sm text-gray-600 dark:text-gray-400">
-              Don't have an account?{" "}
+              {"Don't have an account?"}{" "}
               <Link
                 href="/register"
                 className="text-[#4FC3FC] hover:text-blue-500 font-medium"
@@ -251,7 +251,7 @@ export default function Login() {
               </button>
 
               <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-                Don't have an account?{" "}
+                {"Don't have an account?"}{" "}
                 <Link
                   href="/register"
                   className="text-blue-600 dark:text-blue-400 hover:text-blue-700 font-medium"

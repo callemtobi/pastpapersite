@@ -18,7 +18,7 @@ mongoose.connection.once("open", () => {
 
 // ------------------------------------ CORS configuration
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  origin: process.env.FRONTEND_URL,
   credentials: true,
   allowedHeader: ["GET", "POST", "DELETE", "PATCH", "PUT", "OPTIONS"],
   methods: ["Content-Type", "Authorization"],
@@ -55,7 +55,7 @@ app.use((req, res) => {
 });
 
 // ------------------------------------ Global error handling
-app.use((req, res, next, err) => {
+app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(err.status || 500).json({
     success: false,
