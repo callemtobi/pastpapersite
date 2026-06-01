@@ -4,16 +4,14 @@ import { SignJWT } from "jose";
 import argon2 from "argon2";
 
 const signToken = async (userId) => {
-  const signToken = async (userId) => {
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-    console.log("secret key: " + secret);
+  const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+  console.log("Secret key: " + secret);
 
-    return new SignJWT({ sub: userId.toString() })
-      .setProtectedHeader({ alg: "HS256" })
-      .setIssuedAt()
-      .setExpirationTime("7d")
-      .sign(secret);
-  };
+  return new SignJWT({ sub: userId.toString() })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("7d")
+    .sign(secret);
 };
 
 // Generate OTP (5 digits) and

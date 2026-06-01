@@ -1,22 +1,24 @@
-// "use client";
-
-// export default function Upload() {
-//   return (
-//     <div>
-//       <h1>Upload</h1>
-//       <p>Welcome to the Upload page!</p>
-//     </div>
-//   );
-// }
-
-// -----------------------------------------------------------
-
 "use client";
 
-import { useState } from "react";
-import { Upload, FileText, CheckCircle2, AlertCircle, X } from "lucide-react";
+import { useState, useRef } from "react";
+import axios from "axios";
+import {
+  Upload,
+  FileText,
+  CheckCircle2,
+  AlertCircle,
+  X,
+  Loader,
+} from "lucide-react";
+import {
+  validateFiles,
+  calculateImageHash,
+  checkDuplicate,
+  detectExamKeywords,
+} from "@/lib/uploadValidation";
 
 export default function UploadPage() {
+  const fileInputRef = useRef(null);
   const [formData, setFormData] = useState({
     title: "",
     courseCode: "",
@@ -27,39 +29,172 @@ export default function UploadPage() {
     description: "",
   });
 
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [validationErrors, setValidationErrors] = useState([]);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [imageHashes, setImageHashes] = useState([]);
 
   const updateField = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
+  const handleFileChange = async (e) => {
+    setValidationErrors([]);
+    const files = e.target.files;
+
+    if (!files || files.length === 0) return;
+
+    // Check total file count
+    const totalFiles = selectedFiles.length + files.length;
+    if (totalFiles > 5) {
+      setValidationErrors([
+        `Maximum 5 images allowed. You already have ${selectedFiles.length} image(s). You can only add ${5 - selectedFiles.length} more.`,
+      ]);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      return;
+    }
+
+    // Validate files
+    const validation = validateFiles(files);
+    if (!validation.valid) {
+      setValidationErrors(validation.errors);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      return;
+    }
+
+    // Calculate hashes and check for duplicates
+    const newFiles = Array.from(files);
+    const newHashes = [];
+    const duplicateErrors = [];
+
+    try {
+      for (let i = 0; i < newFiles.length; i++) {
+        const hash = await calculateImageHash(newFiles[i]);
+        const duplicate = checkDuplicate(hash, [...imageHashes, ...newHashes]);
+
+        if (duplicate.isDuplicate) {
+          duplicateErrors.push(
+            `${newFiles[i].name}: Similar to an existing image (${duplicate.similarity.toFixed(1)}% match)`,
+          );
+        } else {
+          newHashes.push(hash);
+        }
+      }
+
+      if (duplicateErrors.length > 0) {
+        setValidationErrors(duplicateErrors);
+        // Reset file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+        return;
+      }
+
+      // Detect keywords
+      const filesWithKeywords = await Promise.all(
+        newFiles.map(async (file) => {
+          const keywords = await detectExamKeywords(file);
+          return { file, keywords };
+        }),
+      );
+
+      // Append new files to existing ones instead of replacing
+      setSelectedFiles((prevFiles) => [...prevFiles, ...filesWithKeywords]);
+      setImageHashes((prevHashes) => [...prevHashes, ...newHashes]);
+
+      // Reset file input after successful addition
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    } catch (error) {
+      setValidationErrors([`Error processing files: ${error.message}`]);
+      // Reset file input on error
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
-  const removeFile = () => {
-    setSelectedFile(null);
+  const removeFile = (index) => {
+    const newFiles = selectedFiles.filter((_, i) => i !== index);
+    const newHashes = imageHashes.filter((_, i) => i !== index);
+    setSelectedFiles(newFiles);
+    setImageHashes(newHashes);
+    setValidationErrors([]);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setUploadSuccess(true);
-    setTimeout(() => {
-      setUploadSuccess(false);
-      setFormData({
-        title: "",
-        courseCode: "",
-        subject: "",
-        year: "",
-        semester: "",
-        examType: "",
-        description: "",
+
+    if (selectedFiles.length === 0) {
+      setValidationErrors(["Please select at least one image"]);
+      return;
+    }
+
+    setUploadLoading(true);
+
+    try {
+      const formDataToSend = new FormData();
+
+      // Add form fields
+      formDataToSend.append("title", formData.title);
+      formDataToSend.append("courseCode", formData.courseCode);
+      formDataToSend.append("subject", formData.subject);
+      formDataToSend.append("year", formData.year);
+      formDataToSend.append("semester", formData.semester);
+      formDataToSend.append("examType", formData.examType);
+      formDataToSend.append("description", formData.description);
+
+      // Add files and their metadata
+      selectedFiles.forEach((item, index) => {
+        formDataToSend.append("images", item.file);
+        formDataToSend.append(
+          `imageMetadata[${index}]`,
+          JSON.stringify({
+            name: item.file.name,
+            hash: imageHashes[index],
+            keywordScore: item.keywords.score,
+          }),
+        );
       });
-      setSelectedFile(null);
-    }, 3000);
+
+      // Send to backend using axios
+      const response = await axios.post("/api/papers/upload", formDataToSend, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      setUploadSuccess(true);
+      setTimeout(() => {
+        setUploadSuccess(false);
+        setFormData({
+          title: "",
+          courseCode: "",
+          subject: "",
+          year: "",
+          semester: "",
+          examType: "",
+          description: "",
+        });
+        setSelectedFiles([]);
+        setImageHashes([]);
+        setValidationErrors([]);
+      }, 3000);
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message || error.message || "Upload failed";
+      setValidationErrors([`Upload failed: ${errorMessage}`]);
+    } finally {
+      setUploadLoading(false);
+    }
   };
 
   return (
@@ -85,8 +220,33 @@ export default function UploadPage() {
                   Upload Successful!
                 </h3>
                 <p className="text-sm text-green-700 dark:text-green-200">
-                  Your paper has been uploaded and will be available shortly.
+                  Your {selectedFiles.length} image(s) have been uploaded and
+                  will be available shortly.
                 </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Validation Errors */}
+      {validationErrors.length > 0 && (
+        <div className="border-0 shadow-lg bg-red-50 dark:bg-red-900/20 border-l-4 border-l-red-500 rounded-lg">
+          <div className="p-6">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-red-900 dark:text-red-100 mb-2">
+                  Validation Errors
+                </h3>
+                <ul className="space-y-1 text-sm text-red-700 dark:text-red-200">
+                  {validationErrors.map((error, idx) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <span className="text-red-500 mt-0.5">•</span>
+                      <span>{error}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
           </div>
@@ -111,36 +271,85 @@ export default function UploadPage() {
                 htmlFor="file"
                 className="block text-sm font-medium text-gray-900 dark:text-white"
               >
-                Paper File *
+                Paper Images * ({selectedFiles.length}/5)
               </label>
               <div
                 className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                  selectedFile
+                  selectedFiles.length > 0
                     ? "border-green-300 bg-green-50 dark:bg-green-900/20"
                     : "border-gray-300 dark:border-gray-600 hover:border-blue-500 hover:bg-gray-50 dark:hover:bg-gray-900/50"
                 }`}
               >
-                {selectedFile ? (
-                  <div className="space-y-3">
+                {selectedFiles.length > 0 ? (
+                  <div className="space-y-4">
                     <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/40">
                       <FileText className="w-6 h-6 text-green-600 dark:text-green-400" />
                     </div>
                     <div>
                       <p className="font-medium text-gray-900 dark:text-white">
-                        {selectedFile.name}
+                        {selectedFiles.length} image(s) selected
                       </p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                        Total size:{" "}
+                        {(
+                          selectedFiles.reduce(
+                            (sum, item) => sum + item.file.size,
+                            0,
+                          ) /
+                          1024 /
+                          1024
+                        ).toFixed(2)}{" "}
+                        MB
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={removeFile}
-                      className="inline-flex items-center gap-2 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                      Remove
-                    </button>
+
+                    {/* Selected Files List */}
+                    <div className="mt-4 space-y-2 max-h-48 overflow-y-auto">
+                      {selectedFiles.map((item, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                              {item.file.name}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {(item.file.size / 1024 / 1024).toFixed(2)} MB •
+                              Keyword Score:{" "}
+                              {(item.keywords.score * 100).toFixed(0)}%
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeFile(idx)}
+                            className="ml-2 p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-red-600 dark:text-red-400 transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {selectedFiles.length < 5 && (
+                      <label
+                        htmlFor="file"
+                        className="cursor-pointer inline-block"
+                      >
+                        <span className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium text-sm">
+                          Add more images
+                        </span>
+                      </label>
+                    )}
+                    <input
+                      ref={fileInputRef}
+                      id="file"
+                      type="file"
+                      onChange={handleFileChange}
+                      accept="image/png,image/jpeg,image/jpg"
+                      multiple
+                      className="hidden"
+                    />
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -157,17 +366,23 @@ export default function UploadPage() {
                           or drag and drop
                         </span>
                       </label>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        PDF, DOC, DOCX up to 10MB
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                        <strong>Requirements:</strong> Up to 5 images, max 2 MB
+                        each (PNG, JPG, JPEG)
+                      </p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                        Images are automatically scanned for duplicates and
+                        exam-related keywords
                       </p>
                     </div>
                     <input
+                      ref={fileInputRef}
                       id="file"
                       type="file"
                       onChange={handleFileChange}
-                      accept=".pdf,.doc,.docx"
+                      accept="image/png,image/jpeg,image/jpg"
+                      multiple
                       className="hidden"
-                      required
                     />
                   </div>
                 )}
@@ -257,12 +472,14 @@ export default function UploadPage() {
                   required
                 >
                   <option value="">Select year</option>
-                  <option value="2026">2026</option>
-                  <option value="2025">2025</option>
-                  <option value="2024">2024</option>
-                  <option value="2023">2023</option>
-                  <option value="2022">2022</option>
-                  <option value="2021">2021</option>
+                  {Array.from(
+                    { length: 7 },
+                    (_, i) => new Date().getFullYear() - i,
+                  ).map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -284,7 +501,6 @@ export default function UploadPage() {
                   <option value="Spring">Spring</option>
                   <option value="Summer">Summer</option>
                   <option value="Fall">Fall</option>
-                  <option value="Winter">Winter</option>
                 </select>
               </div>
             </div>
@@ -307,9 +523,6 @@ export default function UploadPage() {
                 <option value="">Select exam type</option>
                 <option value="Final Exam">Final Exam</option>
                 <option value="Midterm">Midterm</option>
-                <option value="Quiz">Quiz</option>
-                <option value="Practice">Practice Set</option>
-                <option value="Assignment">Assignment</option>
               </select>
             </div>
 
@@ -353,14 +566,25 @@ export default function UploadPage() {
             <div className="flex flex-col sm:flex-row gap-3 pt-4">
               <button
                 type="submit"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex-1 h-12"
+                disabled={uploadLoading || selectedFiles.length === 0}
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex-1 h-12"
               >
-                <Upload className="w-5 h-5" />
-                Upload Paper
+                {uploadLoading ? (
+                  <>
+                    <Loader className="w-5 h-5 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-5 h-5" />
+                    Upload
+                  </>
+                )}
               </button>
               <button
                 type="button"
-                className="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-900 text-gray-900 dark:text-white font-medium transition-colors sm:w-auto h-12"
+                disabled={uploadLoading}
+                className="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed text-gray-900 dark:text-white font-medium transition-colors sm:w-auto h-12"
                 onClick={() => {
                   setFormData({
                     title: "",
@@ -371,7 +595,9 @@ export default function UploadPage() {
                     examType: "",
                     description: "",
                   });
-                  setSelectedFile(null);
+                  setSelectedFiles([]);
+                  setImageHashes([]);
+                  setValidationErrors([]);
                 }}
               >
                 Clear Form
@@ -393,8 +619,9 @@ export default function UploadPage() {
                 Help Your Fellow Students
               </h3>
               <p className="text-sm text-gray-700 dark:text-gray-300">
-                By uploading papers, youre contributing to a valuable resource
-                that helps thousands of students prepare for their exams.
+                By uploading papers, you&apos;re contributing to a valuable
+                resource that helps thousands of students prepare for their
+                exams.
               </p>
             </div>
           </div>

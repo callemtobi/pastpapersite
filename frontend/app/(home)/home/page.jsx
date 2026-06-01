@@ -96,7 +96,7 @@ export default function Main() {
     <div
       className="min-h-screen p-6 space-y-12"
       style={{
-        backgroundImage: "url(/bg.png)",
+        // backgroundImage: "url(/bg.png)",
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}

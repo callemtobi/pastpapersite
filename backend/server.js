@@ -5,6 +5,7 @@ import "dotenv/config";
 
 // ROUTES
 import authRoute from "./routes/auth.js";
+import papersRoute from "./routes/papers.js";
 
 // ------------------------------------MONGODB
 mongoose.connect(process.env.MONGODB_URI);
@@ -35,6 +36,7 @@ app.use(cors(corsOptions));
 
 // ------------------------------------ Routes
 app.use("/api/auth", authRoute);
+app.use("/api/papers", papersRoute);
 
 // ------------------------------------ Health check
 app.get("/api/health", (req, res) => {
