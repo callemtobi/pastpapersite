@@ -6,7 +6,6 @@ const imageSchema = new mongoose.Schema({
   mimetype: String,
   size: Number,
   path: String,
-  hash: String, // Perceptual hash for duplicate detection
   keywordScore: Number, // 0-1 score for exam-related keywords
   detectedKeywords: [String], // Array of detected keywords
   uploadedAt: Date,

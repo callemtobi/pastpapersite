@@ -137,95 +137,6 @@ export const detectExamKeywords = async (file) => {
   });
 };
 
-/**
- * Calculate image hash to detect duplicates
- * Uses a simple perceptual hash approach
- * @param {File} file - The image file
- * @returns {Promise<string>} The image hash
- */
-export const calculateImageHash = async (file) => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const img = new Image();
-        img.onload = () => {
-          // Simple perceptual hash: create a small canvas and hash the pixel data
-          const canvas = document.createElement("canvas");
-          canvas.width = 8;
-          canvas.height = 8;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0, 8, 8);
-          const imageData = ctx.getImageData(0, 0, 8, 8);
-          const data = imageData.data;
-
-          // Calculate average brightness
-          let sum = 0;
-          for (let i = 0; i < data.length; i += 4) {
-            sum += (data[i] + data[i + 1] + data[i + 2]) / 3;
-          }
-          const average = sum / (data.length / 4);
-
-          // Create hash based on brightness comparison
-          let hash = "";
-          for (let i = 0; i < data.length; i += 4) {
-            const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
-            hash += brightness > average ? "1" : "0";
-          }
-
-          resolve(hash);
-        };
-        img.onerror = () => reject(new Error("Failed to load image"));
-        img.src = e.target.result;
-      } catch (error) {
-        reject(error);
-      }
-    };
-    reader.onerror = () => reject(new Error("Failed to read file"));
-    reader.readAsDataURL(file);
-  });
-};
-
-/**
- * Hamming distance between two hashes (for duplicate detection)
- * @param {string} hash1 - First hash
- * @param {string} hash2 - Second hash
- * @returns {number} Hamming distance (0 = identical, higher = more different)
- */
-export const hammingDistance = (hash1, hash2) => {
-  if (hash1.length !== hash2.length) return -1;
-  let distance = 0;
-  for (let i = 0; i < hash1.length; i++) {
-    if (hash1[i] !== hash2[i]) distance++;
-  }
-  return distance;
-};
-
-/**
- * Check for duplicate images using hash comparison
- * @param {string} hash - The new image hash
- * @param {string[]} existingHashes - Array of existing hashes
- * @returns {Object} Duplicate check result { isDuplicate: boolean, similarity: number }
- */
-export const checkDuplicate = (hash, existingHashes = []) => {
-  if (existingHashes.length === 0) {
-    return { isDuplicate: false, similarity: 0 };
-  }
-
-  const distances = existingHashes.map((existing) =>
-    hammingDistance(hash, existing),
-  );
-  const minDistance = Math.min(...distances);
-
-  // If hamming distance is very small, consider it a duplicate
-  // 64 bits total, if distance < 8, it's likely a duplicate
-  const threshold = 8;
-  return {
-    isDuplicate: minDistance < threshold,
-    similarity: ((64 - minDistance) / 64) * 100, // Similarity percentage
-  };
-};
-
 export default {
   VALIDATION_RULES,
   EXAM_KEYWORDS,
@@ -234,7 +145,4 @@ export default {
   validateFileCount,
   validateFiles,
   detectExamKeywords,
-  calculateImageHash,
-  hammingDistance,
-  checkDuplicate,
 };

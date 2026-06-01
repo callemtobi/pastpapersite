@@ -10,12 +10,7 @@ import {
   X,
   Loader,
 } from "lucide-react";
-import {
-  validateFiles,
-  calculateImageHash,
-  checkDuplicate,
-  detectExamKeywords,
-} from "@/lib/uploadValidation";
+import { validateFiles, detectExamKeywords } from "@/lib/uploadValidation";
 
 export default function UploadPage() {
   const fileInputRef = useRef(null);
@@ -33,7 +28,6 @@ export default function UploadPage() {
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [validationErrors, setValidationErrors] = useState([]);
   const [uploadLoading, setUploadLoading] = useState(false);
-  const [imageHashes, setImageHashes] = useState([]);
 
   const updateField = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -71,32 +65,8 @@ export default function UploadPage() {
 
     // Calculate hashes and check for duplicates
     const newFiles = Array.from(files);
-    const newHashes = [];
-    const duplicateErrors = [];
 
     try {
-      for (let i = 0; i < newFiles.length; i++) {
-        const hash = await calculateImageHash(newFiles[i]);
-        const duplicate = checkDuplicate(hash, [...imageHashes, ...newHashes]);
-
-        if (duplicate.isDuplicate) {
-          duplicateErrors.push(
-            `${newFiles[i].name}: Similar to an existing image (${duplicate.similarity.toFixed(1)}% match)`,
-          );
-        } else {
-          newHashes.push(hash);
-        }
-      }
-
-      if (duplicateErrors.length > 0) {
-        setValidationErrors(duplicateErrors);
-        // Reset file input
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
-        return;
-      }
-
       // Detect keywords
       const filesWithKeywords = await Promise.all(
         newFiles.map(async (file) => {
@@ -107,7 +77,6 @@ export default function UploadPage() {
 
       // Append new files to existing ones instead of replacing
       setSelectedFiles((prevFiles) => [...prevFiles, ...filesWithKeywords]);
-      setImageHashes((prevHashes) => [...prevHashes, ...newHashes]);
 
       // Reset file input after successful addition
       if (fileInputRef.current) {
@@ -124,9 +93,7 @@ export default function UploadPage() {
 
   const removeFile = (index) => {
     const newFiles = selectedFiles.filter((_, i) => i !== index);
-    const newHashes = imageHashes.filter((_, i) => i !== index);
     setSelectedFiles(newFiles);
-    setImageHashes(newHashes);
     setValidationErrors([]);
   };
 
@@ -159,18 +126,22 @@ export default function UploadPage() {
           `imageMetadata[${index}]`,
           JSON.stringify({
             name: item.file.name,
-            hash: imageHashes[index],
             keywordScore: item.keywords.score,
           }),
         );
       });
 
       // Send to backend using axios
-      const response = await axios.post("/api/papers/upload", formDataToSend, {
-        headers: {
-          "Content-Type": "multipart/form-data",
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const response = await axios.post(
+        `${apiUrl}/api/papers/upload`,
+        formDataToSend,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         },
-      });
+      );
 
       setUploadSuccess(true);
       setTimeout(() => {
@@ -185,7 +156,6 @@ export default function UploadPage() {
           description: "",
         });
         setSelectedFiles([]);
-        setImageHashes([]);
         setValidationErrors([]);
       }, 3000);
     } catch (error) {
@@ -596,7 +566,6 @@ export default function UploadPage() {
                     description: "",
                   });
                   setSelectedFiles([]);
-                  setImageHashes([]);
                   setValidationErrors([]);
                 }}
               >

@@ -1,5 +1,4 @@
 import Paper from "../models/Paper.js";
-import imageHash from "image-hash";
 import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";
@@ -76,67 +75,6 @@ const validateUploadedFiles = (files) => {
 };
 
 /**
- * Calculate image hash using image-hash library
- * @param {string} filePath - Path to the image file
- * @returns {Promise<string>} The image hash
- */
-const calculateImageHash = async (filePath) => {
-  return new Promise((resolve, reject) => {
-    imageHash.hash(filePath, 16, true, (error, data) => {
-      if (error) {
-        reject(
-          new Error(
-            `Failed to calculate hash for ${filePath}: ${error.message}`,
-          ),
-        );
-      } else {
-        resolve(data);
-      }
-    });
-  });
-};
-
-/**
- * Calculate Hamming distance between two hashes
- * @param {string} hash1 - First hash
- * @param {string} hash2 - Second hash
- * @returns {number} Hamming distance
- */
-const hammingDistance = (hash1, hash2) => {
-  if (hash1.length !== hash2.length) return -1;
-  let distance = 0;
-  for (let i = 0; i < hash1.length; i++) {
-    if (hash1[i] !== hash2[i]) distance++;
-  }
-  return distance;
-};
-
-/**
- * Check if image is duplicate based on hash
- * @param {string} hash - Image hash
- * @param {Array} existingHashes - Array of existing hashes from database
- * @returns {Object} Duplicate check result
- */
-const checkDuplicateImage = (hash, existingHashes = []) => {
-  if (existingHashes.length === 0) {
-    return { isDuplicate: false, similarity: 0 };
-  }
-
-  const distances = existingHashes.map((existing) =>
-    hammingDistance(hash, existing),
-  );
-  const minDistance = Math.min(...distances);
-
-  // If hamming distance is very small, consider it a duplicate
-  // threshold: 8 bits out of 64 (about 87% similarity)
-  const threshold = 8;
-  return {
-    isDuplicate: minDistance < threshold,
-    similarity: ((64 - minDistance) / 64) * 100,
-  };
-};
-
-/**
  * Detect exam keywords in image filename and metadata
  * @param {string} filename - The image filename
  * @returns {Object} Keyword detection result
@@ -199,36 +137,13 @@ export const uploadPaper = async (req, res) => {
       });
     }
 
-    // Get existing hashes from database for duplicate detection
-    const existingPapers = await Paper.find({}, "images.hash");
-    const existingHashes = [];
-    existingPapers.forEach((paper) => {
-      if (paper.images && paper.images.length > 0) {
-        paper.images.forEach((img) => {
-          if (img.hash) existingHashes.push(img.hash);
-        });
-      }
-    });
-
     // Process each file
     const imageData = [];
-    const duplicateWarnings = [];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
 
       try {
-        // Calculate image hash
-        const hash = await calculateImageHash(file.path);
-
-        // Check for duplicates
-        const duplicate = checkDuplicateImage(hash, existingHashes);
-        if (duplicate.isDuplicate) {
-          duplicateWarnings.push(
-            `${file.originalname}: Similar to existing image (${duplicate.similarity.toFixed(1)}% match)`,
-          );
-        }
-
         // Detect keywords
         const keywords = detectExamKeywords(file.originalname);
 
@@ -239,7 +154,6 @@ export const uploadPaper = async (req, res) => {
           mimetype: file.mimetype,
           size: file.size,
           path: file.path,
-          hash,
           keywordScore: keywords.score,
           detectedKeywords: keywords.keywords,
           uploadedAt: new Date(),
@@ -256,13 +170,8 @@ export const uploadPaper = async (req, res) => {
       }
     }
 
-    // Warn about duplicates but continue (they might be intentional)
-    if (duplicateWarnings.length > 0) {
-      console.warn("Duplicate images detected:", duplicateWarnings);
-    }
-
     // Create paper record
-    const paper = await Paper.create({
+    const paperData = {
       title,
       courseCode,
       subject,
@@ -271,9 +180,15 @@ export const uploadPaper = async (req, res) => {
       examType,
       description,
       images: imageData,
-      uploadedBy: req.user?.id || "anonymous", // Assumes middleware sets req.user
       createdAt: new Date(),
-    });
+    };
+
+    // Only set uploadedBy if user is authenticated
+    if (req.user?.id) {
+      paperData.uploadedBy = req.user.id;
+    }
+
+    const paper = await Paper.create(paperData);
 
     return res.status(201).json({
       success: true,
@@ -283,8 +198,6 @@ export const uploadPaper = async (req, res) => {
         title: paper.title,
         courseCode: paper.courseCode,
         imagesCount: paper.images.length,
-        duplicateWarnings:
-          duplicateWarnings.length > 0 ? duplicateWarnings : undefined,
       },
     });
   } catch (error) {
@@ -416,7 +329,5 @@ export default {
   getPapers,
   deletePaper,
   validateUploadedFiles,
-  calculateImageHash,
   detectExamKeywords,
-  checkDuplicateImage,
 };
