@@ -71,36 +71,29 @@ const stats = [
   { label: "Active Users", value: "856" },
 ];
 
-async function getData() {
-  await new Promise((resolve) => setTimeout(resolve, 2000));
+// async function getData() {
+//   await new Promise((resolve) => setTimeout(resolve, 2000));
 
-  return [];
-}
+//   return [];
+// }
 
 export default function Main() {
   const [searchQuery, setSearchQuery] = useState("");
   // Loading
-  const [data, setData] = useState(null);
+  // const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    getData().then((result) => {
-      setData(result);
-      setLoading(false);
-    });
-  }, []);
+  // useEffect(() => {
+  //   getData().then((result) => {
+  //     setData(result);
+  //     setLoading(false);
+  //   });
+  // }, []);
 
-  if (loading) return <Loading />;
+  // if (loading) return <Loading />;
 
   return (
-    <div
-      className="min-h-screen p-6 space-y-12"
-      style={{
-        // backgroundImage: "url(/bg.png)",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }}
-    >
+    <div className="space-y-12">
       {/* Hero Section - Minimalistic */}
       <div className="text-center space-y-8 py-12">
         <div className="space-y-4">
@@ -149,9 +142,9 @@ export default function Main() {
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className="text-center p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200"
+            className="text-center p-6 rounded-lg bg-background-secondary shadow-sm hover:shadow-md transition-shadow duration-200"
           >
-            <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-1">
+            <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-1">
               {stat.value}
             </div>
             <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
@@ -163,33 +156,33 @@ export default function Main() {
       {/* Recent Activity */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-xl font-semibold text-foreground">
             Recent Activity
           </h2>
-          <TrendingUp className="w-5 h-5 text-gray-400" />
+          <TrendingUp className="w-5 h-5 text-gray-600 dark:text-gray-500" />
         </div>
 
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm">
+        <div className="border border-border-light rounded-lg shadow-sm bg-background-secondary">
           <div className="p-0">
-            <div className="divide-y divide-gray-200 dark:divide-gray-700">
+            <div className="divide-y divide-border-light">
               {recentVisitors.map((visitor) => (
                 <div
                   key={visitor.id}
-                  className="p-4 hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors"
+                  className="p-4 hover:bg-background dark:hover:bg-gray-800/50 transition-colors"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center shrink-0">
-                      <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                      <span className="text-sm font-medium text-blue-600 dark:text-blue-300">
                         {visitor.avatar}
                       </span>
                     </div>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-gray-900 dark:text-white text-sm">
+                        <span className="font-medium text-foreground text-sm">
                           {visitor.name}
                         </span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                        <span className="text-xs text-gray-600 dark:text-gray-400">
                           {visitor.action}
                         </span>
                         {visitor.action === "uploaded" ? (
@@ -203,7 +196,7 @@ export default function Main() {
                       </p>
                     </div>
 
-                    <div className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
+                    <div className="text-xs text-gray-600 dark:text-gray-400 shrink-0">
                       {visitor.time}
                     </div>
                   </div>
@@ -216,16 +209,14 @@ export default function Main() {
 
       {/* Activity Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm">
+        <div className="border border-border-light rounded-lg shadow-sm bg-background-secondary">
           <div className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                   Downloads
                 </p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  847
-                </p>
+                <p className="text-2xl font-bold text-foreground">847</p>
                 <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
                   <ArrowUpRight className="w-3 h-3" />
                   +12% from yesterday
@@ -238,16 +229,14 @@ export default function Main() {
           </div>
         </div>
 
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm">
+        <div className="border border-border-light rounded-lg shadow-sm bg-background-secondary">
           <div className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                   Uploads
                 </p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  156
-                </p>
+                <p className="text-2xl font-bold text-foreground">156</p>
                 <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
                   <ArrowUpRight className="w-3 h-3" />
                   +8% from yesterday

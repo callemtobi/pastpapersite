@@ -19,6 +19,11 @@ export default function UploadPage() {
     courseCode: "",
     subject: "",
     year: "",
+    department: "",
+    instructor: {
+      title: "",
+      name: "",
+    },
     semester: "",
     examType: "",
     description: "",
@@ -118,6 +123,9 @@ export default function UploadPage() {
       formDataToSend.append("semester", formData.semester);
       formDataToSend.append("examType", formData.examType);
       formDataToSend.append("description", formData.description);
+      formDataToSend.append("department", formData.department);
+      formDataToSend.append("instructor[title]", formData.instructor.title);
+      formDataToSend.append("instructor[name]", formData.instructor.name);
 
       // Add files and their metadata
       selectedFiles.forEach((item, index) => {
@@ -153,6 +161,11 @@ export default function UploadPage() {
           year: "",
           semester: "",
           examType: "",
+          department: "",
+          instructor: {
+            title: "",
+            name: "",
+          },
           description: "",
         });
         setSelectedFiles([]);
@@ -475,25 +488,97 @@ export default function UploadPage() {
               </div>
             </div>
 
-            {/* Exam Type */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Exam Type */}
+              <div className="space-y-2">
+                <label
+                  htmlFor="examType"
+                  className="block text-sm font-medium text-gray-900 dark:text-white"
+                >
+                  Exam Type *
+                </label>
+                <select
+                  id="examType"
+                  value={formData.examType}
+                  onChange={(e) => updateField("examType", e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
+                  required
+                >
+                  <option value="">Select exam type</option>
+                  <option value="Final Exam">Final Exam</option>
+                  <option value="Midterm">Midterm</option>
+                </select>
+              </div>
+
+              {/* Department */}
+              <div className="space-y-2">
+                <label
+                  htmlFor="department"
+                  className="block text-sm font-medium text-gray-900 dark:text-white"
+                >
+                  Department *
+                </label>
+                <select
+                  id="department"
+                  value={formData.department}
+                  onChange={(e) => updateField("department", e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
+                  required
+                >
+                  <option value="">Select department</option>
+                  <option value="Computer Science">Computer Science</option>
+                  <option value="Software Engineering">
+                    Software Engineering
+                  </option>
+                  <option value="MLT">MLT</option>
+                  <option value="Civil Engineering">Civil Engineering</option>
+                  <option value="Electrical Engineering">
+                    Electrical Engineering
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            {/* Instructor */}
             <div className="space-y-2">
               <label
-                htmlFor="examType"
+                htmlFor="instructor"
                 className="block text-sm font-medium text-gray-900 dark:text-white"
               >
-                Exam Type *
+                Instructor *
               </label>
-              <select
-                id="examType"
-                value={formData.examType}
-                onChange={(e) => updateField("examType", e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
-                required
-              >
-                <option value="">Select exam type</option>
-                <option value="Final Exam">Final Exam</option>
-                <option value="Midterm">Midterm</option>
-              </select>
+              <div className="grid grid-cols-1 sm:grid-cols-[20%_80%] gap-4">
+                <select
+                  id="instructor"
+                  value={formData.instructor.title}
+                  onChange={(e) =>
+                    updateField("instructor", {
+                      ...formData.instructor,
+                      title: e.target.value,
+                    })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
+                  required
+                >
+                  <option value="">Select title</option>
+                  <option value="Mrs.">Mrs.</option>
+                  <option value="Mr.">Mr.</option>
+                </select>
+                <input
+                  type="text"
+                  id="instructor"
+                  placeholder="Enter instructor name"
+                  value={formData.instructor.name}
+                  onChange={(e) =>
+                    updateField("instructor", {
+                      ...formData.instructor,
+                      name: e.target.value,
+                    })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
+                  required
+                />
+              </div>
             </div>
 
             {/* Description */}

@@ -311,7 +311,7 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-linear-to-br from-[#4FC3FC]/10 via-[#DDE3EA]/30 to-white">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-white dark:bg-background">
       {/* ── Landscape card (desktop) ── */}
       <div
         className="hidden md:flex w-full max-w-4xl shadow-xl rounded-xl overflow-hidden bg-white dark:bg-gray-800"

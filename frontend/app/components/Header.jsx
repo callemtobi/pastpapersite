@@ -14,6 +14,7 @@ import {
   X,
   Moon,
   Sun,
+  UsersRound,
 } from "lucide-react";
 
 export default function Header() {
@@ -43,6 +44,7 @@ export default function Header() {
     { path: "/home", label: "Home", icon: Home },
     { path: "/download", label: "Download", icon: Download },
     { path: "/upload", label: "Upload", icon: Upload },
+    { path: "/about", label: "About Us", icon: UsersRound },
   ];
 
   const isActive = (path) => pathname === path;
@@ -51,15 +53,20 @@ export default function Header() {
     <>
       <header className="fixed top-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-4xl z-50">
         {/* Main navbar pill */}
-        {/* <div className="bg-[#111110] rounded-full px-2 py-3 flex items-center gap-2 shadow-lg"> */}
-        <div className="bg-[#FFFFFF] rounded-full px-2 py-3 flex items-center gap-2 shadow-lg">
+        <div
+          className={`rounded-full px-2 py-3 flex items-center gap-2 shadow-lg border ${
+            isDark
+              ? "bg-gray-600 text-white border-[#4FC3F7]"
+              : "bg-white text-black border-gray-200"
+          }`}
+        >
           {/* Logo */}
           <div className="flex items-center gap-2 pl-1 pr-3 shrink-0">
-            <div className="flex items-center justify-center w-9 h-9 rounded-full bg-white/10">
-              <GraduationCap className="w-5 h-5 text-foreground/60" />
+            <div className="flex items-center justify-center w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/30">
+              <GraduationCap className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
-            <span className="text-sm font-semibold text-foreground/90 hidden sm:block whitespace-nowrap">
-              Pasty Paperyyy
+            <span className="text-sm cursor-pointer font-semibold text-gray-900 dark:text-white hidden sm:block whitespace-nowrap">
+              PaperVault
             </span>
           </div>
 
@@ -75,8 +82,6 @@ export default function Header() {
                     isActive(item.path)
                       ? "bg-[#4FC3F7]/10 text-[#4FC3F7]"
                       : "text-foreground/60 hover:bg-[#DDE3EA]"
-                    // ? "bg-white/15 text-white"
-                    // : "text-white/50 hover:bg-white/10 hover:text-white/80"
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -134,7 +139,7 @@ export default function Header() {
 
         {/* Mobile dropdown — sits just below the pill */}
         {mobileMenuOpen && (
-          <div className="md:hidden mt-2 bg-[#FFFFFF] rounded-3xl overflow-hidden shadow-lg">
+          <div className="md:hidden mt-2 bg-white dark:bg-gray-800 rounded-3xl overflow-hidden shadow-lg border border-gray-200 dark:border-gray-700">
             <nav className="px-2 py-2 space-y-1">
               {navItems.map((item) => {
                 const Icon = item.icon;

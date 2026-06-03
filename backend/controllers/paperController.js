@@ -2,6 +2,7 @@ import Paper from "../models/Paper.js";
 import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";
+import Tesseract from "tesseract.js";
 
 /**
  * Validation rules
@@ -12,23 +13,56 @@ const VALIDATION_RULES = {
   ALLOWED_TYPES: ["image/png", "image/jpeg", "image/jpg"],
 };
 
-const EXAM_KEYWORDS = [
-  "question",
-  "marks",
-  "total marks",
-  "time allowed",
-  "semester",
-  "midterm",
-  "peshawar",
-  "final term",
-  "university",
-  "course",
-  "date",
-  "department",
-  "iqra",
-  "national",
-  "university",
-  "iqra national university",
+// const EXAM_KEYWORDS = [
+//   "question",
+//   "marks",
+//   "total marks",
+//   "time allowed",
+//   "semester",
+//   "midterm",
+//   "peshawar",
+//   "final term",
+//   "university",
+//   "course",
+//   "date",
+//   "department",
+//   "iqra",
+//   "national",
+//   "university",
+//   "iqra national university",
+// ];
+
+/**
+ * Weighted pattern scoring system for exam paper detection
+ */
+const patterns = [
+  // Generic exam patterns
+  { regex: /question\s*\d+/i, weight: 20 },
+  { regex: /q\.?\s*\d+/i, weight: 20 },
+  { regex: /answer\s+all\s+questions/i, weight: 25 },
+  { regex: /time\s+allowed/i, weight: 20 },
+  { regex: /total\s+marks/i, weight: 20 },
+  // IQRA National University patterns
+  {
+    regex: /iqra\s+national\s+university/i,
+    weight: 50,
+  },
+  {
+    regex: /iqra\s+national\s+university\s*,?\s*peshawar/i,
+    weight: 75,
+  },
+  {
+    regex: /peshawar/i,
+    weight: 10,
+  },
+  {
+    regex: /(midterm|final\s*term|final\s*exam)/i,
+    weight: 20,
+  },
+  {
+    regex: /department.*iqra/i,
+    weight: 20,
+  },
 ];
 
 /**
@@ -75,30 +109,142 @@ const validateUploadedFiles = (files) => {
 };
 
 /**
+ * Extract text from image using OCR and score with weighted patterns
+ * @param {string} imagePath - Path to the image file
+ * @returns {Promise<Object>} OCR result with text and weighted score
+ */
+const extractAndScoreText = async (imagePath) => {
+  try {
+    console.log(`Starting OCR on: ${imagePath}`);
+
+    const result = await Tesseract.recognize(imagePath, "eng", {
+      logger: (m) => {
+        if (m.status === "recognizing text") {
+          console.log(`OCR progress: ${Math.round(m.progress * 100)}%`);
+        }
+      },
+    });
+
+    const confidence = result.data.confidence;
+    console.log(`---------> OCR confidence: ${confidence}`);
+    const extractedText = result.data.text.toLowerCase();
+    console.log(
+      `OCR extraction complete. Text length: ${extractedText.length}`,
+    );
+
+    // Calculate weighted pattern score
+    let totalScore = 0;
+    let matchedPatterns = [];
+
+    patterns.forEach((pattern) => {
+      const matches = extractedText.match(pattern.regex);
+      if (matches && matches.length > 0) {
+        totalScore += pattern.weight;
+        matchedPatterns.push({
+          pattern: pattern.regex.source,
+          matches: matches.length,
+          weight: pattern.weight,
+        });
+      }
+    });
+
+    // Normalize score: max possible is sum of all weights
+    const maxScore = patterns.reduce((sum, p) => sum + p.weight, 0);
+    // const normalizedScore = Math.min(totalScore / maxScore, 1);
+    const normalizedScore = Math.round((totalScore / maxScore) * 100);
+    console.log(
+      `---------> Total pattern score: ${totalScore} / ${maxScore}, Normalized: ${normalizedScore}`,
+    );
+
+    if (normalizedScore < 50) {
+      console.warn(
+        `Low OCR score detected for ${imagePath}: ${normalizedScore}`,
+      );
+    }
+
+    return {
+      success: true,
+      extractedText,
+      score: normalizedScore,
+      rawScore: totalScore,
+      confidence,
+      maxScore,
+      matchedPatterns,
+    };
+  } catch (error) {
+    console.error(`OCR extraction failed for ${imagePath}:`, error);
+    return {
+      success: false,
+      error: error.message,
+      score: 0,
+      extractedText: "",
+      matchedPatterns: [],
+    };
+  }
+};
+
+/**
+ * Determine approval status based on OCR confidence and raw pattern score
+ * Logic:
+ * - OCR Confidence < 50 → Rejected
+ * - OCR Confidence ≥ 50 AND Raw Score < 100 → Pending Review
+ * - OCR Confidence ≥ 50 AND Raw Score ≥ 100 → Approved
+ * @param {number} confidence - OCR confidence percentage (0-100)
+ * @param {number} rawScore - Raw pattern matching score
+ * @returns {Object} Approval status with reason
+ */
+const determineApprovalStatus = (confidence, rawScore) => {
+  if (confidence < 50) {
+    return {
+      status: "rejected",
+      reason: `OCR confidence too low: ${confidence}% (threshold: 50%)`,
+      confidence,
+      rawScore,
+    };
+  }
+
+  if (rawScore < 100) {
+    return {
+      status: "pending_review",
+      reason: `Raw score below approval threshold: ${rawScore} (threshold: 100)`,
+      confidence,
+      rawScore,
+    };
+  }
+
+  return {
+    status: "approved",
+    reason: `OCR confidence ${confidence}% and raw score ${rawScore} meet approval criteria`,
+    confidence,
+    rawScore,
+  };
+};
+
+/**
  * Detect exam keywords in image filename and metadata
  * @param {string} filename - The image filename
  * @returns {Object} Keyword detection result
  */
-const detectExamKeywords = (filename) => {
-  const lowerFilename = filename.toLowerCase();
-  let score = 0;
-  const detectedKeywords = [];
+// const detectExamKeywords = (filename) => {
+//   const lowerFilename = filename.toLowerCase();
+//   let score = 0;
+//   const detectedKeywords = [];
 
-  EXAM_KEYWORDS.forEach((keyword) => {
-    if (lowerFilename.includes(keyword)) {
-      score += 1;
-      detectedKeywords.push(keyword);
-    }
-  });
+//   EXAM_KEYWORDS.forEach((keyword) => {
+//     if (lowerFilename.includes(keyword)) {
+//       score += 1;
+//       detectedKeywords.push(keyword);
+//     }
+//   });
 
-  // Normalize score to 0-1 range
-  const normalizedScore = Math.min(score / EXAM_KEYWORDS.length, 1);
+//   // Normalize score to 0-1 range
+//   const normalizedScore = Math.min(score / EXAM_KEYWORDS.length, 1);
 
-  return {
-    score: normalizedScore,
-    keywords: detectedKeywords,
-  };
-};
+//   return {
+//     score: normalizedScore,
+//     keywords: detectedKeywords,
+//   };
+// };
 
 /**
  * Upload paper images
@@ -111,6 +257,8 @@ export const uploadPaper = async (req, res) => {
       courseCode,
       subject,
       year,
+      department,
+      instructor,
       semester,
       examType,
       description,
@@ -120,7 +268,16 @@ export const uploadPaper = async (req, res) => {
     console.log(`File title: ${title}`);
 
     // Validate required fields
-    if (!title || !courseCode || !subject || !year || !semester || !examType) {
+    if (
+      !title ||
+      !courseCode ||
+      !subject ||
+      !year ||
+      !department ||
+      !instructor ||
+      !semester ||
+      !examType
+    ) {
       return res.status(400).json({
         success: false,
         message: "Missing required fields",
@@ -144,8 +301,25 @@ export const uploadPaper = async (req, res) => {
       const file = files[i];
 
       try {
-        // Detect keywords
-        const keywords = detectExamKeywords(file.originalname);
+        // Detect keywords from filename
+        // const keywords = detectExamKeywords(file.originalname);
+        // console.log(`Filename keywords:`, keywords);
+
+        // Extract text using OCR and calculate weighted pattern score
+        const ocrResult = await extractAndScoreText(file.path);
+        console.log(
+          `OCR Score: ${ocrResult.score}, Confidence: ${ocrResult.confidence}, Matched Patterns:`,
+          ocrResult.matchedPatterns,
+        );
+
+        // Determine approval status based on OCR confidence and raw score
+        const approvalStatus = determineApprovalStatus(
+          ocrResult.confidence,
+          ocrResult.rawScore,
+        );
+        console.log(
+          `Status: ${approvalStatus.status}, Reason: ${approvalStatus.reason}`,
+        );
 
         // Store image data
         imageData.push({
@@ -154,8 +328,15 @@ export const uploadPaper = async (req, res) => {
           mimetype: file.mimetype,
           size: file.size,
           path: file.path,
-          keywordScore: keywords.score,
-          detectedKeywords: keywords.keywords,
+          verificationStatus: approvalStatus.status,
+          verificationReason: approvalStatus.reason,
+          detectedKeywords: ocrResult.matchedPatterns.map((p) => p.pattern),
+          ocrExtractedText: ocrResult.extractedText,
+          ocrScore: ocrResult.score,
+          ocrConfidence: ocrResult.confidence,
+          ocrRawScore: ocrResult.rawScore,
+          ocrMaxScore: ocrResult.maxScore,
+          matchedPatterns: ocrResult.matchedPatterns,
           uploadedAt: new Date(),
         });
       } catch (error) {
@@ -170,16 +351,59 @@ export const uploadPaper = async (req, res) => {
       }
     }
 
+    // Check if any image was rejected due to low OCR confidence
+    const rejectedImages = imageData.filter(
+      (img) => img.verificationStatus === "rejected",
+    );
+    if (rejectedImages.length > 0) {
+      // Clean up all uploaded files
+      for (const img of imageData) {
+        try {
+          await fs.unlink(img.path);
+        } catch (unlinkError) {
+          console.error(`Failed to delete file ${img.path}:`, unlinkError);
+        }
+      }
+
+      const rejectionReasons = rejectedImages
+        .map((img) => `${img.originalName}: ${img.verificationReason}`)
+        .join("; ");
+
+      console.warn(
+        `Upload rejected due to low OCR confidence: ${rejectionReasons}`,
+      );
+
+      return res.status(400).json({
+        success: false,
+        message:
+          "Upload rejected! One or more images have insufficient OCR confidence",
+        rejectedImages: rejectedImages.map((img) => ({
+          originalName: img.originalName,
+          reason: img.verificationReason,
+        })),
+      });
+    }
+
+    const hasPendingReview = imageData.some(
+      (img) => img.verificationStatus === "pending_review",
+    );
+
     // Create paper record
     const paperData = {
       title,
       courseCode,
       subject,
       year,
+      department,
+      instructor: {
+        title: instructor.title,
+        name: instructor.name,
+      },
       semester,
       examType,
       description,
       images: imageData,
+      status: hasPendingReview ? "pending_review" : "approved",
       createdAt: new Date(),
     };
 
@@ -329,5 +553,5 @@ export default {
   getPapers,
   deletePaper,
   validateUploadedFiles,
-  detectExamKeywords,
+  // detectExamKeywords,
 };
