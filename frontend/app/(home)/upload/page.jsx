@@ -142,15 +142,20 @@ export default function UploadPage() {
 
       // Send to backend using axios
       // const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const response = await axiosInstance.post(
-        "/api/papers/upload",
+      const response = await axios.post(
+        "http://localhost:8000/api/papers/upload",
         formDataToSend,
         {
           headers: {
             "Content-Type": "multipart/form-data",
           },
+          credentials: "include",
         },
       );
+
+      if (response.status === 401) {
+        router.push("/login");
+      }
 
       setUploadSuccess(true);
       setTimeout(() => {

@@ -26,6 +26,12 @@ export default function Login() {
           email: formData.email,
           password: formData.password,
         },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+        },
       );
       console.log("user data sent", response.data);
       router.push("/");

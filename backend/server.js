@@ -2,6 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import "dotenv/config";
+import cookieParser from "cookie-parser";
 
 // ROUTES
 import authRoute from "./routes/auth.js";
@@ -33,6 +34,7 @@ app.use(express.static("./public"));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(cors(corsOptions));
+app.use(cookieParser());
 
 // ------------------------------------ Routes
 app.use("/api/auth", authRoute);

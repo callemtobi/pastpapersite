@@ -404,6 +404,7 @@ export const uploadPaper = async (req, res) => {
       description,
       images: imageData,
       status: hasPendingReview ? "pending_review" : "approved",
+      uploadedBy: req.user?.id || null,
       createdAt: new Date(),
     };
 

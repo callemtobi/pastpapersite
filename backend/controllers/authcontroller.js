@@ -1,18 +1,19 @@
 import User from "../models/User.js";
 import { Resend } from "resend";
-import { SignJWT } from "jose";
+// import { SignJWT } from "jose";
 import argon2 from "argon2";
+import { generateToken } from "../utils/jwt.js";
 
-const signToken = async (userId) => {
-  const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-  console.log("Secret key: " + secret);
+// const signToken = async (userId) => {
+//   const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+//   console.log("Secret key: " + secret);
 
-  return new SignJWT({ sub: userId.toString() })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime("7d")
-    .sign(secret);
-};
+//   return new SignJWT({ sub: userId.toString() })
+//     .setProtectedHeader({ alg: "HS256" })
+//     .setIssuedAt()
+//     .setExpirationTime("7d")
+//     .sign(secret);
+// };
 
 // Generate OTP (5 digits) and
 // Hash it with argon2
@@ -83,9 +84,14 @@ export const login = async (req, res) => {
         .json({ success: false, message: "Invalid email or password." });
     }
 
-    console.log(
-      `-------------User ${user.email} authenticated successfully-------------`,
-    );
+    const token = await generateToken(user._id);
+
+    res.cookie("accessToken", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 24 * 60 * 60 * 1000,
+    });
 
     return res.status(200).json({
       success: true,
@@ -176,6 +182,23 @@ export const register = async (req, res) => {
     });
   } catch (err) {
     console.error("--------> Error: ", err);
+  }
+};
+
+export const logout = async (req, res) => {
+  console.log("Cookies is cleared.");
+  try {
+    res.clearCookie("accessToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
+    return res.json({ message: "Logged out" });
+  } catch (error) {
+    console.error("logout error:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error." });
   }
 };
 
@@ -305,4 +328,4 @@ export const resendOtp = async (req, res) => {
   }
 };
 
-export default { login, register, verifyOtp, resendOtp };
+export default { login, register, logout, verifyOtp, resendOtp };

@@ -8,6 +8,7 @@ import {
   getPapers,
   deletePaper,
 } from "../controllers/paperController.js";
+import { authenticate } from "../middleware/auth.js";
 
 const router = express.Router();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -61,7 +62,7 @@ const upload = multer({
  *   - description (string, optional)
  *   - images (file[], multiple)
  */
-router.post("/upload", upload.array("images", 5), uploadPaper);
+router.post("/upload", authenticate, upload.array("images", 5), uploadPaper);
 
 /**
  * Get all papers with pagination and filters
@@ -82,6 +83,6 @@ router.get("/:id", getPaper);
  * DELETE /api/papers/:id
  * Requires authentication (user must own the paper)
  */
-router.delete("/:id", deletePaper);
+router.delete("/:id", authenticate, deletePaper);
 
 export default router;

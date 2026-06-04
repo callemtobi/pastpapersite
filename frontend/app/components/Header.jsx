@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
+import axios from "axios";
 import "../globals.css";
 import {
   GraduationCap,
@@ -33,6 +34,17 @@ export default function Header() {
   }, [isDark]);
 
   const handleLogout = () => {
+    try {
+      axios.post(
+        "http://localhost:8000/api/auth/logout",
+        {},
+        {
+          withCredentials: "include",
+        },
+      );
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
     router.push("/login");
   };
 
