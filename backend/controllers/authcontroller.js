@@ -55,7 +55,6 @@ const sendOTPEmail = async (email, otp, expiresAt) => {
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    console.log(`Email: ${email}, Password: ${password}`);
 
     if (!email || !password) {
       return res
@@ -84,12 +83,13 @@ export const login = async (req, res) => {
         .json({ success: false, message: "Invalid email or password." });
     }
 
-    const token = await signToken(user._id);
+    console.log(
+      `-------------User ${user.email} authenticated successfully-------------`,
+    );
 
     return res.status(200).json({
       success: true,
       message: "Login successful.",
-      token,
       user: {
         id: user._id,
         name: user.name,
@@ -179,9 +179,27 @@ export const register = async (req, res) => {
   }
 };
 
+// export const logout = async (req, res) => {
+//   try {
+//     const refreshToken = req.cookies?.refresh_token;
+
+//     if (refreshToken) {
+//       await db.refreshTokens.delete(refreshToken).catch(() => {}); // best-effort
+//     }
+
+//     return res.json({ message: "Logged out" });
+//   } catch (error) {
+//     console.error("logout error:", error);
+//     return res
+//       .status(500)
+//       .json({ success: false, message: "Internal server error." });
+//   }
+// };
+
 // Match OTPs
 // set isVerified to true
 // Issue JWT
+
 export const verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -222,13 +240,10 @@ export const verifyOtp = async (req, res) => {
     await user.save();
 
     // ── Issue JWT ──────────────────────────────────────────────
-    const token = await signToken(user._id);
-    console.log(`TOKEN::: ${token}`);
 
     return res.status(200).json({
       success: true,
       message: "Email verified successfully.",
-      token,
       user: {
         id: user._id,
         name: user.name,

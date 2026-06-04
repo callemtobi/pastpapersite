@@ -3,15 +3,19 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { GraduationCap, Mail, Lock } from "lucide-react";
+import { GraduationCap, Mail, Lock, Loader } from "lucide-react";
 import axios from "axios";
 
 export default function Login() {
-  const route = useRouter();
+  const router = useRouter();
   const [formData, setFormData] = useState({ email: "", password: "" });
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleChange = (e) =>
+  const handleChange = (e) => {
+    setError(""); // Clear error when user types
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,7 +28,7 @@ export default function Login() {
         },
       );
       console.log("user data sent", response.data);
-      route.push("/");
+      router.push("/");
     } catch (error) {
       alert("Error: ", error);
     }
@@ -79,6 +83,12 @@ export default function Login() {
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
             Sign in to your account to continue
           </p>
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
@@ -142,9 +152,11 @@ export default function Login() {
 
             <button
               type="submit"
-              className="w-full bg-[#4FC3FC] hover:bg-[#29b6f6] text-white py-2.5 rounded-lg font-medium transition-colors"
+              disabled={isLoading}
+              className="w-full bg-[#4FC3FC] hover:bg-[#29b6f6] disabled:bg-gray-400 text-white py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
             >
-              Sign in
+              {isLoading && <Loader className="w-4 h-4 animate-spin" />}
+              {isLoading ? "Signing in..." : "Sign in"}
             </button>
 
             <p className="text-center text-sm text-gray-600 dark:text-gray-400">
@@ -180,6 +192,11 @@ export default function Login() {
             </p>
           </div>
           <div className="p-6">
+            {error && (
+              <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <label
@@ -245,9 +262,11 @@ export default function Login() {
 
               <button
                 type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition-colors"
+                disabled={isLoading}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
               >
-                Sign in
+                {isLoading && <Loader className="w-4 h-4 animate-spin" />}
+                {isLoading ? "Signing in..." : "Sign in"}
               </button>
 
               <div className="text-center text-sm text-gray-600 dark:text-gray-400">

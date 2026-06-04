@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Search,
   Download,
@@ -78,6 +79,7 @@ const stats = [
 // }
 
 export default function Main() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   // Loading
   // const [data, setData] = useState(null);

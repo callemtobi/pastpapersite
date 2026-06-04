@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
-import axios from "axios";
+import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Upload,
   FileText,
@@ -13,6 +13,7 @@ import {
 import { validateFiles, detectExamKeywords } from "@/lib/uploadValidation";
 
 export default function UploadPage() {
+  const router = useRouter();
   const fileInputRef = useRef(null);
   const [formData, setFormData] = useState({
     title: "",
@@ -140,9 +141,9 @@ export default function UploadPage() {
       });
 
       // Send to backend using axios
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const response = await axios.post(
-        `${apiUrl}/api/papers/upload`,
+      // const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const response = await axiosInstance.post(
+        "/api/papers/upload",
         formDataToSend,
         {
           headers: {

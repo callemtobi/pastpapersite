@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Search,
   Download,
@@ -11,6 +12,7 @@ import {
   ChevronDown,
   FileText,
   Eye,
+  Loader,
 } from "lucide-react";
 
 const allPapers = [
@@ -113,12 +115,23 @@ const allPapers = [
 ];
 
 export default function DownloadPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [subjectFilter, setSubjectFilter] = useState("all");
   const [yearFilter, setYearFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  // if (isLoading) {
+  //   return (
+  //     <div className="flex items-center justify-center min-h-screen">
+  //       <div className="text-center">
+  //         <Loader className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
+  //         <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   const filteredPapers = allPapers.filter((paper) => {
     const matchesSearch =

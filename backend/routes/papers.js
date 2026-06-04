@@ -50,6 +50,7 @@ const upload = multer({
 /**
  * Upload paper with multiple images
  * POST /api/papers/upload
+ * Requires authentication
  * Body: form-data with:
  *   - title (string)
  *   - courseCode (string)
@@ -65,18 +66,21 @@ router.post("/upload", upload.array("images", 5), uploadPaper);
 /**
  * Get all papers with pagination and filters
  * GET /api/papers?page=1&limit=10&subject=Math&examType=Final&year=2024
+ * Public endpoint
  */
 router.get("/", getPapers);
 
 /**
  * Get single paper by ID
  * GET /api/papers/:id
+ * Public endpoint
  */
 router.get("/:id", getPaper);
 
 /**
  * Delete paper by ID
  * DELETE /api/papers/:id
+ * Requires authentication (user must own the paper)
  */
 router.delete("/:id", deletePaper);
 

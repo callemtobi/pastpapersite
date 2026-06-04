@@ -21,8 +21,8 @@ mongoose.connection.once("open", () => {
 const corsOptions = {
   origin: process.env.FRONTEND_URL,
   credentials: true,
-  allowedHeader: ["GET", "POST", "DELETE", "PATCH", "PUT", "OPTIONS"],
-  methods: ["Content-Type", "Authorization"],
+  methods: ["GET", "POST", "DELETE", "PATCH", "PUT", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 };
 
 // ------------------------------------ Middleware
