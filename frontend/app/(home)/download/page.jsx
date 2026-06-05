@@ -14,6 +14,7 @@ import {
   Eye,
   Loader,
 } from "lucide-react";
+import axios from "axios";
 
 const allPapers = [
   {
@@ -40,78 +41,6 @@ const allPapers = [
     rating: 4.9,
     pages: 12,
   },
-  {
-    id: 3,
-    title: "Organic Chemistry - Quiz 3",
-    course: "CHEM 3010",
-    subject: "Chemistry",
-    year: "2025",
-    semester: "Spring",
-    type: "Quiz",
-    downloads: 189,
-    rating: 4.6,
-    pages: 4,
-  },
-  {
-    id: 4,
-    title: "Linear Algebra - Final 2024",
-    course: "MATH 3400",
-    subject: "Mathematics",
-    year: "2024",
-    semester: "Fall",
-    type: "Final Exam",
-    downloads: 312,
-    rating: 4.7,
-    pages: 10,
-  },
-  {
-    id: 5,
-    title: "Algorithms - Practice Set",
-    course: "CS 4200",
-    subject: "Computer Science",
-    year: "2025",
-    semester: "Spring",
-    type: "Practice",
-    downloads: 287,
-    rating: 4.5,
-    pages: 15,
-  },
-  {
-    id: 6,
-    title: "Thermodynamics - Midterm",
-    course: "PHYS 2500",
-    subject: "Physics",
-    year: "2024",
-    semester: "Fall",
-    type: "Midterm",
-    downloads: 156,
-    rating: 4.4,
-    pages: 7,
-  },
-  {
-    id: 7,
-    title: "Microeconomics - Final 2025",
-    course: "ECON 2010",
-    subject: "Economics",
-    year: "2025",
-    semester: "Spring",
-    type: "Final Exam",
-    downloads: 223,
-    rating: 4.8,
-    pages: 9,
-  },
-  {
-    id: 8,
-    title: "Digital Logic Design - Quiz 2",
-    course: "ENG 2300",
-    subject: "Engineering",
-    year: "2024",
-    semester: "Fall",
-    type: "Quiz",
-    downloads: 198,
-    rating: 4.3,
-    pages: 5,
-  },
 ];
 
 export default function DownloadPage() {
@@ -122,6 +51,9 @@ export default function DownloadPage() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isLoading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [papers, setPapers] = useState([]);
   // if (isLoading) {
   //   return (
   //     <div className="flex items-center justify-center min-h-screen">
@@ -133,10 +65,43 @@ export default function DownloadPage() {
   //   );
   // }
 
-  const filteredPapers = allPapers.filter((paper) => {
+  // Fetch data from backend
+  useEffect(() => {
+    let cancelled = false;
+
+    const getPapers = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get("http://localhost:8000/api/papers");
+        console.log(response.data);
+        if (!cancelled) {
+          if (response.data.success && response.data.papers) {
+            setPapers(response.data.papers);
+          } else {
+            setPapers([]); // Default to empty array
+          }
+        }
+      } catch (err) {
+        const errorMessage =
+          err.response?.data?.message ||
+          err.message ||
+          "Error fetching papers data";
+        if (!cancelled) setError(errorMessage);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    getPapers();
+
+    return () => {
+      cancelled = true;
+    }; // cleanup
+  }, []);
+
+  const filteredPapers = papers.filter((paper) => {
     const matchesSearch =
-      paper.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      paper.course.toLowerCase().includes(searchQuery.toLowerCase());
+      paper.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      paper.department.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesSubject =
       subjectFilter === "all" || paper.subject === subjectFilter;
     const matchesYear = yearFilter === "all" || paper.year === yearFilter;
@@ -288,7 +253,7 @@ export default function DownloadPage() {
       <div className="grid grid-cols-1 gap-6">
         {filteredPapers.map((paper) => (
           <div
-            key={paper.id}
+            key={paper._id}
             className="border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:shadow-md transition-all"
           >
             <div className="p-6">
@@ -301,14 +266,17 @@ export default function DownloadPage() {
                       </div>
                       <div className="flex-1">
                         <h3 className="font-semibold text-lg text-foreground mb-1">
-                          {paper.title}
+                          {paper.subject}
                         </h3>
                         <div className="flex flex-wrap items-center gap-2 text-gray-400">
                           <div className="bg-primary text-gray-400">
-                            {paper.course}
+                            {paper.courseCode}
                           </div>
-                          <div variant="outline">{paper.subject}</div>
-                          <div variant="outline">{paper.type}</div>
+                          {" • "}
+                          <div variant="outline">{paper.instructor.title}</div>
+                          <div variant="outline">{paper.instructor.name}</div>
+                          {" • "}
+                          <div variant="outline">{paper.examType}</div>
                         </div>
                       </div>
                     </div>
@@ -337,19 +305,29 @@ export default function DownloadPage() {
 
                     <span className="flex items-center gap-1 shadow-sm rounded-full p-3 py-1">
                       <BookOpen className="w-4 h-4 stroke-[1.5]" />
-                      {paper.subject}
+                      {paper.department}
                     </span>
                   </div>
                 </div>
 
                 <div className="flex sm:flex-col gap-2 lg:items-end">
-                  <button className="gap-2 px-8 h-12 w-40 rounded-xl bg-[#4FC3F7] hover:bg-[#4FC3F7]/70 border-gray-300 text-white inline-flex items-center font-medium transition-colors">
+                  {/* <button
+                    onClick={() => {
+                      router.push(`/papers/${paper._id}/download`);
+                    }}
+                    className="gap-2 px-8 h-12 w-40 rounded-xl bg-[#4FC3F7] hover:bg-[#4FC3F7]/70 border-gray-300 text-white inline-flex items-center font-medium transition-colors"
+                  >
                     <Download className="w-4 h-4" />
                     Download
-                  </button>
-                  <button className="gap-2 px-8 h-12 w-40 rounded-xl bg-[#DDE3EA] dark:border-gray-600 hover:bg-[#DDE3EA]/70 dark:hover:bg-gray-900 inline-flex items-center font-medium text-gray-900 dark:text-white transition-colors">
+                  </button> */}
+                  <button
+                    onClick={() => {
+                      router.push(`/download/${paper._id}`);
+                    }}
+                    className="gap-2 px-8 h-12 w-40 rounded-xl bg-[#DDE3EA] dark:border-gray-600 hover:bg-[#DDE3EA]/70 dark:hover:bg-gray-900 inline-flex items-center font-medium text-gray-900 dark:text-white transition-colors"
+                  >
                     <Eye className="w-4 h-4" />
-                    Preview
+                    View
                   </button>
                 </div>
               </div>

@@ -70,6 +70,18 @@ const paperSchema = new mongoose.Schema({
     enum: ["approved", "pending_review", "rejected"],
     default: "pending",
   },
+  downloads: {
+    type: Number,
+    default: 0,
+  },
+  rating: {
+    type: Number,
+    default: 0,
+  },
+  pages: {
+    type: Number,
+    default: 0,
+  },
   uploadedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",

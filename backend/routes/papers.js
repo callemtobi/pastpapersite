@@ -4,9 +4,10 @@ import path from "path";
 import { fileURLToPath } from "url";
 import {
   uploadPaper,
-  getPaper,
+  getPaperById,
   getPapers,
   deletePaper,
+  downloadPaper,
 } from "../controllers/paperController.js";
 import { authenticate } from "../middleware/auth.js";
 
@@ -76,7 +77,7 @@ router.get("/", getPapers);
  * GET /api/papers/:id
  * Public endpoint
  */
-router.get("/:id", getPaper);
+router.get("/:id", getPaperById);
 
 /**
  * Delete paper by ID
@@ -84,5 +85,12 @@ router.get("/:id", getPaper);
  * Requires authentication (user must own the paper)
  */
 router.delete("/:id", authenticate, deletePaper);
+
+/**
+ * Download paper by ID
+ * GET /api/papers/:id/download
+ * Public endpoint
+ */
+router.get("/:id/download", downloadPaper);
 
 export default router;

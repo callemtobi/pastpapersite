@@ -439,7 +439,7 @@ export const uploadPaper = async (req, res) => {
  * Get paper by ID
  * GET /api/papers/:id
  */
-export const getPaper = async (req, res) => {
+export const getPaperById = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -548,11 +548,45 @@ export const deletePaper = async (req, res) => {
   }
 };
 
+// download paper
+export const downloadPaper = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const paper = await Paper.findById(id);
+    if (!paper) {
+      return res.status(404).json({
+        success: false,
+        message: "Paper not found",
+      });
+    }
+
+    // Assuming the paper has a file path stored
+    const filePath = paper.filePath;
+    if (!filePath) {
+      return res.status(404).json({
+        success: false,
+        message: "Paper file not found",
+      });
+    }
+
+    return res.status(200).download(filePath);
+  } catch (error) {
+    console.error("Download paper error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to download paper",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};
+
 export default {
   uploadPaper,
-  getPaper,
+  getPaperById,
   getPapers,
   deletePaper,
   validateUploadedFiles,
+  downloadPaper,
   // detectExamKeywords,
 };
