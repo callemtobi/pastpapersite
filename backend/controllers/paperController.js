@@ -327,7 +327,7 @@ export const uploadPaper = async (req, res) => {
           originalName: file.originalname,
           mimetype: file.mimetype,
           size: file.size,
-          path: file.path,
+          path: `/uploads/${file.filename}`,
           verificationStatus: approvalStatus.status,
           verificationReason: approvalStatus.reason,
           detectedKeywords: ocrResult.matchedPatterns.map((p) => p.pattern),
@@ -562,7 +562,8 @@ export const downloadPaper = async (req, res) => {
     }
 
     // Assuming the paper has a file path stored
-    const filePath = paper.filePath;
+    const filePath = paper.images[0].path;
+    console.log("File path:", filePath);
     if (!filePath) {
       return res.status(404).json({
         success: false,
@@ -581,6 +582,33 @@ export const downloadPaper = async (req, res) => {
   }
 };
 
+// preview paper
+export const previewPaper = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const paper = await Paper.findById(id);
+    if (!paper) {
+      return res.status(404).json({
+        success: false,
+        message: "Paper not found",
+      });
+    }
+    console.log(`Viewing paper: ${paper.title}`);
+    return res.status(200).json({
+      success: true,
+      paper,
+    });
+  } catch (error) {
+    console.error("Preview paper error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to preview paper",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};
+
 export default {
   uploadPaper,
   getPaperById,
@@ -588,5 +616,6 @@ export default {
   deletePaper,
   validateUploadedFiles,
   downloadPaper,
+  previewPaper,
   // detectExamKeywords,
 };

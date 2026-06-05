@@ -8,6 +8,7 @@ import {
   getPapers,
   deletePaper,
   downloadPaper,
+  previewPaper,
 } from "../controllers/paperController.js";
 import { authenticate } from "../middleware/auth.js";
 
@@ -92,5 +93,7 @@ router.delete("/:id", authenticate, deletePaper);
  * Public endpoint
  */
 router.get("/:id/download", downloadPaper);
+
+router.get("/:id/preview", previewPaper);
 
 export default router;

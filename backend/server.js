@@ -3,6 +3,8 @@ import mongoose from "mongoose";
 import cors from "cors";
 import "dotenv/config";
 import cookieParser from "cookie-parser";
+// import path from "path";
+// import { fileURLToPath } from "url";
 
 // ROUTES
 import authRoute from "./routes/auth.js";
@@ -29,12 +31,16 @@ const corsOptions = {
 // ------------------------------------ Middleware
 const app = express();
 const PORT = process.env.PORT || 8000;
+// const __filename = fileURLToPath(import.meta.url);
+// const __dirname = path.dirname(__filename);
 
-app.use(express.static("./public"));
+app.use(express.static("public"));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(cors(corsOptions));
 app.use(cookieParser());
+app.use("/uploads", express.static("uploads"));
+// app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // ------------------------------------ Routes
 app.use("/api/auth", authRoute);

@@ -2,9 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  Search,
-  Filter,
-  ChevronDown,
   Download,
   Eye,
   BookOpen,
@@ -20,41 +17,9 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import { useParams, useRouter } from "next/navigation";
+import Image from "next/image";
 
-// Mock data service - replace with actual API call
-// const fetchPaperDetails = async (id) => {
-//   // Simulate API delay
-//   await new Promise((resolve) => setTimeout(resolve, 800));
-
-//   // Mock paper data
-//   return {
-//     _id: 123,
-//     title: "Advanced Machine Learning Techniques",
-//     subject: "Computer Science",
-//     courseCode: "CS-401",
-//     examType: "Final Exam",
-//     semester: "Fall",
-//     year: "2024",
-//     downloads: 1247,
-//     rating: 4.8,
-//     pages: 12,
-//     department: "Engineering",
-//     instructor: {
-//       title: "Prof.",
-//       name: "Sarah Johnson",
-//     },
-//     description:
-//       "This comprehensive examination covers neural networks, deep learning architectures, reinforcement learning, and practical applications of ML in real-world scenarios. The paper includes both theoretical questions and practical coding problems.",
-//     fileSize: "2.4 MB",
-//     fileFormat: "PDF",
-//     uploadDate: "2024-12-15",
-//     tags: ["Machine Learning", "AI", "Neural Networks", "Deep Learning"],
-//     previewUrl: "/api/preview/paper.pdf", // Replace with actual preview URL
-//     downloadUrl: "/api/download/paper.pdf", // Replace with actual download URL
-//   };
-// };
-
-const PaperViewerPage = () => {
+export default function PaperViewerPage() {
   const { id } = useParams();
   const router = useRouter();
   const [paper, setPaper] = useState(null);
@@ -63,6 +28,7 @@ const PaperViewerPage = () => {
   const [downloading, setDownloading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [activeTab, setActiveTab] = useState("preview");
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   // Paper details from backend
   useEffect(() => {
@@ -74,8 +40,6 @@ const PaperViewerPage = () => {
         const response = await axios.get(
           `http://localhost:8000/api/papers/${id}`,
         );
-
-        console.log(response.data);
 
         if (!cancelled) {
           if (response.data.success && response.data.paper) {
@@ -108,6 +72,7 @@ const PaperViewerPage = () => {
     if (!paper) return;
 
     setDownloading(true);
+    setError(null);
     try {
       // Fetch the file from backend with download option
       const response = await axios.get(
@@ -127,7 +92,7 @@ const PaperViewerPage = () => {
       link.href = url;
       link.setAttribute(
         "download",
-        `${paper.courseCode}_${paper.examType}_${paper.year}.pdf`,
+        `${paper.courseCode}_${paper.examType}_${paper.year}.png`,
       );
       document.body.appendChild(link);
       link.click();
@@ -149,14 +114,48 @@ const PaperViewerPage = () => {
     }
   };
 
-  const handlePreview = () => {
-    setShowPreview(true);
-    setActiveTab("preview");
+  // Handle preview - fetches the PDF and displays it
+  const handlePreview = async () => {
+    if (!paper) return;
+
+    // console.log("Paper: " + paper);
+    // console.log(JSON.stringify(paper.images[0], null, 2));
+
+    setPreviewLoading(true);
+    setError(null);
+
+    try {
+      setShowPreview(true);
+      setActiveTab("preview");
+    } catch (err) {
+      console.error("Preview failed:", err);
+
+      setError(err.response?.data?.message || "Failed to load preview.");
+    } finally {
+      setPreviewLoading(false);
+    }
   };
+
+  // Generate PDF
+  // const generatePDF = async () => {
+  //   if (!paper) return;
+
+  //   const doc = new jsPDF();
+  //   doc.text(paper.title, 10, 10);
+  //   doc.text(`Course: ${paper.courseCode}`, 10, 20);
+  //   doc.text(`Subject: ${paper.subject}`, 10, 30);
+  //   doc.text(`Year: ${paper.year}`, 10, 40);
+  //   doc.text(`Semester: ${paper.semester}`, 10, 50);
+  //   doc.text(`Exam Type: ${paper.examType}`, 10, 60);
+  //   doc.text(`Instructor: ${paper.instructor.name}`, 10, 70);
+  //   doc.text(`Description:`, 10, 80);
+  //   doc.text(paper.description, 10, 90);
+  //   doc.save(`${paper.courseCode}_${paper.examType}_${paper.year}.pdf`);
+  // };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+      <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
         <div className="text-center space-y-4">
           <Loader2 className="w-12 h-12 animate-spin text-blue-500 mx-auto" />
           <p className="text-gray-600 dark:text-gray-300">
@@ -169,7 +168,7 @@ const PaperViewerPage = () => {
 
   if (error || !paper) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center space-y-4">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20">
             <AlertCircle className="w-8 h-8 text-red-500" />
@@ -191,7 +190,7 @@ const PaperViewerPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -398,13 +397,26 @@ const PaperViewerPage = () => {
               <div className="p-6">
                 {activeTab === "preview" ? (
                   <div className="space-y-4">
-                    <div className="bg-gray-100 dark:bg-gray-900 rounded-xl overflow-hidden aspect-[3/4] relative">
+                    <div className="bg-gray-100 dark:bg-gray-900 rounded-xl overflow-hidden aspect-3/4 relative">
                       {showPreview ? (
-                        <iframe
-                          src={paper.previewUrl}
-                          className="w-full h-full"
-                          title="Paper Preview"
-                        />
+                        <div className="h-full overflow-auto bg-white">
+                          {paper.images?.map(
+                            (image, index) => (
+                              console.log("image:" + image[0]),
+                              (
+                                <Image
+                                  key={index}
+                                  // src={`http://localhost:8000/uploads${image.path}`}
+                                  src={`http://localhost:8000/uploads/${image.filename}`}
+                                  alt={`Page ${index + 1}`}
+                                  width={800}
+                                  height={1000}
+                                  unoptimized
+                                />
+                              )
+                            ),
+                          )}
+                        </div>
                       ) : (
                         <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
                           <FileText className="w-16 h-16 text-gray-400 dark:text-gray-600 mb-4" />
@@ -498,7 +510,7 @@ const PaperViewerPage = () => {
                         Usage Statistics
                       </h4>
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-4">
+                        <div className="bg-linear-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-4">
                           <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                             {paper.downloads.toLocaleString()}
                           </p>
@@ -506,7 +518,7 @@ const PaperViewerPage = () => {
                             Total Downloads
                           </p>
                         </div>
-                        <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg p-4">
+                        <div className="bg-linear-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg p-4">
                           <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                             {paper.rating}
                           </p>
@@ -540,6 +552,4 @@ const PaperViewerPage = () => {
       </div>
     </div>
   );
-};
-
-export default PaperViewerPage;
+}
