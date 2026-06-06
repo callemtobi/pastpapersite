@@ -39,7 +39,7 @@ export default function Header() {
         "http://localhost:8000/api/auth/logout",
         {},
         {
-          withCredentials: "include",
+          withCredentials: true,
         },
       );
     } catch (err) {

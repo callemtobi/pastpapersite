@@ -73,7 +73,12 @@ export default function DownloadPage() {
       try {
         setLoading(true);
         const response = await axios.get("http://localhost:8000/api/papers");
-        console.log(response.data);
+        const token = document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("accessToken="))
+          ?.split("=")[1];
+        console.log("Access Token:", token);
+        // console.log(response.data);
         if (!cancelled) {
           if (response.data.success && response.data.papers) {
             setPapers(response.data.papers);

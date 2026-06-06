@@ -402,6 +402,7 @@ export const uploadPaper = async (req, res) => {
       semester,
       examType,
       description,
+      pages: imageData.length,
       images: imageData,
       status: hasPendingReview ? "pending_review" : "approved",
       uploadedBy: req.user?.id || null,
@@ -552,6 +553,7 @@ export const deletePaper = async (req, res) => {
 export const downloadPaper = async (req, res) => {
   try {
     const { id } = req.params;
+    const imageIndex = parseInt(req.query.imageIndex) || 0; // read index
 
     const paper = await Paper.findById(id);
     if (!paper) {
@@ -561,9 +563,27 @@ export const downloadPaper = async (req, res) => {
       });
     }
 
+    const image = paper.images[imageIndex]; // use the correct image
+    if (!image) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Image not found" });
+    }
+
     // Assuming the paper has a file path stored
-    const filePath = paper.images[0].path;
-    console.log("File path:", filePath);
+    const uploadPath = image.path;
+    const filePath = path.join(
+      process.cwd(),
+      uploadPath.replace(/^\/uploads\//, "uploads/"),
+    );
+
+    // Check if file path exists
+    // if (!fs.existsSync(filePath)) {
+    //   return res
+    //     .status(404)
+    //     .json({ success: false, message: "File not found on disk" });
+    // }
+
     if (!filePath) {
       return res.status(404).json({
         success: false,
@@ -571,7 +591,7 @@ export const downloadPaper = async (req, res) => {
       });
     }
 
-    return res.status(200).download(filePath);
+    return res.status(200).sendFile(filePath);
   } catch (error) {
     console.error("Download paper error:", error);
     return res.status(500).json({
@@ -609,6 +629,30 @@ export const previewPaper = async (req, res) => {
   }
 };
 
+export const incrementDownload = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const paper = await Paper.findByIdAndUpdate(
+      id,
+      { $inc: { downloads: 1 } },
+      { returnDocument: true },
+    );
+
+    if (!paper) {
+      return res.status(404).json({ message: "Paper not found" });
+    }
+
+    res.json({
+      message: "Download count updated",
+      downloads: paper.downloads,
+    });
+  } catch (error) {
+    console.error("Download increment error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 export default {
   uploadPaper,
   getPaperById,
@@ -617,5 +661,6 @@ export default {
   validateUploadedFiles,
   downloadPaper,
   previewPaper,
+  incrementDownload,
   // detectExamKeywords,
 };

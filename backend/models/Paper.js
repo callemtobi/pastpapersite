@@ -64,6 +64,7 @@ const paperSchema = new mongoose.Schema({
     required: true,
   },
   description: String,
+  pages: { type: Number, default: 0 },
   images: [imageSchema],
   status: {
     type: String,

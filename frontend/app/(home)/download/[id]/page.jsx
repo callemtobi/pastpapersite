@@ -18,11 +18,13 @@ import {
 import axios from "axios";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
+import * as jsPDF from "jspdf";
 
 export default function PaperViewerPage() {
   const { id } = useParams();
   const router = useRouter();
   const [paper, setPaper] = useState(null);
+  const [imagesSize, setImageSize] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [downloading, setDownloading] = useState(false);
@@ -69,45 +71,54 @@ export default function PaperViewerPage() {
   }, [id]);
 
   const handleDownload = async () => {
-    if (!paper) return;
+    if (!paper || !paper.images?.length) return;
 
     setDownloading(true);
     setError(null);
+
     try {
-      // Fetch the file from backend with download option
-      const response = await axios.get(
-        `http://localhost:8000/api/papers/${id}/download`,
-        {
-          responseType: "blob",
-          onDownloadProgress: (progressEvent) => {
-            // You can add progress tracking here if needed
-            console.log(`Download progress: ${progressEvent.progress}`);
+      for (let i = 0; i < paper.images.length; i++) {
+        const image = paper.images[i];
+        const response = await axios.get(
+          `http://localhost:8000/api/papers/${id}/download?imageIndex=${i}`,
+          {
+            responseType: "blob",
+            onDownloadProgress: (progressEvent) => {
+              // You can add progress tracking here if needed
+              console.log(`Download progress: ${progressEvent.progress}`);
+            },
           },
-        },
-      );
+        );
 
-      // Create blob link to download
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute(
-        "download",
-        `${paper.courseCode}_${paper.examType}_${paper.year}.png`,
-      );
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+        const url = window.URL.createObjectURL(new Blob([response.data]));
 
-      // Optionally update download count in backend
-      //   await axios.put(
-      //     `http://localhost:8000/api/papers/${id}/increment-downloads`,
-      //   );
+        const link = document.createElement("a");
+        link.href = url;
+
+        console.log(response.headers["content-type"]);
+        console.log(response.data);
+
+        // safe filename
+        const ext = image.originalName?.split(".").pop() || "png";
+        link.setAttribute(
+          "download",
+          `${paper.courseCode}_${paper.examType}_${paper.year}_img${i + 1}.${ext}`,
+        );
+
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        window.URL.revokeObjectURL(url);
+      }
+      await axios.put(
+        `http://localhost:8000/api/papers/${id}/increment-download`,
+      );
     } catch (err) {
       console.error("Download failed:", err);
       setError(
         err.response?.data?.message ||
-          "Failed to download the paper. Please try again.",
+          "Failed to download images. Please try again.",
       );
     } finally {
       setDownloading(false);
@@ -118,7 +129,7 @@ export default function PaperViewerPage() {
   const handlePreview = async () => {
     if (!paper) return;
 
-    // console.log("Paper: " + paper);
+    console.log(JSON.stringify(paper.images[0], null, 2));
     // console.log(JSON.stringify(paper.images[0], null, 2));
 
     setPreviewLoading(true);
@@ -137,21 +148,117 @@ export default function PaperViewerPage() {
   };
 
   // Generate PDF
-  // const generatePDF = async () => {
-  //   if (!paper) return;
+  const generatePDF = async () => {
+    if (!paper || !paper.images?.length) return;
 
-  //   const doc = new jsPDF();
-  //   doc.text(paper.title, 10, 10);
-  //   doc.text(`Course: ${paper.courseCode}`, 10, 20);
-  //   doc.text(`Subject: ${paper.subject}`, 10, 30);
-  //   doc.text(`Year: ${paper.year}`, 10, 40);
-  //   doc.text(`Semester: ${paper.semester}`, 10, 50);
-  //   doc.text(`Exam Type: ${paper.examType}`, 10, 60);
-  //   doc.text(`Instructor: ${paper.instructor.name}`, 10, 70);
-  //   doc.text(`Description:`, 10, 80);
-  //   doc.text(paper.description, 10, 90);
-  //   doc.save(`${paper.courseCode}_${paper.examType}_${paper.year}.pdf`);
-  // };
+    try {
+      setLoading(true);
+      setError(null);
+
+      const { default: jsPDF } = await import("jspdf");
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 10;
+
+      for (let i = 0; i < paper.images.length; i++) {
+        const image = paper.images[i];
+
+        // Build image URL
+        const imageUrl = `http://localhost:8000${image.path}`;
+
+        // Fetch image
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+
+        // Convert blob to base64
+        const base64 = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
+        });
+
+        // Get image dimensions
+        const img = new window.Image();
+
+        await new Promise((resolve) => {
+          img.onload = resolve;
+          img.src = base64;
+        });
+
+        // Add new PDF page except for first image
+        if (i > 0) {
+          doc.addPage();
+        }
+
+        const imgWidth = img.width;
+        const imgHeight = img.height;
+
+        const maxWidth = pageWidth - margin * 2;
+        const maxHeight = pageHeight - margin * 2;
+
+        const ratio = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
+
+        const pdfWidth = imgWidth * ratio;
+        const pdfHeight = imgHeight * ratio;
+
+        const x = (pageWidth - pdfWidth) / 2;
+        const y = (pageHeight - pdfHeight) / 2;
+
+        doc.addImage(
+          base64,
+          image.mimetype === "image/png" ? "PNG" : "JPEG",
+          x,
+          y,
+          pdfWidth,
+          pdfHeight,
+        );
+      }
+
+      doc.save(`${paper.courseCode}_${paper.examType}_${paper.year}.pdf`);
+      await axios.put(
+        `http://localhost:8000/api/papers/${id}/increment-download`,
+      );
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      setError("Failed to generate PDF. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Get images size
+  useEffect(() => {
+    const getSizes = async () => {
+      if (!paper?.images?.length) return;
+      try {
+        let totalSize = 0;
+
+        for (let i = 0; i < paper.images.length; i++) {
+          totalSize += paper.images[i].size;
+        }
+
+        const bytes = totalSize;
+        const convSize = (bytes / (1024 * 1024)).toFixed(2);
+        // return `${mb} MB`;
+        console.log("Total image size:", convSize);
+        setImageSize(convSize);
+
+        // return convSize;
+      } catch (err) {
+        console.error("Failed to get image size", err);
+        setError("Image size extraction failed");
+        return 0;
+      }
+    };
+
+    if (paper) getSizes();
+  }, [paper]);
 
   if (loading) {
     return (
@@ -290,7 +397,14 @@ export default function PaperViewerPage() {
                     </p>
                     <div className="flex items-center gap-1 text-sm text-gray-900 dark:text-white">
                       <FileText className="w-4 h-4" />
-                      {paper.fileSize} • {paper.fileFormat}
+                      {imagesSize} MB
+                      {/* {(() => {
+                        const bytes = paper.images[0]?.size;
+                        if (!bytes) return "N/A";
+                        const mb = (bytes / (1024 * 1024)).toFixed(2);
+                        return `${mb} MB`;
+                      })()}{" "} */}
+                      {/* • {paper.images[0].mimetype} */}
                     </div>
                   </div>
                 </div>
@@ -351,7 +465,10 @@ export default function PaperViewerPage() {
                   <Clock className="w-4 h-4" />
                   <span>
                     Uploaded on{" "}
-                    {new Date(paper.uploadDate).toLocaleDateString()}
+                    {new Date(paper.images[0].uploadedAt).toLocaleDateString(
+                      "en-US",
+                      { month: "short", day: "numeric", year: "numeric" },
+                    )}
                   </span>
                 </div>
               </div>
@@ -400,22 +517,22 @@ export default function PaperViewerPage() {
                     <div className="bg-gray-100 dark:bg-gray-900 rounded-xl overflow-hidden aspect-3/4 relative">
                       {showPreview ? (
                         <div className="h-full overflow-auto bg-white">
-                          {paper.images?.map(
-                            (image, index) => (
-                              console.log("image:" + image[0]),
-                              (
-                                <Image
-                                  key={index}
-                                  // src={`http://localhost:8000/uploads${image.path}`}
-                                  src={`http://localhost:8000/uploads/${image.filename}`}
-                                  alt={`Page ${index + 1}`}
-                                  width={800}
-                                  height={1000}
-                                  unoptimized
-                                />
-                              )
-                            ),
-                          )}
+                          {paper.images?.map((image, index) => (
+                            <div key={index} className="relative w-full h-auto">
+                              <span className="flex items-center justify-center text-xs text-gray-600 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 px-1 rounded">
+                                Page {index + 1}
+                              </span>
+                              <Image
+                                key={index}
+                                // src={`http://localhost:8000/uploads${image.path}`}
+                                src={`http://localhost:8000/uploads/${image.filename}`}
+                                alt={`Page ${index + 1}`}
+                                width={800}
+                                height={1000}
+                                unoptimized
+                              />
+                            </div>
+                          ))}
                         </div>
                       ) : (
                         <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
@@ -439,7 +556,8 @@ export default function PaperViewerPage() {
                     <div className="flex justify-between items-center text-sm text-gray-500 dark:text-gray-400">
                       <span>Document preview - {paper.pages} pages total</span>
                       <button
-                        onClick={handleDownload}
+                        onClick={generatePDF}
+                        disabled={loading}
                         className="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:text-blue-700"
                       >
                         <Download className="w-4 h-4" />
@@ -467,13 +585,7 @@ export default function PaperViewerPage() {
                             File Size
                           </span>
                           <span className="text-gray-900 dark:text-white">
-                            {/* {paper.images[0].size} */}
-                            {(() => {
-                              const bytes = paper.images[0]?.size;
-                              if (!bytes) return "N/A";
-                              const mb = (bytes / (1024 * 1024)).toFixed(2);
-                              return `${mb} MB`;
-                            })()}
+                            {imagesSize} MB
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
@@ -499,7 +611,11 @@ export default function PaperViewerPage() {
                           <span className="text-gray-900 dark:text-white">
                             {new Date(
                               paper.images[0].uploadedAt,
-                            ).toLocaleDateString()}
+                            ).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}
                           </span>
                         </div>
                       </div>

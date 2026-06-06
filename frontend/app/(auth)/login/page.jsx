@@ -10,15 +10,29 @@ export default function Login() {
   const router = useRouter();
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
-    setError(""); // Clear error when user types
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError("");
+    setEmailError("");
+    setPasswordError("");
+
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    setIsLoading(true);
+    setError("");
+    setEmailError("");
+    setPasswordError("");
+
     try {
       const response = await axios.post(
         "http://localhost:8000/api/auth/login",
@@ -33,10 +47,38 @@ export default function Login() {
           withCredentials: true,
         },
       );
-      console.log("user data sent", response.data);
+
       router.push("/");
     } catch (error) {
-      alert("Error: ", error);
+      const status = error.response?.status;
+      const message = error.response?.data?.message || "Something went wrong.";
+
+      if (status === 401) {
+        const attemptsRemaining = error.response?.data?.attemptsRemaining;
+
+        setPasswordError(
+          attemptsRemaining >= 0
+            ? `Incorrect email or password. ${attemptsRemaining} attempt(s) remaining.`
+            : "Incorrect email or password.",
+        );
+      } else if (status === 404) {
+        setEmailError("No account found with this email.");
+      } else if (status === 429) {
+        const retryAfter = error.response?.data?.retryAfter;
+
+        if (retryAfter) {
+          const minutes = Math.floor(retryAfter / 60);
+          const seconds = retryAfter % 60;
+
+          setError(
+            `Too many login attempts. Try again in ${minutes}m ${seconds}s.`,
+          );
+        } else {
+          setError("Too many login attempts. Please try again later.");
+        }
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -117,6 +159,9 @@ export default function Login() {
                   className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC]"
                 />
               </div>
+              {emailError && (
+                <p className="mt-1 text-sm text-red-500">{emailError}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -139,6 +184,9 @@ export default function Login() {
                   className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC]"
                 />
               </div>
+              {passwordError && (
+                <p className="mt-1 text-sm text-red-500">{passwordError}</p>
+              )}
             </div>
 
             <div className="flex items-center justify-between text-sm">

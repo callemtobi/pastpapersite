@@ -65,9 +65,11 @@ export const login = async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Invalid email or password." });
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password.",
+        attemptsRemaining: req.rateLimit.remaining,
+      });
     }
 
     if (!user.isVerified) {
@@ -81,7 +83,11 @@ export const login = async (req, res) => {
     if (!passwordMatch) {
       return res
         .status(401)
-        .json({ success: false, message: "Invalid email or password." });
+        .json({
+          success: false,
+          message: "Invalid email or password.",
+          attemptsRemaining: req.rateLimit.remaining,
+        });
     }
 
     const token = await generateToken(user._id);

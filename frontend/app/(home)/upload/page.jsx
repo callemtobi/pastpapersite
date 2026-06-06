@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 import {
   Upload,
   FileText,
@@ -149,7 +150,7 @@ export default function UploadPage() {
           headers: {
             "Content-Type": "multipart/form-data",
           },
-          credentials: "include",
+          withCredentials: true,
         },
       );
 
@@ -197,50 +198,6 @@ export default function UploadPage() {
           Share past examination papers with the community
         </p>
       </div>
-
-      {/* Success Message */}
-      {uploadSuccess && (
-        <div className="border-0 shadow-lg bg-green-50 dark:bg-green-900/20 border-l-4 border-l-green-500 rounded-lg">
-          <div className="p-6">
-            <div className="flex items-center gap-3">
-              <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400 shrink-0" />
-              <div>
-                <h3 className="font-semibold text-green-900 dark:text-green-100">
-                  Upload Successful!
-                </h3>
-                <p className="text-sm text-green-700 dark:text-green-200">
-                  Your {selectedFiles.length} image(s) have been uploaded and
-                  will be available shortly.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Validation Errors */}
-      {validationErrors.length > 0 && (
-        <div className="border-0 shadow-lg bg-red-50 dark:bg-red-900/20 border-l-4 border-l-red-500 rounded-lg">
-          <div className="p-6">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-semibold text-red-900 dark:text-red-100 mb-2">
-                  Validation Errors
-                </h3>
-                <ul className="space-y-1 text-sm text-red-700 dark:text-red-200">
-                  {validationErrors.map((error, idx) => (
-                    <li key={idx} className="flex items-start gap-2">
-                      <span className="text-red-500 mt-0.5">•</span>
-                      <span>{error}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Upload Form */}
       <div className="border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm">
@@ -666,6 +623,50 @@ export default function UploadPage() {
           </form>
         </div>
       </div>
+
+      {/* Success Message */}
+      {uploadSuccess && (
+        <div className="border-0 shadow-lg bg-green-50 dark:bg-green-900/20 border-l-4 border-l-green-500 rounded-lg">
+          <div className="p-6">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400 shrink-0" />
+              <div>
+                <h3 className="font-semibold text-green-900 dark:text-green-100">
+                  Upload Successful!
+                </h3>
+                <p className="text-sm text-green-700 dark:text-green-200">
+                  Your {selectedFiles.length} image(s) have been uploaded and
+                  will be available shortly.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Validation Errors */}
+      {validationErrors.length > 0 && (
+        <div className="border-0 shadow-lg bg-red-50 dark:bg-red-900/20 border-l-4 border-l-red-500 rounded-lg">
+          <div className="p-6">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-red-900 dark:text-red-100 mb-2">
+                  Validation Errors
+                </h3>
+                <ul className="space-y-1 text-sm text-red-700 dark:text-red-200">
+                  {validationErrors.map((error, idx) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <span className="text-red-500 mt-0.5">•</span>
+                      <span>{error}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Community Impact */}
       <div className="border border-blue-200 dark:border-blue-900/30 rounded-lg shadow-sm bg-blue-50 dark:bg-blue-900/10">

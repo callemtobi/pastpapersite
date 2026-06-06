@@ -9,6 +9,7 @@ import {
   deletePaper,
   downloadPaper,
   previewPaper,
+  incrementDownload,
 } from "../controllers/paperController.js";
 import { authenticate } from "../middleware/auth.js";
 
@@ -95,5 +96,7 @@ router.delete("/:id", authenticate, deletePaper);
 router.get("/:id/download", downloadPaper);
 
 router.get("/:id/preview", previewPaper);
+
+router.put("/:id/increment-download", incrementDownload);
 
 export default router;
