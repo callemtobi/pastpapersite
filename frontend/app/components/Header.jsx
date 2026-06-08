@@ -17,6 +17,11 @@ import {
   Sun,
   UsersRound,
 } from "lucide-react";
+import {
+  showErrorToast,
+  showLoadingToast,
+  showSuccessToast,
+} from "@/lib/toastConfig";
 
 export default function Header() {
   const pathname = usePathname();
@@ -44,8 +49,11 @@ export default function Header() {
       );
     } catch (err) {
       console.error("Logout error:", err);
+    } finally {
+      showSuccessToast("You have been logged out.");
+
+      router.push("/login");
     }
-    router.push("/login");
   };
 
   const toggleTheme = () => {
@@ -59,7 +67,14 @@ export default function Header() {
     { path: "/about", label: "About Us", icon: UsersRound },
   ];
 
-  const isActive = (path) => pathname === path;
+  // const isActive = (path) => pathname === path;
+  const isActive = (path) => {
+    if (path === "/download") {
+      // Check if current path starts with "/download" (handles /download/123, /download/some-id, etc.)
+      return pathname === path || pathname.startsWith(path + "/");
+    }
+    return pathname === path;
+  };
 
   return (
     <>

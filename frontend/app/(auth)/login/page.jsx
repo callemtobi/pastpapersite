@@ -1,13 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { GraduationCap, Mail, Lock, Loader } from "lucide-react";
 import axios from "axios";
+import { showErrorToast, showSuccessToast } from "@/lib/toastConfig";
+
+const REDIRECT_MESSAGES = {
+  auth_required: "Please log in to access that page.",
+  session_expired: "Your session expired. Please log in again.",
+};
 
 export default function Login() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [emailError, setEmailError] = useState("");
@@ -48,6 +55,8 @@ export default function Login() {
         },
       );
 
+      showSuccessToast("Logged in successfully.");
+
       router.push("/");
     } catch (error) {
       const status = error.response?.status;
@@ -61,6 +70,7 @@ export default function Login() {
             ? `Incorrect email or password. ${attemptsRemaining} attempt(s) remaining.`
             : "Incorrect email or password.",
         );
+        showErrorToast(`You have ${attemptsRemaining} attempts remaining.`);
       } else if (status === 404) {
         setEmailError("No account found with this email.");
       } else if (status === 429) {
@@ -81,6 +91,19 @@ export default function Login() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    const reason = searchParams.get("reason");
+    if (reason && REDIRECT_MESSAGES[reason]) {
+      showErrorToast(REDIRECT_MESSAGES[reason], {
+        id: reason,
+      });
+
+      const url = new URL(window.location.href);
+      url.searchParams.delete("reason");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, []);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-white dark:bg-background">
@@ -184,20 +207,20 @@ export default function Login() {
                   className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC]"
                 />
               </div>
-              {passwordError && (
+              {/* {passwordError && (
                 <p className="mt-1 text-sm text-red-500">{passwordError}</p>
-              )}
+              )} */}
             </div>
 
             <div className="flex items-center justify-between text-sm">
               <label className="flex items-center gap-2 cursor-pointer">
-                <input
+                {/* <input
                   type="checkbox"
                   className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700"
                 />
                 <span className="text-gray-600 dark:text-gray-400">
                   Remember me
-                </span>
+                </span> */}
               </label>
               <a
                 href="/forgot-password"
@@ -301,13 +324,13 @@ export default function Login() {
 
               <div className="flex items-center justify-between text-sm">
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input
+                  {/* <input
                     type="checkbox"
                     className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700"
                   />
                   <span className="text-gray-600 dark:text-gray-400">
                     Remember me
-                  </span>
+                  </span> */}
                 </label>
                 <a
                   href="#"

@@ -77,7 +77,6 @@ export default function DownloadPage() {
           .split("; ")
           .find((row) => row.startsWith("accessToken="))
           ?.split("=")[1];
-        console.log("Access Token:", token);
         // console.log(response.data);
         if (!cancelled) {
           if (response.data.success && response.data.papers) {

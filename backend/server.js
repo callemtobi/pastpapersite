@@ -3,15 +3,17 @@ import mongoose from "mongoose";
 import cors from "cors";
 import "dotenv/config";
 import cookieParser from "cookie-parser";
-// import path from "path";
-// import { fileURLToPath } from "url";
+import { startCleanupCron } from "./utils/cleanupCron.js";
 
 // ROUTES
 import authRoute from "./routes/auth.js";
 import papersRoute from "./routes/papers.js";
 
 // ------------------------------------MONGODB
-mongoose.connect(process.env.MONGODB_URI);
+mongoose.connect(process.env.MONGODB_URI).then(() => {
+  console.log("✅ MongoDB connected");
+  startCleanupCron(); // 👈 start after DB is ready
+});
 mongoose.connection.on(
   "error",
   console.error.bind(console, "----------> Connection error...."),

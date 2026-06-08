@@ -13,6 +13,11 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import axios from "axios";
+import {
+  showErrorToast,
+  showLoadingToast,
+  showSuccessToast,
+} from "@/lib/toastConfig";
 
 const departments = [
   { value: "cs", label: "Computer Science" },
@@ -222,14 +227,16 @@ export default function Register() {
 
   // ── Step 2 — OTP digit input ──────────────────────────────────
   const handleOtpChange = (index, value) => {
-    // Allow only digits
-    if (!/^\d?$/.test(value)) return;
+    // Extract only the last digit typed (handles cases where input already has a value)
+    const digit = value.replace(/\D/g, "").slice(-1);
+
     const next = [...otp];
-    next[index] = value;
+    next[index] = digit;
     setOtp(next);
     setOtpError("");
-    // Auto-advance focus
-    if (value && index < 6) {
+
+    // Auto-advance if a digit was entered and not on last input
+    if (digit && index < 5) {
       otpRefs.current[index + 1]?.focus();
     }
   };
@@ -256,6 +263,7 @@ export default function Register() {
     e.preventDefault();
     const otpValue = otp.join("");
     if (otpValue.length < 6) {
+      showErrorToast("Please enter the complete 6-digit code.");
       setOtpError("Please enter the complete 6-digit code.");
       return;
     }
@@ -275,9 +283,11 @@ export default function Register() {
       if (token) {
         localStorage.setItem("token", token);
       }
+      showSuccessToast("Email verified! Redirecting…");
       setOtpSuccess("Email verified! Redirecting…");
       setTimeout(() => router.push("/login"), 1500);
     } catch (err) {
+      showErrorToast("Invalid or expired code. Please try again.");
       setOtpError(
         err.response?.data?.message ||
           "Invalid or expired code. Please try again.",

@@ -18,6 +18,12 @@ import {
 import axios from "axios";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
+import {
+  showSuccessToast,
+  showLoadingToast,
+  showErrorToast,
+} from "@/lib/toastConfig";
+
 import * as jsPDF from "jspdf";
 
 export default function PaperViewerPage() {
@@ -121,6 +127,7 @@ export default function PaperViewerPage() {
           "Failed to download images. Please try again.",
       );
     } finally {
+      showSuccessToast("Download successful.");
       setDownloading(false);
     }
   };
@@ -225,9 +232,11 @@ export default function PaperViewerPage() {
         `http://localhost:8000/api/papers/${id}/increment-download`,
       );
     } catch (err) {
+      showErrorToast("PDF generation failed");
       console.error("PDF generation failed:", err);
       setError("Failed to generate PDF. Please try again.");
     } finally {
+      showSuccessToast("Download successful.");
       setLoading(false);
     }
   };
