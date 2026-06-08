@@ -2,7 +2,13 @@ import User from "../models/User.js";
 import { Resend } from "resend";
 // import { SignJWT } from "jose";
 import argon2 from "argon2";
-import { generateToken } from "../utils/jwt.js";
+import {
+  generateToken,
+  createPasswordResetToken,
+  verifyPasswordResetToken,
+} from "../utils/jwt.js";
+
+const resend = new Resend(process.env.RESEND_KEY);
 
 // const signToken = async (userId) => {
 //   const secret = new TextEncoder().encode(process.env.JWT_SECRET);
@@ -15,9 +21,6 @@ import { generateToken } from "../utils/jwt.js";
 //     .sign(secret);
 // };
 
-// Generate OTP (5 digits) and
-// Hash it with argon2
-// Set OTP expiry
 const generateOTP = async () => {
   const plain = Math.floor(100000 + Math.random() * 900000).toString();
   const hash = await argon2.hash(plain);
@@ -28,7 +31,6 @@ const generateOTP = async () => {
 
 // Send OTP through email
 const sendOTPEmail = async (email, otp, expiresAt) => {
-  const resend = new Resend(process.env.RESEND_KEY);
   const expiryFormatted = expiresAt.toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
@@ -67,7 +69,7 @@ export const login = async (req, res) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: "Invalid email or password.",
+        message: "No account found with this email.",
         attemptsRemaining: req.rateLimit.remaining,
       });
     }
@@ -81,13 +83,11 @@ export const login = async (req, res) => {
 
     const passwordMatch = await argon2.verify(user.password, password);
     if (!passwordMatch) {
-      return res
-        .status(401)
-        .json({
-          success: false,
-          message: "Invalid email or password.",
-          attemptsRemaining: req.rateLimit.remaining,
-        });
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password.",
+        attemptsRemaining: req.rateLimit.remaining,
+      });
     }
 
     const token = await generateToken(user._id);
@@ -120,7 +120,6 @@ export const login = async (req, res) => {
 
 export const register = async (req, res) => {
   try {
-    const resend = new Resend(process.env.RESEND_KEY);
     const { name, email, studentId, department, password, confirmPassword } =
       req.body;
 
@@ -154,9 +153,8 @@ export const register = async (req, res) => {
     }
 
     // Hash password
-    console.log(`Before Hashing: ${password}`);
     const hashedPassword = await argon2.hash(password);
-    console.log(`After Hashing: ${hashedPassword}`);
+    console.log(`Hashing password: ${hashedPassword}`);
 
     // Generate OTP
     // ── Generate OTP ───────────────────────────────────────────
@@ -334,4 +332,162 @@ export const resendOtp = async (req, res) => {
   }
 };
 
-export default { login, register, logout, verifyOtp, resendOtp };
+// Forgot password
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        messaege: "Email is required.",
+      });
+    }
+
+    // find user in DB
+    const user = await User.findOne({ email, isVerified: true });
+    if (!user) {
+      return res.status(200).json({
+        success: false,
+        message:
+          "If that email is registered, you'll receive a reset link shortly.",
+      });
+    }
+
+    // ── Build a one-time-use JWT reset token ───────────────────
+    // The token's fingerprint is derived from the user's current password hash,
+    // so it becomes invalid the moment the password is changed.
+    const resetToken = await createPasswordResetToken(user._id, user.password);
+
+    // Record when we issued it so we can cross-reference in resetPassword
+    await User.updateOne({ _id: user._id }, { resetTokenIssuedAt: new Date() });
+
+    // ── Send email with reset link ─────────────────────────────
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+
+    await resend.emails.send({
+      from: process.env.EMAIL_FROM || "onboarding@resend.dev",
+      to: user.email,
+      subject: "Reset your password",
+      html: `
+        <p>You requested a password reset.</p>
+        <p><a href="${resetUrl}">Click here to reset your password</a></p>
+        <p>This link expires in <strong>1 hour</strong>.</p>
+        <p>If you didn't request this, you can safely ignore this email.</p>
+      `,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message:
+        "If that email is registered, you'll receive a reset link shortly.",
+    });
+  } catch (err) {
+    console.error("Forgot password error: " + err);
+    res.status(500).json({ success: false, message: "Internal server error." });
+  }
+};
+
+// Reset password
+export const resetPassword = async (req, res) => {
+  try {
+    const { token, password, confirmPassword } = req.body;
+
+    if (!token) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Reset token is required." });
+    }
+
+    if (!password || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Both password fields are required.",
+      });
+    }
+
+    // Validate passwords
+
+    if (password !== confirmPassword) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Passwords do not match." });
+    }
+
+    // ── Verify the JWT and fingerprint ─────────────────────────
+    // We need the user's current password hash to verify the fingerprint,
+    // so we extract userId first, then look up the user.
+    let userId;
+    let user;
+
+    try {
+      // Do a preliminary decode just to get the userId from sub
+      // const { verifyToken } = await import("../utils/jwt.js");
+      // const preliminary = await verifyToken(token);
+      const { decodeJwt } = await import("jose");
+      const preliminary = decodeJwt(token);
+
+      if (preliminary.purpose !== "password-reset" || !preliminary.sub) {
+        return res
+          .status(401)
+          .json({ success: false, message: "Invalid or expired reset token." });
+      }
+
+      userId = preliminary.sub;
+      user = await User.findById(userId);
+
+      if (!user) {
+        return res
+          .status(401)
+          .json({ success: false, message: "Invalid or expired reset token." });
+      }
+      // Now do the full verification (fingerprint check against current hash)
+      await verifyPasswordResetToken(token, user.password);
+    } catch {
+      // verifyToken / verifyPasswordResetToken throw on expiry or tampering
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid or expired reset token." });
+    }
+
+    // ── Guard: reject if no reset was ever requested ───────────
+    if (!user.resetTokenIssuedAt) {
+      return res
+        .status(401)
+        .json({ success: false, message: "No password reset was requested." });
+    }
+    console.log("Updating user password...");
+
+    // ── Hash new password and save ─────────────────────────────
+    const hashedPassword = await argon2.hash(password);
+    console.log("Password reset successful for user:", user.email);
+
+    await User.updateOne(
+      { _id: user._id },
+      {
+        password: hashedPassword,
+        resetTokenIssuedAt: null, // invalidate — can't reuse same token
+        // failedLoginAttempts: 0, // clear any lockout while we're here
+        // lockoutUntil: null,
+      },
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Password reset successfully. You can now log in.",
+    });
+  } catch (err) {
+    console.error("Error resetting password" + err);
+    res.status(500).json({ success: false, message: "Internal server error." });
+  }
+};
+
+export default {
+  login,
+  register,
+  logout,
+  verifyOtp,
+  resendOtp,
+  forgotPassword,
+  resetPassword,
+};

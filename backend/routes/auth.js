@@ -5,16 +5,21 @@ import {
   logout,
   verifyOtp,
   resendOtp,
+  forgotPassword,
+  resetPassword,
 } from "../controllers/authController.js";
 import { loginRateLimiter } from "../middleware/loginRateLimiter.js";
 
 const router = express.Router();
 
 router.post("/login", loginRateLimiter, login);
-(router.post("/login/forgot-password", forgotPassword),
-  router.post("/logout", logout));
+router.post("/logout", logout);
 router.post("/register", register);
 router.post("/verify-otp", verifyOtp);
 router.post("/resend-otp", resendOtp);
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
+
+// router.get("/reset-password", resetPassword);
 
 export default router;

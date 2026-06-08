@@ -29,6 +29,12 @@ const userSchema = new mongoose.Schema({
   isVerified: { type: Boolean, default: false },
   otp: { type: String },
   otpExpiresAt: { type: Date },
+  resetToken: String,
+  resetTokenExpiresAt: Date,
+  resetTokenIssuedAt: {
+    type: Date,
+    default: null,
+  },
 });
 
 const User = mongoose.model("User", userSchema);
