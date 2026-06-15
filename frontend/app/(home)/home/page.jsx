@@ -13,6 +13,8 @@ import {
   User,
 } from "lucide-react";
 import Loading from "./loading";
+import { motion } from "motion/react";
+import { fadeUp } from "@/lib/animations";
 
 // Mock data for recent activity
 const recentVisitors = [
@@ -99,17 +101,55 @@ export default function Main() {
       {/* Hero Section - Minimalistic */}
       <div className="text-center space-y-8 py-12">
         <div className="space-y-4">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 dark:text-white tracking-tight">
+          {/* <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 dark:text-white tracking-tight"> */}
+          <motion.h1
+            variants={fadeUp}
+            initial="hidden"
+            animate="visible"
+            className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 dark:text-white tracking-tight"
+          >
             Pasty Paperyyy
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 text-lg max-w-xl mx-auto">
+          </motion.h1>
+          {/* </h1> */}
+          {/* <p className="text-gray-600 dark:text-gray-400 text-lg max-w-xl mx-auto"> */}
+          <motion.p
+            initial={{
+              opacity: 0,
+              y: 20,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            transition={{
+              delay: 0.4,
+              duration: 0.8,
+            }}
+            className="text-gray-600 dark:text-gray-400 text-lg max-w-xl mx-auto"
+          >
             Your gateway to academic excellence
-          </p>
+          </motion.p>
+          {/* </p> */}
         </div>
 
         {/* Search Bar */}
         <div className="max-w-2xl mx-auto">
-          <div className="relative">
+          {/* <div className="relative"> */}
+          <motion.div
+            initial={{
+              opacity: 0,
+              scale: 0.95,
+            }}
+            animate={{
+              opacity: 1,
+              scale: 1,
+            }}
+            transition={{
+              delay: 0.8,
+              duration: 0.6,
+            }}
+            className="relative"
+          >
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
@@ -118,11 +158,27 @@ export default function Main() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-12 pr-4 h-14 text-base border-2 border-gray-300 dark:border-gray-600 rounded-2xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
             />
-          </div>
+          </motion.div>
+          {/* </div> */}
         </div>
 
         {/* Quick Actions */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center pt-2">
+        {/* <div className="flex flex-col sm:flex-row gap-4 justify-center pt-2"> */}
+        <motion.div
+          initial={{
+            opacity: 0,
+            y: 30,
+          }}
+          animate={{
+            opacity: 1,
+            y: 0,
+          }}
+          transition={{
+            delay: 1,
+            duration: 0.7,
+          }}
+          className="flex flex-col sm:flex-row gap-4 justify-center pt-2"
+        >
           <Link href={"/download"}>
             {/* <button className="gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 h-12 rounded-xl inline-flex items-center font-medium transition-colors"> */}
             <button className="gap-2 bg-[#4FC3F7] hover:bg-[#4FC3F7]/70 border-gray-300 text-white px-8 h-12 rounded-xl inline-flex items-center font-medium transition-colors">
@@ -136,7 +192,8 @@ export default function Main() {
               Upload Paper
             </button>
           </Link>
-        </div>
+        </motion.div>
+        {/* </div> */}
       </div>
 
       {/* Stats - Minimal Design */}
