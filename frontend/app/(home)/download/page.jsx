@@ -14,6 +14,8 @@ import {
   Eye,
   Loader,
 } from "lucide-react";
+import { motion } from "motion/react";
+import { resultsContainer, resultCard } from "@/lib/animations";
 import axios from "axios";
 
 const allPapers = [
@@ -54,16 +56,6 @@ export default function DownloadPage() {
   const [isLoading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [papers, setPapers] = useState([]);
-  // if (isLoading) {
-  //   return (
-  //     <div className="flex items-center justify-center min-h-screen">
-  //       <div className="text-center">
-  //         <Loader className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
-  //         <p className="text-gray-600 dark:text-gray-400">Loading...</p>
-  //       </div>
-  //     </div>
-  //   );
-  // }
 
   // Fetch data from backend
   useEffect(() => {
@@ -77,12 +69,11 @@ export default function DownloadPage() {
           .split("; ")
           .find((row) => row.startsWith("accessToken="))
           ?.split("=")[1];
-        // console.log(response.data);
         if (!cancelled) {
           if (response.data.success && response.data.papers) {
             setPapers(response.data.papers);
           } else {
-            setPapers([]); // Default to empty array
+            setPapers([]);
           }
         }
       } catch (err) {
@@ -99,13 +90,14 @@ export default function DownloadPage() {
 
     return () => {
       cancelled = true;
-    }; // cleanup
+    };
   }, []);
 
   const filteredPapers = papers.filter((paper) => {
     const matchesSearch =
       paper.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      paper.department.toLowerCase().includes(searchQuery.toLowerCase());
+      paper.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      paper.courseCode?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesSubject =
       subjectFilter === "all" || paper.subject === subjectFilter;
     const matchesYear = yearFilter === "all" || paper.year === yearFilter;
@@ -131,53 +123,95 @@ export default function DownloadPage() {
     <div className={`max-w-4xl mx-auto space-y-6`}>
       {/* Header */}
       <div className="space-y-4">
-        <div>
+        {/* Page Heading - Fade up with Y: 20 → 0 */}
+        <motion.div
+          initial={{
+            opacity: 0,
+            y: 20,
+          }}
+          animate={{
+            opacity: 1,
+            y: 0,
+          }}
+          transition={{ duration: 0.6 }}
+        >
           <h1 className="text-3xl font-bold text-foreground mb-2">
             Browse Papers
           </h1>
           <p className="text-muted-foreground">
             Search and download past examination papers
           </p>
-        </div>
+        </motion.div>
 
-        {/* Search and Filter Bar */}
+        {/* Search and Filter Bar - Animate together with delay */}
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-3">
+          <motion.div
+            initial={{
+              opacity: 0,
+              y: 30,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            transition={{
+              duration: 0.6,
+              delay: 0.2,
+            }}
+            className="flex flex-col sm:flex-row gap-3"
+          >
             <div className="relative flex-1">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
+              <motion.input
                 type="text"
                 placeholder="Search by course code, title, or keyword..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 h-12 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
+                whileFocus={{
+                  scale: 1.01,
+                }}
+                transition={{
+                  type: "spring",
+                  stiffness: 300,
+                  damping: 20,
+                }}
+                className="border border-border-light bg-input-bg w-full pl-12 pr-4 h-12 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200"
               />
             </div>
-            <button
+            <motion.button
               onClick={() => setShowFilters(!showFilters)}
-              className="inline-flex items-center gap-2 px-6 h-12 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-900 text-gray-900 dark:text-white font-medium transition-colors"
+              whileHover={{
+                y: -2,
+              }}
+              whileTap={{
+                scale: 0.98,
+              }}
+              className="border border-border-light bg-primary-button-bg text-input-text inline-flex items-center gap-2 px-6 h-12  rounded-lg font-medium transition-colors"
             >
               <Filter className="w-5 h-5" />
               Filters
               <ChevronDown
                 className={`w-4 h-4 transition-transform ${showFilters ? "rotate-180" : ""}`}
               />
-            </button>
-          </div>
+            </motion.button>
+          </motion.div>
 
           {/* Filter Options */}
           {showFilters && (
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm">
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="border border-border-light rounded-lg shadow-sm"
+            >
               <div className="p-6">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-900 dark:text-white">
-                      Subject
-                    </label>
+                    <label className="text-sm font-medium ">Subject</label>
                     <select
                       value={subjectFilter}
                       onChange={(e) => setSubjectFilter(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
+                      className="border border-border-light bg-input-bg w-full px-4 py-2  rounded-lg focus:outline-none focus:border-blue-500"
                     >
                       <option value="all">All Subjects</option>
                       <option value="Computer Science">Computer Science</option>
@@ -190,13 +224,11 @@ export default function DownloadPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-900 dark:text-white">
-                      Year
-                    </label>
+                    <label className="text-sm font-medium ">Year</label>
                     <select
                       value={yearFilter}
                       onChange={(e) => setYearFilter(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
+                      className="border border-border-light bg-input-bg w-full px-4 py-2 rounded-lg  focus:outline-none focus:border-blue-500"
                     >
                       <option value="all">All Years</option>
                       <option value="2025">2025</option>
@@ -207,13 +239,11 @@ export default function DownloadPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-900 dark:text-white">
-                      Type
-                    </label>
+                    <label className="text-sm font-medium ">Type</label>
                     <select
                       value={typeFilter}
                       onChange={(e) => setTypeFilter(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
+                      className="border border-border-light bg-input-bg w-full px-4 py-2 rounded-lg  focus:outline-none focus:border-blue-500"
                     >
                       <option value="all">All Types</option>
                       <option value="Final Exam">Final Exam</option>
@@ -237,12 +267,17 @@ export default function DownloadPage() {
                   </button>
                 </div>
               </div>
-            </div>
+            </motion.div>
           )}
         </div>
 
-        {/* Results Count */}
-        <div className="flex items-center justify-between">
+        {/* Results Counter - Fade in only, no movement */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="flex items-center justify-between"
+        >
           <p className="text-sm text-muted-foreground">
             Showing{" "}
             <span className="font-medium text-foreground">
@@ -250,14 +285,20 @@ export default function DownloadPage() {
             </span>{" "}
             papers
           </p>
-        </div>
+        </motion.div>
       </div>
 
-      {/* Papers Grid */}
-      <div className="grid grid-cols-1 gap-6">
+      {/* Papers Grid with stagger animation */}
+      <motion.div
+        variants={resultsContainer}
+        initial="hidden"
+        animate="visible"
+        className="grid grid-cols-1 gap-6"
+      >
         {filteredPapers.map((paper) => (
-          <div
+          <motion.div
             key={paper._id}
+            variants={resultCard}
             className="border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:shadow-md transition-all"
           >
             <div className="p-6">
@@ -266,7 +307,7 @@ export default function DownloadPage() {
                   <div>
                     <div className="flex items-start gap-3 mb-2">
                       <div className="p-2 rounded-lg bg-primary/10 bg-amber-200">
-                        <BookOpen className="w-5 h-5 text-primary " />
+                        <BookOpen className="w-5 h-5 text-primary" />
                       </div>
                       <div className="flex-1">
                         <h3 className="font-semibold text-lg text-foreground mb-1">
@@ -315,37 +356,52 @@ export default function DownloadPage() {
                 </div>
 
                 <div className="flex sm:flex-col gap-2 lg:items-end">
-                  {/* <button
-                    onClick={() => {
-                      router.push(`/papers/${paper._id}/download`);
-                    }}
-                    className="gap-2 px-8 h-12 w-40 rounded-xl bg-[#4FC3F7] hover:bg-[#4FC3F7]/70 border-gray-300 text-white inline-flex items-center font-medium transition-colors"
-                  >
-                    <Download className="w-4 h-4" />
-                    Download
-                  </button> */}
-                  <button
+                  <motion.button
                     onClick={() => {
                       router.push(`/download/${paper._id}`);
                     }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     className="gap-2 px-8 h-12 w-40 rounded-xl bg-[#DDE3EA] dark:border-gray-600 hover:bg-[#DDE3EA]/70 dark:hover:bg-gray-900 inline-flex items-center font-medium text-gray-900 dark:text-white transition-colors"
                   >
                     <Eye className="w-4 h-4" />
                     View
-                  </button>
+                  </motion.button>
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
+      {/* Empty State Animation */}
       {filteredPapers.length === 0 && (
-        <div className="border-border/50 shadow-sm">
+        <motion.div
+          initial={{
+            opacity: 0,
+            y: 15,
+          }}
+          animate={{
+            opacity: 1,
+            y: 0,
+          }}
+          transition={{ duration: 0.6 }}
+          className="border border-border-light rounded-lg shadow-sm"
+        >
           <div className="p-12 text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
+            <motion.div
+              animate={{
+                scale: [1, 1.05, 1],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+              className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4"
+            >
               <Search className="w-8 h-8 text-muted-foreground" />
-            </div>
+            </motion.div>
             <h3 className="text-xl font-semibold text-foreground mb-2">
               No papers found
             </h3>
@@ -353,7 +409,7 @@ export default function DownloadPage() {
               Try adjusting your search or filters
             </p>
           </div>
-        </div>
+        </motion.div>
       )}
     </div>
   );

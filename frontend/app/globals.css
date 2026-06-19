@@ -1,26 +1,27 @@
 @import "tailwindcss";
 
 :root {
+  /* Light mode defaults */
   --background: #ffffff;
   --foreground: #171717;
   --background-secondary: #f5f5f5;
   --border-light: #e0e0e0;
+  --input-bg: #ffffff; /* ← add here so it always exists */
+  --input-text: #171717;
+  --primary-button-bg: #ffffff;
+  /* --secondary-button-bg: ; */
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-background-secondary: var(--background-secondary);
+  --color-border-light: var(--border-light);
+  --color-input-bg: var(--input-bg); /* ← now a Tailwind class */
+  --color-input-text: var(--input-text);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0f1419;
-    --foreground: #e8eef5;
-    --background-secondary: #1a2332;
-    --border-light: #2d3748;
-  }
+  --color-primary-button-bg: var(--primary-button-bg);
 }
 
 html,
@@ -37,12 +38,26 @@ html.dark {
   --background: #0f1419;
   --foreground: #4fc3f7;
   --background-secondary: #1a2332;
-  --border-light: #2d3748;
+  --border-light: #066794;
+  --input-bg: #1a2332;
+  --input-text: #f0f0f0;
+  --primary-button-bg: #4fc3f7;
 }
 
-html.light {
+/* html.light {
   --background: #ffffff;
   --foreground: #171717;
   --background-secondary: #f5f5f5;
   --border-light: #e0e0e0;
-}
+  --input-bg: #ffffff;
+  --input-text: #171717;
+} */
+
+/* @media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0f1419;
+    --foreground: #e8eef5;
+    --background-secondary: #1a2332;
+    --border-light: #2d3748;
+  }
+} */

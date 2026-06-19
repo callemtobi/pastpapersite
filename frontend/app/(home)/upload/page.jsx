@@ -12,6 +12,7 @@ import {
   Loader,
 } from "lucide-react";
 import { validateFiles, detectExamKeywords } from "@/lib/uploadValidation";
+import { motion } from "motion/react";
 
 export default function UploadPage() {
   const router = useRouter();
@@ -190,19 +191,42 @@ export default function UploadPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          Upload Paper
-        </h1>
+      <motion.div
+        initial={{
+          opacity: 0,
+          y: 20,
+        }}
+        animate={{
+          opacity: 1,
+          y: 0,
+        }}
+        transition={{ duration: 0.6 }}
+        className="space-y-2"
+      >
+        <h1 className="text-3xl font-bold text-foreground">Upload Paper</h1>
         <p className="text-gray-600 dark:text-gray-400">
           Share past examination papers with the community
         </p>
-      </div>
+      </motion.div>
 
       {/* Upload Form */}
-      <div className="border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm">
-        <div className="border-b border-gray-200 dark:border-gray-700 p-6">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+      <motion.div
+        initial={{
+          opacity: 0,
+          y: 30,
+        }}
+        animate={{
+          opacity: 1,
+          y: 0,
+        }}
+        transition={{
+          duration: 0.6,
+          delay: 0.2,
+        }}
+        className="border border-border-light rounded-lg shadow-sm"
+      >
+        <div className=" border border-border-light p-6">
+          <h2 className="text-xl font-semibold text-foreground">
             Paper Details
           </h2>
           <p className="text-gray-500 dark:text-gray-400 text-sm">
@@ -213,17 +237,14 @@ export default function UploadPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* File Upload */}
             <div className="space-y-2">
-              <label
-                htmlFor="file"
-                className="block text-sm font-medium text-gray-900 dark:text-white"
-              >
+              <label htmlFor="file" className="block text-sm font-medium ">
                 Paper Images * ({selectedFiles.length}/5)
               </label>
               <div
                 className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
                   selectedFiles.length > 0
-                    ? "border-green-300 bg-green-50 dark:bg-green-900/20"
-                    : "border-gray-300 dark:border-gray-600 hover:border-blue-500 hover:bg-gray-50 dark:hover:bg-gray-900/50"
+                    ? "border border-border-light bg-background-secondary hover:bg-background"
+                    : "border border-border-light hover:"
                 }`}
               >
                 {selectedFiles.length > 0 ? (
@@ -232,7 +253,7 @@ export default function UploadPage() {
                       <FileText className="w-6 h-6 text-green-600 dark:text-green-400" />
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900 dark:text-white">
+                      <p className="font-medium ">
                         {selectedFiles.length} image(s) selected
                       </p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -282,7 +303,7 @@ export default function UploadPage() {
                         htmlFor="file"
                         className="cursor-pointer inline-block"
                       >
-                        <span className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium text-sm">
+                        <span className="font-medium text-sm">
                           Add more images
                         </span>
                       </label>
@@ -337,10 +358,7 @@ export default function UploadPage() {
 
             {/* Title */}
             <div className="space-y-2">
-              <label
-                htmlFor="title"
-                className="block text-sm font-medium text-gray-900 dark:text-white"
-              >
+              <label htmlFor="title" className="block text-sm font-medium ">
                 Paper Title *
               </label>
               <input
@@ -349,7 +367,7 @@ export default function UploadPage() {
                 placeholder="e.g., Calculus II - Final Exam 2025"
                 value={formData.title}
                 onChange={(e) => updateField("title", e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
+                className="w-full px-4 py-2 border border-border-light rounded-lg  focus:outline-none focus:border-blue-500"
                 required
               />
             </div>
@@ -359,7 +377,7 @@ export default function UploadPage() {
               <div className="space-y-2">
                 <label
                   htmlFor="courseCode"
-                  className="block text-sm font-medium text-gray-900 dark:text-white"
+                  className="block text-sm font-medium "
                 >
                   Course Code *
                 </label>
@@ -369,23 +387,20 @@ export default function UploadPage() {
                   placeholder="e.g., MATH 2420"
                   value={formData.courseCode}
                   onChange={(e) => updateField("courseCode", e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-border-light rounded-lg focus:outline-none focus:border-blue-500"
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <label
-                  htmlFor="subject"
-                  className="block text-sm font-medium text-gray-900 dark:text-white"
-                >
+                <label htmlFor="subject" className="block text-sm font-medium ">
                   Subject *
                 </label>
                 <select
                   id="subject"
                   value={formData.subject}
                   onChange={(e) => updateField("subject", e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-border-light bg-input-bg rounded-lg focus:outline-none focus:border-blue-500"
                   required
                 >
                   <option value="">Select subject</option>
@@ -404,17 +419,14 @@ export default function UploadPage() {
             {/* Year and Semester */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label
-                  htmlFor="year"
-                  className="block text-sm font-medium text-gray-900 dark:text-white"
-                >
+                <label htmlFor="year" className="block text-sm font-medium ">
                   Year *
                 </label>
                 <select
                   id="year"
                   value={formData.year}
                   onChange={(e) => updateField("year", e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-border-light bg-input-bg rounded-lg focus:outline-none focus:border-blue-500"
                   required
                 >
                   <option value="">Select year</option>
@@ -432,7 +444,7 @@ export default function UploadPage() {
               <div className="space-y-2">
                 <label
                   htmlFor="semester"
-                  className="block text-sm font-medium text-gray-900 dark:text-white"
+                  className="block text-sm font-medium "
                 >
                   Semester *
                 </label>
@@ -440,7 +452,7 @@ export default function UploadPage() {
                   id="semester"
                   value={formData.semester}
                   onChange={(e) => updateField("semester", e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-border-light bg-input-bg rounded-lg focus:outline-none focus:border-blue-500"
                   required
                 >
                   <option value="">Select semester</option>
@@ -456,7 +468,7 @@ export default function UploadPage() {
               <div className="space-y-2">
                 <label
                   htmlFor="examType"
-                  className="block text-sm font-medium text-gray-900 dark:text-white"
+                  className="block text-sm font-medium "
                 >
                   Exam Type *
                 </label>
@@ -464,7 +476,7 @@ export default function UploadPage() {
                   id="examType"
                   value={formData.examType}
                   onChange={(e) => updateField("examType", e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-border-light bg-input-bg rounded-lg focus:outline-none focus:border-blue-500"
                   required
                 >
                   <option value="">Select exam type</option>
@@ -477,7 +489,7 @@ export default function UploadPage() {
               <div className="space-y-2">
                 <label
                   htmlFor="department"
-                  className="block text-sm font-medium text-gray-900 dark:text-white"
+                  className="block text-sm font-medium "
                 >
                   Department *
                 </label>
@@ -485,7 +497,7 @@ export default function UploadPage() {
                   id="department"
                   value={formData.department}
                   onChange={(e) => updateField("department", e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-border-light bg-input-bg rounded-lg focus:outline-none focus:border-blue-500"
                   required
                 >
                   <option value="">Select department</option>
@@ -506,7 +518,7 @@ export default function UploadPage() {
             <div className="space-y-2">
               <label
                 htmlFor="instructor"
-                className="block text-sm font-medium text-gray-900 dark:text-white"
+                className="block text-sm font-medium "
               >
                 Instructor *
               </label>
@@ -520,7 +532,7 @@ export default function UploadPage() {
                       title: e.target.value,
                     })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-border-light bg-input-bg rounded-lg focus:outline-none focus:border-blue-500"
                   required
                 >
                   <option value="">Select title</option>
@@ -538,7 +550,7 @@ export default function UploadPage() {
                       name: e.target.value,
                     })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-border-light  rounded-lg focus:outline-none focus:border-blue-500"
                   required
                 />
               </div>
@@ -548,7 +560,7 @@ export default function UploadPage() {
             <div className="space-y-2">
               <label
                 htmlFor="description"
-                className="block text-sm font-medium text-gray-900 dark:text-white"
+                className="block text-sm font-medium "
               >
                 Description (Optional)
               </label>
@@ -558,7 +570,7 @@ export default function UploadPage() {
                 value={formData.description}
                 onChange={(e) => updateField("description", e.target.value)}
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 resize-vertical"
+                className="w-full px-4 py-2 border border-border-light rounded-lg  focus:outline-none focus:border-blue-500 resize-vertical"
               />
             </div>
 
@@ -582,10 +594,17 @@ export default function UploadPage() {
 
             {/* Submit Button */}
             <div className="flex flex-col sm:flex-row gap-3 pt-4">
-              <button
+              <motion.button
+                whileHover={{
+                  y: -2,
+                }}
+                whileTap={{
+                  scale: 0.98,
+                }}
                 type="submit"
                 disabled={uploadLoading || selectedFiles.length === 0}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex-1 h-12"
+                // className="inline-flex items-center justify-center gap-2 px-6 py-3 border border-border-light text-input-text disabled:bg-background-secondary disabled:text-input-text disabled:cursor-not-allowed rounded-lg font-medium transition-colors flex-1 h-12"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 border border-border-light bg-primary-button-bg text-input-text disabled:bg-background-secondary disabled:text-input-text disabled:cursor-not-allowed rounded-lg font-medium transition-colors flex-1 h-12"
               >
                 {uploadLoading ? (
                   <>
@@ -598,11 +617,11 @@ export default function UploadPage() {
                     Upload
                   </>
                 )}
-              </button>
+              </motion.button>
               <button
                 type="button"
                 disabled={uploadLoading}
-                className="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed text-gray-900 dark:text-white font-medium transition-colors sm:w-auto h-12"
+                className="px-6 py-3  disabled:opacity-50 disabled:cursor-not-allowed border border-border-light rounded-lg hover:bg-border-light font-medium transition-colors sm:w-auto h-12"
                 onClick={() => {
                   setFormData({
                     title: "",
@@ -622,7 +641,7 @@ export default function UploadPage() {
             </div>
           </form>
         </div>
-      </div>
+      </motion.div>
 
       {/* Success Message */}
       {uploadSuccess && (
@@ -669,25 +688,79 @@ export default function UploadPage() {
       )}
 
       {/* Community Impact */}
-      <div className="border border-blue-200 dark:border-blue-900/30 rounded-lg shadow-sm bg-blue-50 dark:bg-blue-900/10">
+      <motion.div
+        initial={{
+          opacity: 0,
+          y: 30,
+        }}
+        whileInView={{
+          opacity: 1,
+          y: 0,
+        }}
+        transition={{
+          duration: 0.7,
+          ease: "easeOut",
+        }}
+        viewport={{ once: true, amount: 0.2 }}
+        whileHover={{
+          scale: 1.01,
+          boxShadow: "0 8px 30px rgba(59, 130, 246, 0.15)",
+          transition: { duration: 0.2 },
+        }}
+        className="border border-blue-200 dark:border-blue-900/30 rounded-lg shadow-sm bg-blue-50 dark:bg-blue-900/10"
+      >
         <div className="p-6">
           <div className="flex flex-col sm:flex-row items-center gap-4">
-            <div className="shrink-0 p-4 rounded-full bg-white dark:bg-gray-800 shadow-sm">
-              <CheckCircle2 className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-            </div>
+            {/* Animated icon with pulse */}
+            <motion.div
+              whileHover={{
+                scale: 1.15,
+                rotate: 10,
+                transition: { type: "spring", stiffness: 400 },
+              }}
+              className="shrink-0 p-4 rounded-full bg-white dark:bg-gray-800 shadow-sm"
+            >
+              <motion.div
+                animate={{
+                  scale: [1, 1.12, 1],
+                }}
+                transition={{
+                  duration: 2.5,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              >
+                <CheckCircle2 className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+              </motion.div>
+            </motion.div>
+
+            {/* Text content with staggered entrance */}
             <div className="text-center sm:text-left">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+              <motion.h3
+                initial={{ opacity: 0, x: -15 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                viewport={{ once: true }}
+                className="font-semibold text-gray-900 dark:text-white mb-1"
+              >
                 Help Your Fellow Students
-              </h3>
-              <p className="text-sm text-gray-700 dark:text-gray-300">
+              </motion.h3>
+
+              <motion.p
+                initial={{ opacity: 0, x: -15 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                viewport={{ once: true }}
+                className="text-sm text-gray-700 dark:text-gray-300"
+              >
                 By uploading papers, you&apos;re contributing to a valuable
                 resource that helps thousands of students prepare for their
                 exams.
-              </p>
+              </motion.p>
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
