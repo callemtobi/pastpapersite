@@ -5,7 +5,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { motion } from "motion/react";
-import "../globals.css";
+import "@/css/globals.css";
 import {
   GraduationCap,
   Home,

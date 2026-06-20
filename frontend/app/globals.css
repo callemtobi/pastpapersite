@@ -7,8 +7,8 @@
   --background-secondary: #f5f5f5;
   --border-light: #e0e0e0;
   --input-bg: #ffffff; /* ← add here so it always exists */
-  --input-text: #171717;
-  --primary-button-bg: #ffffff;
+  --input-text: #f0f0f0;
+  --primary-button-bg: #4fc3f7;
   /* --secondary-button-bg: ; */
 }
 
@@ -40,7 +40,7 @@ html.dark {
   --background-secondary: #1a2332;
   --border-light: #066794;
   --input-bg: #1a2332;
-  --input-text: #f0f0f0;
+  --input-text: #171717;
   --primary-button-bg: #4fc3f7;
 }
 

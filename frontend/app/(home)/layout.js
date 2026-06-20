@@ -1,7 +1,7 @@
 "use client";
 
 import Header from "../components/Header";
-import "../globals.css";
+import "@/css/globals.css";
 
 export default function Layout({ children }) {
   return (

@@ -137,7 +137,7 @@ export default function UploadPage() {
           `imageMetadata[${index}]`,
           JSON.stringify({
             name: item.file.name,
-            keywordScore: item.keywords.score,
+            keywordScore: item.keywords?.score ?? 0,
           }),
         );
       });
@@ -284,7 +284,7 @@ export default function UploadPage() {
                             <p className="text-xs text-gray-500 dark:text-gray-400">
                               {(item.file.size / 1024 / 1024).toFixed(2)} MB •
                               Keyword Score:{" "}
-                              {(item.keywords.score * 100).toFixed(0)}%
+                              {((item.keywords?.score ?? 0) * 100).toFixed(0)}%
                             </p>
                           </div>
                           <button
@@ -365,7 +365,7 @@ export default function UploadPage() {
                 id="title"
                 type="text"
                 placeholder="e.g., Calculus II - Final Exam 2025"
-                value={formData.title}
+                value={formData?.title ?? ""}
                 onChange={(e) => updateField("title", e.target.value)}
                 className="w-full px-4 py-2 border border-border-light rounded-lg  focus:outline-none focus:border-blue-500"
                 required
@@ -602,9 +602,19 @@ export default function UploadPage() {
                   scale: 0.98,
                 }}
                 type="submit"
-                disabled={uploadLoading || selectedFiles.length === 0}
+                disabled={
+                  uploadLoading ||
+                  selectedFiles.length === 0 ||
+                  !formData.subject ||
+                  !formData.courseCode ||
+                  !formData.department ||
+                  !formData.examType ||
+                  !formData.semester ||
+                  !formData.title ||
+                  !formData.year
+                }
                 // className="inline-flex items-center justify-center gap-2 px-6 py-3 border border-border-light text-input-text disabled:bg-background-secondary disabled:text-input-text disabled:cursor-not-allowed rounded-lg font-medium transition-colors flex-1 h-12"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 border border-border-light bg-primary-button-bg text-input-text disabled:bg-background-secondary disabled:text-input-text disabled:cursor-not-allowed rounded-lg font-medium transition-colors flex-1 h-12"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 border border-border-light bg-primary-button-bg text-input-text disabled:bg-background-secondary disabled:text-foreground disabled:cursor-not-allowed rounded-lg font-medium transition-colors flex-1 h-12"
               >
                 {uploadLoading ? (
                   <>
@@ -628,6 +638,11 @@ export default function UploadPage() {
                     courseCode: "",
                     subject: "",
                     year: "",
+                    department: "",
+                    instructor: {
+                      title: "",
+                      name: "",
+                    },
                     semester: "",
                     examType: "",
                     description: "",
