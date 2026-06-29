@@ -8,7 +8,7 @@ const imageSchema = new mongoose.Schema({
   path: String,
   verificationStatus: {
     type: String,
-    enum: ["approved", "pending_review", "rejected"],
+    enum: ["approved", "pending", "rejected"],
     default: "pending",
   },
   keywordScore: Number, // 0-1 score for exam-related keywords
@@ -68,7 +68,7 @@ const paperSchema = new mongoose.Schema({
   images: [imageSchema],
   status: {
     type: String,
-    enum: ["approved", "pending_review", "rejected"],
+    enum: ["approved", "pending", "rejected"],
     default: "pending",
   },
   downloads: {

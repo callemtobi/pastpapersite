@@ -10,8 +10,14 @@ import {
   downloadPaper,
   previewPaper,
   incrementDownload,
+  updatePaper,
 } from "../controllers/paperController.js";
 import { authenticate } from "../middleware/auth.js";
+import {
+  getDashboardStats,
+  getRecentActivity,
+  getTopDownloadedPapers,
+} from "../controllers/dasboardController.js";
 
 const router = express.Router();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -51,52 +57,14 @@ const upload = multer({
   },
 });
 
-/**
- * Upload paper with multiple images
- * POST /api/papers/upload
- * Requires authentication
- * Body: form-data with:
- *   - title (string)
- *   - courseCode (string)
- *   - subject (string)
- *   - year (string)
- *   - semester (string)
- *   - examType (string)
- *   - description (string, optional)
- *   - images (file[], multiple)
- */
-router.post("/upload", authenticate, upload.array("images", 5), uploadPaper);
-
-/**
- * Get all papers with pagination and filters
- * GET /api/papers?page=1&limit=10&subject=Math&examType=Final&year=2024
- * Public endpoint
- */
 router.get("/", getPapers);
-
-/**
- * Get single paper by ID
- * GET /api/papers/:id
- * Public endpoint
- */
 router.get("/:id", getPaperById);
-
-/**
- * Delete paper by ID
- * DELETE /api/papers/:id
- * Requires authentication (user must own the paper)
- */
-router.delete("/:id", authenticate, deletePaper);
-
-/**
- * Download paper by ID
- * GET /api/papers/:id/download
- * Public endpoint
- */
 router.get("/:id/download", downloadPaper);
-
 router.get("/:id/preview", previewPaper);
 
+router.post("/upload", authenticate, upload.array("images", 5), uploadPaper);
 router.put("/:id/increment-download", incrementDownload);
+
+router.delete("/:id", authenticate, deletePaper);
 
 export default router;

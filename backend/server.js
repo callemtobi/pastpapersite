@@ -8,6 +8,7 @@ import { startCleanupCron } from "./utils/cleanupCron.js";
 // ROUTES
 import authRoute from "./routes/auth.js";
 import papersRoute from "./routes/papers.js";
+import adminRoute from "./routes/admin.js";
 
 // ------------------------------------MONGODB
 mongoose.connect(process.env.MONGODB_URI).then(() => {
@@ -47,6 +48,7 @@ app.use("/uploads", express.static("uploads"));
 // ------------------------------------ Routes
 app.use("/api/auth", authRoute);
 app.use("/api/papers", papersRoute);
+app.use("/api/admin", adminRoute);
 
 // ------------------------------------ Health check
 app.get("/api/health", (req, res) => {

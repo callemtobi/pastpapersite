@@ -55,6 +55,50 @@ const sendOTPEmail = async (email, otp, expiresAt) => {
 
 // ── Controllers ───────────────────────────────────────────────────────────────
 
+export const getUsers = async (req, res) => {
+  try {
+    const users = await User.find();
+    return res.status(200).json({
+      success: true,
+      message: "User's fetched successfully.",
+      users,
+    });
+  } catch (err) {
+    console.error("Get papers error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch papers",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};
+
+export const getUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "user not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      user,
+    });
+  } catch (err) {
+    console.error("Get user error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch user",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};
+
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -483,6 +527,7 @@ export const resetPassword = async (req, res) => {
 };
 
 export default {
+  getUsers,
   login,
   register,
   logout,

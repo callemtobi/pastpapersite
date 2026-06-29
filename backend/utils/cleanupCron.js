@@ -30,3 +30,16 @@ export const startCleanupCron = () => {
 };
 
 export default { startCleanupCron, cleanupUnverifiedUsers };
+
+/*
+┌──────── minute (0 - 59)
+│   ┌────── hour (0 - 23)
+│   │   ┌──── day of month (1 - 31)
+│   │   │   ┌── month (1 - 12)
+│   │   │   │   ┌ day of week (0 - 7)
+│   │   │   │   │
+You can add a sixth field for seconds
+Every 10 seconds --> cron.schedule("ESTERICK  /10 * * * * *", async () => {
+
+Every minute --> cron.schedule("* * * * *", async () => {
+*/

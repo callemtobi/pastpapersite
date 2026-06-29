@@ -18,142 +18,19 @@ import {
   ChevronRight,
   LayoutGrid,
   List,
+  Shield,
 } from "lucide-react";
 import Link from "next/link";
+import axios from "axios";
+import {
+  showSuccessToast,
+  showErrorToast,
+  showLoadingToast,
+  dismissToast,
+} from "@/lib/toastConfig";
 
 export default function Papers() {
-  const mockPapers = [
-    {
-      id: 1,
-      title: "Advanced Machine Learning",
-      courseCode: "CS-401",
-      subject: "Computer Science",
-      department: "Computer Science",
-      instructor: "Prof. Sarah Johnson",
-      year: "2024",
-      semester: "Fall",
-      examType: "Final Exam",
-      status: "approved",
-      downloads: 1247,
-      pages: 12,
-      createdAt: "2024-12-15",
-      verified: true,
-    },
-    {
-      id: 2,
-      title: "Calculus III",
-      courseCode: "MATH-301",
-      subject: "Mathematics",
-      department: "Mathematics",
-      instructor: "Prof. Michael Chen",
-      year: "2024",
-      semester: "Spring",
-      examType: "Midterm",
-      status: "pending",
-      downloads: 856,
-      pages: 8,
-      createdAt: "2024-12-14",
-      verified: false,
-    },
-    {
-      id: 3,
-      title: "Quantum Physics",
-      courseCode: "PHY-401",
-      subject: "Physics",
-      department: "Physics",
-      instructor: "Dr. Emily Watson",
-      year: "2023",
-      semester: "Fall",
-      examType: "Final Exam",
-      status: "approved",
-      downloads: 2341,
-      pages: 15,
-      createdAt: "2024-12-13",
-      verified: true,
-    },
-    {
-      id: 4,
-      title: "Organic Chemistry",
-      courseCode: "CHEM-301",
-      subject: "Chemistry",
-      department: "Chemistry",
-      instructor: "Prof. David Kim",
-      year: "2024",
-      semester: "Fall",
-      examType: "Midterm",
-      status: "rejected",
-      downloads: 432,
-      pages: 10,
-      createdAt: "2024-12-12",
-      verified: false,
-    },
-    {
-      id: 5,
-      title: "Data Structures",
-      courseCode: "CS-301",
-      subject: "Computer Science",
-      department: "Computer Science",
-      instructor: "Prof. Alex Rivera",
-      year: "2024",
-      semester: "Spring",
-      examType: "Final Exam",
-      status: "approved",
-      downloads: 1892,
-      pages: 14,
-      createdAt: "2024-12-11",
-      verified: true,
-    },
-    {
-      id: 6,
-      title: "Linear Algebra",
-      courseCode: "MATH-202",
-      subject: "Mathematics",
-      department: "Mathematics",
-      instructor: "Prof. Lisa Wong",
-      year: "2024",
-      semester: "Fall",
-      examType: "Final Exam",
-      status: "pending",
-      downloads: 634,
-      pages: 9,
-      createdAt: "2024-12-10",
-      verified: false,
-    },
-    {
-      id: 7,
-      title: "Thermodynamics",
-      courseCode: "PHY-301",
-      subject: "Physics",
-      department: "Physics",
-      instructor: "Dr. Robert Brown",
-      year: "2024",
-      semester: "Spring",
-      examType: "Midterm",
-      status: "approved",
-      downloads: 1023,
-      pages: 11,
-      createdAt: "2024-12-09",
-      verified: true,
-    },
-    {
-      id: 8,
-      title: "Inorganic Chemistry",
-      courseCode: "CHEM-401",
-      subject: "Chemistry",
-      department: "Chemistry",
-      instructor: "Prof. Maria Garcia",
-      year: "2023",
-      semester: "Fall",
-      examType: "Final Exam",
-      status: "rejected",
-      downloads: 289,
-      pages: 13,
-      createdAt: "2024-12-08",
-      verified: false,
-    },
-  ];
-
-  const [papers, setPapers] = useState(() => mockPapers);
+  const [papers, setPapers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPapers, setSelectedPapers] = useState([]);
@@ -163,43 +40,70 @@ export default function Papers() {
   const [filterYear, setFilterYear] = useState("all");
   const [activeTab, setActiveTab] = useState("all");
   const [viewMode, setViewMode] = useState("table");
+  const [error, setError] = useState(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
+  // Fetch papers from database
+  useEffect(() => {
+    let cancelled = false;
+    const getPapers = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get("http://localhost:8000/api/papers");
+        if (!cancelled) {
+          if (response.data.success && response.data.papers) {
+            setPapers(response.data.papers);
+          } else {
+            setPapers([]);
+          }
+        }
+      } catch (err) {
+        const errorMessage =
+          err.response?.data?.message ||
+          err.message ||
+          "Error fetching papers data";
+        if (!cancelled) setError(errorMessage);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    getPapers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Filter papers based on search, filters, and tabs
   const getFilteredPapers = () => {
     let filtered = papers;
 
-    // Search filter
     if (searchQuery) {
       filtered = filtered.filter(
         (paper) =>
-          paper.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          paper.courseCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          paper.subject.toLowerCase().includes(searchQuery.toLowerCase()),
+          paper.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          paper.courseCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          paper.subject?.toLowerCase().includes(searchQuery.toLowerCase()),
       );
     }
 
-    // Department filter
     if (filterDepartment !== "all") {
       filtered = filtered.filter(
         (paper) => paper.department === filterDepartment,
       );
     }
 
-    // Status filter
     if (filterStatus !== "all") {
       filtered = filtered.filter((paper) => paper.status === filterStatus);
     }
 
-    // Year filter
     if (filterYear !== "all") {
       filtered = filtered.filter((paper) => paper.year === filterYear);
     }
 
-    // Tab filter
     if (activeTab === "pending") {
       filtered = filtered.filter((paper) => paper.status === "pending");
     } else if (activeTab === "approved") {
@@ -232,16 +136,10 @@ export default function Papers() {
     setSelectedPapers([]);
   };
 
-  // Handle items per page change
   const handleItemsPerPageChange = (e) => {
     setItemsPerPage(Number(e.target.value));
     setCurrentPage(1);
   };
-
-  // Reset pagination when filters change
-  // useEffect(() => {
-  //   setCurrentPage(1);
-  // }, [searchQuery, filterDepartment, filterStatus, filterYear, activeTab]);
 
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
@@ -270,7 +168,7 @@ export default function Papers() {
     if (selectedPapers.length === currentPapers.length) {
       setSelectedPapers([]);
     } else {
-      setSelectedPapers(currentPapers.map((p) => p.id));
+      setSelectedPapers(currentPapers.map((p) => p._id));
     }
   };
 
@@ -287,7 +185,7 @@ export default function Papers() {
   const handleDeleteSelected = () => {
     if (selectedPapers.length === 0) return;
     if (confirm(`Delete ${selectedPapers.length} selected paper(s)?`)) {
-      setPapers(papers.filter((p) => !selectedPapers.includes(p.id)));
+      setPapers(papers.filter((p) => !selectedPapers.includes(p._id)));
       setSelectedPapers([]);
     }
   };
@@ -388,6 +286,7 @@ export default function Papers() {
               </p>
             </div>
           </div>
+
           {/* Tabs Menu */}
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="flex flex-wrap items-center justify-between border-b border-gray-200 dark:border-gray-700 px-4">
@@ -417,7 +316,6 @@ export default function Papers() {
               </div>
 
               <div className="flex items-center gap-2 py-2">
-                {/* View Toggle */}
                 <div className="hidden sm:flex border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                   <button
                     onClick={() => setViewMode("table")}
@@ -443,7 +341,6 @@ export default function Papers() {
                   </button>
                 </div>
 
-                {/* Bulk Actions */}
                 {selectedPapers.length > 0 && (
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -459,7 +356,6 @@ export default function Papers() {
                   </div>
                 )}
 
-                {/* Filters Toggle */}
                 <button
                   onClick={() => setShowFilters(!showFilters)}
                   className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
@@ -564,11 +460,13 @@ export default function Papers() {
                   {currentPapers.map((paper) => {
                     const statusBadge = getStatusBadge(paper.status);
                     const StatusIcon = statusBadge.icon;
+                    const isPending = paper.status === "pending";
+
                     return (
                       <tr
-                        key={paper.id}
+                        key={paper._id}
                         className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${
-                          selectedPapers.includes(paper.id)
+                          selectedPapers.includes(paper._id)
                             ? "bg-[#4FC3FC]/5 dark:bg-[#4FC3FC]/10"
                             : ""
                         }`}
@@ -576,21 +474,21 @@ export default function Papers() {
                         <td className="px-4 py-3">
                           <input
                             type="checkbox"
-                            checked={selectedPapers.includes(paper.id)}
-                            onChange={() => handleSelect(paper.id)}
+                            checked={selectedPapers.includes(paper._id)}
+                            onChange={() => handleSelect(paper._id)}
                             className="rounded border-gray-300 dark:border-gray-600"
                           />
                         </td>
                         <td className="px-4 py-3">
                           <div>
                             <Link
-                              href={`/papers/${paper.id}`}
+                              href={`/papers/${paper._id}`}
                               className="font-medium text-gray-900 dark:text-white text-sm hover:text-[#4FC3FC] transition-colors"
                             >
                               {paper.title}
                             </Link>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                              {paper.instructor}
+                              {paper.instructor?.title} {paper.instructor?.name}
                             </p>
                           </div>
                         </td>
@@ -620,32 +518,23 @@ export default function Papers() {
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <Link
-                              href={`/papers/${paper.id}`}
-                              className="p-1.5 text-gray-400 hover:text-[#4FC3FC] rounded-lg hover:bg-[#4FC3FC]/10 transition-colors"
+                              href={`/admin/papers/${paper._id}`}
+                              className="p-1.5 rounded-lg transition-colors"
                               title="View"
                             >
-                              <Eye className="w-4 h-4" />
+                              <button
+                                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                                  paper.status === "rejected"
+                                    ? "bg-red-500 hover:bg-red-600 text-white"
+                                    : paper.status === "pending"
+                                      ? "bg-yellow-500 hover:bg-yellow-600 text-white"
+                                      : "bg-[#4FC3FC] hover:bg-[#29b6f6] text-white"
+                                }`}
+                              >
+                                <Eye className="w-4 h-4" />
+                                View
+                              </button>
                             </Link>
-                            <Link
-                              href={`/papers/${paper.id}/edit`}
-                              className="p-1.5 text-gray-400 hover:text-blue-500 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                              title="Edit"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Link>
-                            <button
-                              onClick={() => {
-                                if (confirm(`Delete "${paper.title}"?`)) {
-                                  setPapers(
-                                    papers.filter((p) => p.id !== paper.id),
-                                  );
-                                }
-                              }}
-                              className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
                           </div>
                         </td>
                       </tr>

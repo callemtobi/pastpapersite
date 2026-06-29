@@ -173,8 +173,6 @@ export default function Register() {
   const cooldownRef = useRef(null);
 
   // ── Helpers ──────────────────────────────────────────────────
-  const updateField = (field, value) =>
-    setFormData((prev) => ({ ...prev, [field]: value }));
 
   // Start the resend cooldown timer
   const startCooldown = () => {

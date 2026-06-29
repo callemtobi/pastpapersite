@@ -3,6 +3,7 @@ import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";
 import Tesseract from "tesseract.js";
+import { log } from "console";
 
 /**
  * Validation rules
@@ -205,7 +206,7 @@ const determineApprovalStatus = (confidence, rawScore) => {
 
   if (rawScore < 100) {
     return {
-      status: "pending_review",
+      status: "pending",
       reason: `Raw score below approval threshold: ${rawScore} (threshold: 100)`,
       confidence,
       rawScore,
@@ -385,7 +386,7 @@ export const uploadPaper = async (req, res) => {
     }
 
     const hasPendingReview = imageData.some(
-      (img) => img.verificationStatus === "pending_review",
+      (img) => img.verificationStatus === "pending",
     );
 
     // Create paper record
@@ -404,7 +405,7 @@ export const uploadPaper = async (req, res) => {
       description,
       pages: imageData.length,
       images: imageData,
-      status: hasPendingReview ? "pending_review" : "approved",
+      status: hasPendingReview ? "pending" : "approved",
       uploadedBy: req.user?.id || null,
       createdAt: new Date(),
     };
@@ -503,47 +504,6 @@ export const getPapers = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch papers",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
-    });
-  }
-};
-
-/**
- * Delete paper
- * DELETE /api/papers/:id
- */
-export const deletePaper = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const paper = await Paper.findByIdAndDelete(id);
-    if (!paper) {
-      return res.status(404).json({
-        success: false,
-        message: "Paper not found",
-      });
-    }
-
-    // Delete uploaded image files
-    if (paper.images && paper.images.length > 0) {
-      for (const image of paper.images) {
-        try {
-          await fs.unlink(image.path);
-        } catch (error) {
-          console.error(`Failed to delete file ${image.path}:`, error);
-        }
-      }
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Paper deleted successfully",
-    });
-  } catch (error) {
-    console.error("Delete paper error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to delete paper",
       error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
@@ -653,6 +613,175 @@ export const incrementDownload = async (req, res) => {
   }
 };
 
+// ------------------ ADMIN
+// export const updatePaper = async (req, res) => {
+//   try {
+//     console.log("⌛ Update underway........");
+//     const { id } = req.params;
+//     const {
+//       title,
+//       courseCode,
+//       subject,
+//       department,
+//       instructor,
+//       year,
+//       semester,
+//       examType,
+//       description,
+//     } = req.body;
+
+//     const paper = await Paper.findById(id);
+//     if (!paper) {
+//       return res
+//         .status(404)
+//         .json({ success: false, message: "Paper not found" });
+//     }
+
+//     paper.title = title;
+//     paper.courseCode = courseCode;
+//     paper.subject = subject;
+//     paper.department = department;
+//     paper.instructor = instructor;
+//     paper.year = year;
+//     paper.semester = semester;
+//     paper.examType = examType;
+//     paper.description = description;
+
+//     await paper.save();
+//     console.log("✅ Update Successful!");
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Paper updated successfully.",
+//       data: paper,
+//     });
+//   } catch (error) {
+//     console.error("Update paper error:", error);
+
+//     return res.status(500).json({
+//       success: false,
+//       message: "Failed to update paper",
+//       error: process.env.NODE_ENV === "development" ? error.message : undefined,
+//     });
+//   }
+// };
+export const updatePaper = async (req, res) => {
+  try {
+    console.log("⌛ Update underway........");
+    const { id } = req.params;
+    const {
+      title,
+      courseCode,
+      subject,
+      department,
+      instructor,
+      year,
+      semester,
+      examType,
+      description,
+      status,
+    } = req.body;
+
+    const paper = await Paper.findById(id);
+    if (!paper) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Paper not found" });
+    }
+
+    // ── Update metadata fields if provided ─────────────────────
+    if (title !== undefined) paper.title = title;
+    if (courseCode !== undefined) paper.courseCode = courseCode;
+    if (subject !== undefined) paper.subject = subject;
+    if (department !== undefined) paper.department = department;
+    if (instructor !== undefined) paper.instructor = instructor;
+    if (year !== undefined) paper.year = year;
+    if (semester !== undefined) paper.semester = semester;
+    if (examType !== undefined) paper.examType = examType;
+    if (description !== undefined) paper.description = description;
+
+    // ── Update status if provided ──────────────────────────────
+    if (status !== undefined) {
+      // Validate status
+      const validStatuses = ["approved", "pending", "rejected"];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid status. Must be one of: ${validStatuses.join(", ")}`,
+        });
+      }
+      paper.status = status;
+    }
+
+    await paper.save();
+    console.log("✅ Update Successful!");
+
+    return res.status(200).json({
+      success: true,
+      message: "Paper updated successfully.",
+      data: paper,
+    });
+  } catch (error) {
+    console.error("Update paper error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update paper",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};
+
+export const verifyPaper = async (req, res) => {
+  try {
+    const { id } = req.params;
+  } catch (error) {
+    console.error(`Error: ${error}`);
+    return res.status(400).json({
+      success: false,
+      message: "Failed to verify paper.",
+      error: process.env.NODE_ENV == "development" ? error.message : undefined,
+    });
+  }
+};
+
+export const deletePaper = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const paper = await Paper.findByIdAndDelete(id);
+    if (!paper) {
+      return res.status(404).json({
+        success: false,
+        message: "Paper not found",
+      });
+    }
+
+    // Delete uploaded image files
+    if (paper.images && paper.images.length > 0) {
+      for (const image of paper.images) {
+        try {
+          await fs.unlink(image.path);
+        } catch (error) {
+          console.error(`Failed to delete file ${image.path}:`, error);
+        }
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Paper deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete paper error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete paper",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};
+
 export default {
   uploadPaper,
   getPaperById,
@@ -662,5 +791,6 @@ export default {
   downloadPaper,
   previewPaper,
   incrementDownload,
+  updatePaper,
   // detectExamKeywords,
 };
