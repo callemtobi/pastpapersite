@@ -17,7 +17,7 @@ import {
   getDashboardStats,
   getRecentActivity,
   getTopDownloadedPapers,
-} from "../controllers/dasboardController.js";
+} from "../controllers/dashboardController.js";
 
 const router = express.Router();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

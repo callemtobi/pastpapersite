@@ -95,7 +95,7 @@ export default function AdminDashboard() {
 
         // Fetch all stats from backend
         const response = await axios.get(
-          "http://localhost:8000/api/papers/admin/dashboard/stats",
+          "http://localhost:8000/api/admin/dashboard/stats",
         );
 
         if (!cancelled && response.data.success) {

@@ -441,7 +441,7 @@ const UserFormModal = ({
                 }`}
               >
                 <option value="">Select department</option>
-                {departments.map((dept) => (
+                {departments?.map((dept) => (
                   <option key={dept} value={dept}>
                     {dept}
                   </option>
@@ -595,7 +595,9 @@ export default function UsersPage() {
     const getUsers = async () => {
       try {
         setLoading(true);
-        const response = await axios.get("http://localhost:8000/api/auth");
+        const response = await axios.get(
+          "http://localhost:8000/api/admin/users",
+        );
         if (!cancelled) {
           if (response.data.success && response.data.users) {
             setUsers(response.data.users);
@@ -715,7 +717,7 @@ export default function UsersPage() {
 
     try {
       const response = await axios.post(
-        "http://localhost:8000/api/users",
+        "http://localhost:8000/api/admin/users",
         data,
       );
       dismissToast(loadingToast);
@@ -741,7 +743,7 @@ export default function UsersPage() {
 
     try {
       const response = await axios.patch(
-        `http://localhost:8000/api/users/${selectedUser._id}`,
+        `http://localhost:8000/api/admin/users/${selectedUser._id}`,
         data,
       );
       dismissToast(loadingToast);
@@ -773,7 +775,7 @@ export default function UsersPage() {
 
     try {
       const response = await axios.delete(
-        `http://localhost:8000/api/users/${id}`,
+        `http://localhost:8000/api/admin/users/${id}`,
       );
       dismissToast(loadingToast);
 
@@ -1073,7 +1075,7 @@ export default function UsersPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {currentUsers.map((user) => {
+                  {currentUsers.map((user, index) => {
                     const roleBadge = getRoleBadge(user.role);
                     const statusBadge = getStatusBadge(user.isActive);
                     const RoleIcon = roleBadge.icon;
@@ -1081,7 +1083,7 @@ export default function UsersPage() {
 
                     return (
                       <tr
-                        key={user._id}
+                        key={user._id || `user-${index}`}
                         className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${
                           selectedUsers.includes(user._id)
                             ? "bg-[#4FC3FC]/5 dark:bg-[#4FC3FC]/10"
