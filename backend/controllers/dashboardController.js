@@ -136,7 +136,7 @@ async function getRecentActivityFunc(limit = 10) {
     activities.push({
       type: "upload",
       user: "Unknown User", // You can populate this with user info
-      paper: `${paper.courseCode} - ${paper.title}`,
+      paper: `- ${paper.name}`,
       time: paper.createdAt,
     });
   });
@@ -184,7 +184,7 @@ export const getRecentActivity = async (req, res) => {
       activities.push({
         type: "upload",
         user: paper.uploadedBy || "System",
-        paper: `${paper.courseCode} - ${paper.title}`,
+        paper: `- ${paper.name}`,
         time: paper.createdAt,
         id: paper._id,
       });
@@ -200,7 +200,7 @@ export const getRecentActivity = async (req, res) => {
       activities.push({
         type: paper.status === "approved" ? "approval" : "rejection",
         user: "Admin",
-        paper: `${paper.courseCode} - ${paper.title}`,
+        paper: `- ${paper.name}`,
         time: paper.updatedAt,
         id: paper._id,
       });
@@ -217,7 +217,7 @@ export const getRecentActivity = async (req, res) => {
       activities.push({
         type: "download",
         user: "User",
-        paper: `${paper.courseCode} - ${paper.title}`,
+        paper: `- ${paper.name}`,
         time: paper.updatedAt,
         id: paper._id,
       });

@@ -35,99 +35,120 @@ export default function EditPaperPage() {
   const [success, setSuccess] = useState(false);
   const [originalFormData, setOriginalFormData] = useState(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+  // ── State for dropdown data ─────────────────────────────────────
+  const [departments, setDepartments] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [instructors, setInstructors] = useState([]);
+  const [loadingData, setLoadingData] = useState(false);
+
   const [formData, setFormData] = useState({
-    title: "",
-    courseCode: "",
-    subject: "",
+    course: "",
     department: "",
-    instructorTitle: "",
-    instructorName: "",
+    instructor: "",
     year: "",
     semester: "",
     examType: "",
     description: "",
-    pages: "",
   });
-
-  const departments = [
-    { value: "Computer Science", label: "Computer Science" },
-    { value: "Software Engineering", label: "Software Engineering" },
-    { value: "MLT", label: "MLT" },
-    { value: "Civil Engineering", label: "Civil Engineering" },
-    { value: "Electrical Engineering", label: "Electrical Engineering" },
-    { value: "Mathematics", label: "Mathematics" },
-    { value: "Physics", label: "Physics" },
-    { value: "Chemistry", label: "Chemistry" },
-    { value: "Economics", label: "Economics" },
-    { value: "Business", label: "Business" },
-  ];
-
-  const subjects = [
-    "Computer Science",
-    "Mathematics",
-    "Physics",
-    "Chemistry",
-    "Engineering",
-    "Economics",
-    "Biology",
-    "Business",
-  ];
 
   const semesters = ["Spring", "Summer", "Fall"];
   const examTypes = ["Midterm", "Final Exam"];
-  const instructorTitles = ["Mr.", "Mrs."];
-
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 10 }, (_, i) =>
     (currentYear - i).toString(),
   );
 
-  // Fetch paper details
+  // ── Fetch paper details and dropdown data ──────────────────────
   useEffect(() => {
     let cancelled = false;
 
-    const fetchPaper = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(
-          `http://localhost:8000/api/papers/${id}`,
+        setLoadingData(true);
+
+        // Fetch paper details and dropdown data in parallel
+        const [paperRes, deptRes, courseRes, instructorRes] = await Promise.all(
+          [
+            axios.get(`http://localhost:8000/api/papers/${id}`),
+            axios.get("http://localhost:8000/api/admin/departments"),
+            axios.get("http://localhost:8000/api/admin/courses"),
+            axios.get("http://localhost:8000/api/admin/instructors"),
+          ],
         );
 
-        if (!cancelled && response.data.success) {
-          const paper = response.data.paper;
-          const newFormData = {
-            title: paper.title || "",
-            courseCode: paper.courseCode || "",
-            subject: paper.subject || "",
-            department: paper.department || "",
-            instructorTitle: paper.instructor?.title || "",
-            instructorName: paper.instructor?.name || "",
-            year: paper.year || "",
-            semester: paper.semester || "",
-            examType: paper.examType || "",
-            description: paper.description || "",
-            pages: paper.pages?.toString() || "",
-          };
-          setOriginalFormData(newFormData);
-          setFormData(newFormData);
+        if (!cancelled) {
+          // ── Set dropdown data ──────────────────────────────────────
+          if (deptRes.data.success) {
+            setDepartments(deptRes.data.departments || []);
+          }
+          if (courseRes.data.success) {
+            setCourses(courseRes.data.courses || []);
+          }
+          if (instructorRes.data.success) {
+            setInstructors(instructorRes.data.instructors || []);
+          }
+
+          // ── Set form data ──────────────────────────────────────────
+          if (paperRes.data.success && paperRes.data.paper) {
+            const paper = paperRes.data.paper;
+            const newFormData = {
+              course: paper.course?._id || paper.course || "",
+              department: paper.department?._id || paper.department || "",
+              instructor: paper.instructor?._id || paper.instructor || "",
+              year: paper.year || "",
+              semester: paper.semester || "",
+              examType: paper.examType || "",
+              description: paper.description || "",
+            };
+            setOriginalFormData(newFormData);
+            setFormData(newFormData);
+          }
         }
       } catch (err) {
         const errorMessage =
-          err.response?.data?.message || err.message || "Failed to fetch paper";
+          err.response?.data?.message || err.message || "Failed to fetch data";
         if (!cancelled) setError(errorMessage);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          setLoadingData(false);
+        }
       }
     };
 
     if (id) {
-      fetchPaper();
+      fetchData();
     }
 
     return () => {
       cancelled = true;
     };
   }, [id]);
+
+  // ── Helper: Get course name for display ────────────────────────
+  const getCourseName = () => {
+    if (!formData.course) return "Select a course";
+    const course = courses.find((c) => c._id === formData.course);
+    return course?.name || "Unknown Course";
+  };
+
+  // ── Helper: Get department name for display ────────────────────
+  const getDepartmentName = () => {
+    if (!formData.department) return "Select a department";
+    const dept = departments.find((d) => d._id === formData.department);
+    return dept?.name || "Unknown Department";
+  };
+
+  // ── Helper: Get instructor name for display ────────────────────
+  const getInstructorName = () => {
+    if (!formData.instructor) return "Select an instructor";
+    const instructor = instructors.find((i) => i._id === formData.instructor);
+    return instructor
+      ? `${instructor.title} ${instructor.name}`
+      : "Unknown Instructor";
+  };
 
   // Check if any changes were made
   const hasChanges = () => {
@@ -140,25 +161,67 @@ export default function EditPaperPage() {
     if (!originalFormData) return [];
     const changes = [];
     const fields = [
-      { key: "title", label: "Title" },
-      { key: "courseCode", label: "Course Code" },
-      { key: "subject", label: "Subject" },
+      { key: "course", label: "Course" },
       { key: "department", label: "Department" },
-      { key: "instructorTitle", label: "Instructor Title" },
-      { key: "instructorName", label: "Instructor Name" },
+      { key: "instructor", label: "Instructor" },
       { key: "year", label: "Year" },
       { key: "semester", label: "Semester" },
       { key: "examType", label: "Exam Type" },
       { key: "description", label: "Description" },
-      { key: "pages", label: "Pages" },
     ];
 
     fields.forEach(({ key, label }) => {
-      if (formData[key] !== originalFormData[key]) {
+      const oldVal = originalFormData[key] || "(empty)";
+      const newVal = formData[key] || "(empty)";
+
+      // For references, show display names
+      if (key === "course") {
+        const oldCourse = courses.find(
+          (c) => c._id === originalFormData.course,
+        );
+        const newCourse = courses.find((c) => c._id === formData.course);
+        if (originalFormData.course !== formData.course) {
+          changes.push({
+            label,
+            old: oldCourse?.name || "(empty)",
+            new: newCourse?.name || "(empty)",
+          });
+        }
+      } else if (key === "department") {
+        const oldDept = departments.find(
+          (d) => d._id === originalFormData.department,
+        );
+        const newDept = departments.find((d) => d._id === formData.department);
+        if (originalFormData.department !== formData.department) {
+          changes.push({
+            label,
+            old: oldDept?.name || "(empty)",
+            new: newDept?.name || "(empty)",
+          });
+        }
+      } else if (key === "instructor") {
+        const oldInstructor = instructors.find(
+          (i) => i._id === originalFormData.instructor,
+        );
+        const newInstructor = instructors.find(
+          (i) => i._id === formData.instructor,
+        );
+        if (originalFormData.instructor !== formData.instructor) {
+          changes.push({
+            label,
+            old: oldInstructor
+              ? `${oldInstructor.title} ${oldInstructor.name}`
+              : "(empty)",
+            new: newInstructor
+              ? `${newInstructor.title} ${newInstructor.name}`
+              : "(empty)",
+          });
+        }
+      } else if (oldVal !== newVal) {
         changes.push({
           label,
-          old: originalFormData[key] || "(empty)",
-          new: formData[key] || "(empty)",
+          old: oldVal,
+          new: newVal,
         });
       }
     });
@@ -178,11 +241,9 @@ export default function EditPaperPage() {
 
     // ── 1. Required-field validation ────────────────────────────
     const requiredFields = [
-      { key: "title", label: "Title" },
-      { key: "courseCode", label: "Course Code" },
-      { key: "subject", label: "Subject" },
+      { key: "course", label: "Course" },
       { key: "department", label: "Department" },
-      { key: "instructorName", label: "Instructor Name" },
+      { key: "instructor", label: "Instructor" },
       { key: "year", label: "Year" },
       { key: "semester", label: "Semester" },
       { key: "examType", label: "Exam Type" },
@@ -218,23 +279,17 @@ export default function EditPaperPage() {
 
     try {
       const payload = {
-        title: formData.title,
-        courseCode: formData.courseCode,
-        subject: formData.subject,
+        course: formData.course,
         department: formData.department,
-        instructor: {
-          title: formData.instructorTitle,
-          name: formData.instructorName,
-        },
+        instructor: formData.instructor,
         year: formData.year,
         semester: formData.semester,
         examType: formData.examType,
         description: formData.description || "",
-        pages: parseInt(formData.pages) || 0,
       };
 
       const response = await axios.patch(
-        `http://localhost:8000/api/papers/admin/${id}`,
+        `http://localhost:8000/api/admin/papers/${id}`,
         payload,
       );
 
@@ -353,60 +408,33 @@ export default function EditPaperPage() {
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Title */}
+              {/* ── Course (Paper Name) ────────────────────────────── */}
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Title <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleChange}
-                  placeholder="e.g., Advanced Machine Learning"
-                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC] focus:ring-1 focus:ring-[#4FC3FC]"
-                  required
-                />
-              </div>
-
-              {/* Course Code */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Course Code <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="courseCode"
-                  value={formData.courseCode}
-                  onChange={handleChange}
-                  placeholder="e.g., CS-401"
-                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC] focus:ring-1 focus:ring-[#4FC3FC]"
-                  required
-                />
-              </div>
-
-              {/* Subject */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Subject <span className="text-red-500">*</span>
+                  Course <span className="text-red-500">*</span>
                 </label>
                 <select
-                  name="subject"
-                  value={formData.subject}
+                  name="course"
+                  value={formData.course}
                   onChange={handleChange}
                   className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC] focus:ring-1 focus:ring-[#4FC3FC]"
                   required
                 >
-                  <option value="">Select subject</option>
-                  {subjects.map((subject) => (
-                    <option key={subject} value={subject}>
-                      {subject}
-                    </option>
-                  ))}
+                  <option value="">Select a course</option>
+                  {courses
+                    .filter((c) => c.isActive)
+                    .map((course) => (
+                      <option key={course._id} value={course._id}>
+                        {course.name}
+                      </option>
+                    ))}
                 </select>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Current: {getCourseName()}
+                </p>
               </div>
 
-              {/* Department */}
+              {/* ── Department ───────────────────────────────────────── */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                   Department <span className="text-red-500">*</span>
@@ -419,50 +447,46 @@ export default function EditPaperPage() {
                   required
                 >
                   <option value="">Select department</option>
-                  {departments.map((dept) => (
-                    <option key={dept.value} value={dept.value}>
-                      {dept.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Instructor */}
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                    Title <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="instructorTitle"
-                    value={formData.instructorTitle}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC] focus:ring-1 focus:ring-[#4FC3FC]"
-                  >
-                    {instructorTitles.map((title) => (
-                      <option key={title} value={title}>
-                        {title}
+                  {departments
+                    .filter((d) => d.isActive)
+                    .map((dept) => (
+                      <option key={dept._id} value={dept._id}>
+                        {dept.name}
                       </option>
                     ))}
-                  </select>
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                    Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="instructorName"
-                    value={formData.instructorName}
-                    onChange={handleChange}
-                    placeholder="e.g., Sarah Johnson"
-                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC] focus:ring-1 focus:ring-[#4FC3FC]"
-                    required
-                  />
-                </div>
+                </select>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Current: {getDepartmentName()}
+                </p>
               </div>
 
-              {/* Year */}
+              {/* ── Instructor ───────────────────────────────────────── */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  Instructor <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="instructor"
+                  value={formData.instructor}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC] focus:ring-1 focus:ring-[#4FC3FC]"
+                  required
+                >
+                  <option value="">Select instructor</option>
+                  {instructors
+                    .filter((i) => i.isActive)
+                    .map((instructor) => (
+                      <option key={instructor._id} value={instructor._id}>
+                        {instructor.title} {instructor.name}
+                      </option>
+                    ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Current: {getInstructorName()}
+                </p>
+              </div>
+
+              {/* ── Year ─────────────────────────────────────────────── */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                   Year <span className="text-red-500">*</span>
@@ -483,7 +507,7 @@ export default function EditPaperPage() {
                 </select>
               </div>
 
-              {/* Semester */}
+              {/* ── Semester ─────────────────────────────────────────── */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                   Semester <span className="text-red-500">*</span>
@@ -504,7 +528,7 @@ export default function EditPaperPage() {
                 </select>
               </div>
 
-              {/* Exam Type */}
+              {/* ── Exam Type ────────────────────────────────────────── */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                   Exam Type <span className="text-red-500">*</span>
@@ -525,23 +549,7 @@ export default function EditPaperPage() {
                 </select>
               </div>
 
-              {/* Pages */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Number of Pages
-                </label>
-                <input
-                  type="number"
-                  name="pages"
-                  value={formData.pages}
-                  onChange={handleChange}
-                  placeholder="e.g., 10"
-                  min="0"
-                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC] focus:ring-1 focus:ring-[#4FC3FC]"
-                />
-              </div>
-
-              {/* Description */}
+              {/* ── Description ──────────────────────────────────────── */}
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                   Description

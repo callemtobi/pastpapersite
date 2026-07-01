@@ -1,3 +1,4 @@
+// app/(home)/upload/page.jsx
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -13,20 +14,26 @@ import {
 } from "lucide-react";
 import { validateFiles, detectExamKeywords } from "@/lib/uploadValidation";
 import { motion } from "motion/react";
+import {
+  showSuccessToast,
+  showErrorToast,
+  showLoadingToast,
+  dismissToast,
+} from "@/lib/toastConfig";
 
 export default function UploadPage() {
   const router = useRouter();
   const fileInputRef = useRef(null);
+  const [loading, setLoading] = useState(false);
+  const [departments, setDepartments] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [instructors, setInstructors] = useState([]);
+  const [selectedCourse, setSelectedCourse] = useState("");
   const [formData, setFormData] = useState({
-    title: "",
-    courseCode: "",
-    subject: "",
-    year: "",
+    course: "",
     department: "",
-    instructor: {
-      title: "",
-      name: "",
-    },
+    instructor: "",
+    year: "",
     semester: "",
     examType: "",
     description: "",
@@ -36,6 +43,33 @@ export default function UploadPage() {
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [validationErrors, setValidationErrors] = useState([]);
   const [uploadLoading, setUploadLoading] = useState(false);
+
+  // Fetch departments, courses, and instructors
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [deptRes, courseRes, instructorRes] = await Promise.all([
+          axios.get("http://localhost:8000/api/admin/departments"),
+          axios.get("http://localhost:8000/api/admin/courses"),
+          axios.get("http://localhost:8000/api/admin/instructors"),
+        ]);
+
+        if (deptRes.data.success) {
+          setDepartments(deptRes.data.departments || []);
+        }
+        if (courseRes.data.success) {
+          setCourses(courseRes.data.courses || []);
+        }
+        if (instructorRes.data.success) {
+          setInstructors(instructorRes.data.instructors || []);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        showErrorToast("Failed to load form data. Please refresh.");
+      }
+    };
+    fetchData();
+  }, []);
 
   const updateField = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -53,7 +87,6 @@ export default function UploadPage() {
       setValidationErrors([
         `Maximum 5 images allowed. You already have ${selectedFiles.length} image(s). You can only add ${5 - selectedFiles.length} more.`,
       ]);
-      // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -64,18 +97,15 @@ export default function UploadPage() {
     const validation = validateFiles(files);
     if (!validation.valid) {
       setValidationErrors(validation.errors);
-      // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
       return;
     }
 
-    // Calculate hashes and check for duplicates
     const newFiles = Array.from(files);
 
     try {
-      // Detect keywords
       const filesWithKeywords = await Promise.all(
         newFiles.map(async (file) => {
           const keywords = await detectExamKeywords(file);
@@ -83,16 +113,13 @@ export default function UploadPage() {
         }),
       );
 
-      // Append new files to existing ones instead of replacing
       setSelectedFiles((prevFiles) => [...prevFiles, ...filesWithKeywords]);
 
-      // Reset file input after successful addition
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
     } catch (error) {
       setValidationErrors([`Error processing files: ${error.message}`]);
-      // Reset file input on error
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -119,16 +146,13 @@ export default function UploadPage() {
       const formDataToSend = new FormData();
 
       // Add form fields
-      formDataToSend.append("title", formData.title);
-      formDataToSend.append("courseCode", formData.courseCode);
-      formDataToSend.append("subject", formData.subject);
+      formDataToSend.append("course", formData.course);
+      formDataToSend.append("department", formData.department);
+      formDataToSend.append("instructor", formData.instructor);
       formDataToSend.append("year", formData.year);
       formDataToSend.append("semester", formData.semester);
       formDataToSend.append("examType", formData.examType);
-      formDataToSend.append("description", formData.description);
-      formDataToSend.append("department", formData.department);
-      formDataToSend.append("instructor[title]", formData.instructor.title);
-      formDataToSend.append("instructor[name]", formData.instructor.name);
+      formDataToSend.append("description", formData.description || "");
 
       // Add files and their metadata
       selectedFiles.forEach((item, index) => {
@@ -142,8 +166,6 @@ export default function UploadPage() {
         );
       });
 
-      // Send to backend using axios
-      // const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       const response = await axios.post(
         "http://localhost:8000/api/papers/upload",
         formDataToSend,
@@ -157,32 +179,35 @@ export default function UploadPage() {
 
       if (response.status === 401) {
         router.push("/login");
+        return;
       }
 
-      setUploadSuccess(true);
-      setTimeout(() => {
-        setUploadSuccess(false);
-        setFormData({
-          title: "",
-          courseCode: "",
-          subject: "",
-          year: "",
-          semester: "",
-          examType: "",
-          department: "",
-          instructor: {
-            title: "",
-            name: "",
-          },
-          description: "",
-        });
-        setSelectedFiles([]);
-        setValidationErrors([]);
-      }, 3000);
+      if (response.data.success) {
+        showSuccessToast("Paper uploaded successfully!");
+        setUploadSuccess(true);
+        setTimeout(() => {
+          setUploadSuccess(false);
+          setFormData({
+            course: "",
+            department: "",
+            instructor: "",
+            year: "",
+            semester: "",
+            examType: "",
+            description: "",
+          });
+          setSelectedFiles([]);
+          setValidationErrors([]);
+          router.push("/download");
+        }, 2000);
+      } else {
+        showErrorToast(response.data.message || "Upload failed");
+      }
     } catch (error) {
       const errorMessage =
         error.response?.data?.message || error.message || "Upload failed";
       setValidationErrors([`Upload failed: ${errorMessage}`]);
+      showErrorToast(errorMessage);
     } finally {
       setUploadLoading(false);
     }
@@ -192,14 +217,8 @@ export default function UploadPage() {
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <motion.div
-        initial={{
-          opacity: 0,
-          y: 20,
-        }}
-        animate={{
-          opacity: 1,
-          y: 0,
-        }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
         className="space-y-2"
       >
@@ -211,21 +230,12 @@ export default function UploadPage() {
 
       {/* Upload Form */}
       <motion.div
-        initial={{
-          opacity: 0,
-          y: 30,
-        }}
-        animate={{
-          opacity: 1,
-          y: 0,
-        }}
-        transition={{
-          duration: 0.6,
-          delay: 0.2,
-        }}
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.2 }}
         className="border border-border-light rounded-lg shadow-sm"
       >
-        <div className=" border border-border-light p-6">
+        <div className="border border-border-light p-6">
           <h2 className="text-xl font-semibold text-foreground">
             Paper Details
           </h2>
@@ -237,7 +247,7 @@ export default function UploadPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* File Upload */}
             <div className="space-y-2">
-              <label htmlFor="file" className="block text-sm font-medium ">
+              <label htmlFor="file" className="block text-sm font-medium">
                 Paper Images * ({selectedFiles.length}/5)
               </label>
               <div
@@ -253,7 +263,7 @@ export default function UploadPage() {
                       <FileText className="w-6 h-6 text-green-600 dark:text-green-400" />
                     </div>
                     <div>
-                      <p className="font-medium ">
+                      <p className="font-medium">
                         {selectedFiles.length} image(s) selected
                       </p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -270,7 +280,6 @@ export default function UploadPage() {
                       </p>
                     </div>
 
-                    {/* Selected Files List */}
                     <div className="mt-4 space-y-2 max-h-48 overflow-y-auto">
                       {selectedFiles.map((item, idx) => (
                         <div
@@ -356,70 +365,79 @@ export default function UploadPage() {
               </div>
             </div>
 
-            {/* Title */}
+            {/* Course / Paper Name */}
             <div className="space-y-2">
-              <label htmlFor="title" className="block text-sm font-medium ">
-                Paper Title *
+              <label htmlFor="course" className="block text-sm font-medium">
+                Course / Paper Name *
               </label>
-              <input
-                id="title"
-                type="text"
-                placeholder="e.g., Calculus II - Final Exam 2025"
-                value={formData?.title ?? ""}
-                onChange={(e) => updateField("title", e.target.value)}
-                className="w-full px-4 py-2 border border-border-light rounded-lg  focus:outline-none focus:border-blue-500"
+              <select
+                id="course"
+                value={formData.course}
+                onChange={(e) => updateField("course", e.target.value)}
+                className="w-full px-4 py-2 border border-border-light rounded-lg focus:outline-none focus:border-blue-500"
                 required
-              />
+              >
+                <option value="">Select a course</option>
+                {courses
+                  .filter((c) => c.isActive)
+                  .map((course) => (
+                    <option key={course._id} value={course._id}>
+                      {course.name}
+                    </option>
+                  ))}
+              </select>
             </div>
 
-            {/* Course Code and Subject */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label
-                  htmlFor="courseCode"
-                  className="block text-sm font-medium "
-                >
-                  Course Code *
-                </label>
-                <input
-                  id="courseCode"
-                  type="text"
-                  placeholder="e.g., MATH 2420"
-                  value={formData.courseCode}
-                  onChange={(e) => updateField("courseCode", e.target.value)}
-                  className="w-full px-4 py-2 border border-border-light rounded-lg focus:outline-none focus:border-blue-500"
-                  required
-                />
-              </div>
+            {/* Department */}
+            <div className="space-y-2">
+              <label htmlFor="department" className="block text-sm font-medium">
+                Department *
+              </label>
+              <select
+                id="department"
+                value={formData.department}
+                onChange={(e) => updateField("department", e.target.value)}
+                className="w-full px-4 py-2 border border-border-light bg-input-bg rounded-lg focus:outline-none focus:border-blue-500"
+                required
+              >
+                <option value="">Select department</option>
+                {departments
+                  .filter((d) => d.isActive)
+                  .map((dept) => (
+                    <option key={dept._id} value={dept._id}>
+                      {dept.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
 
-              <div className="space-y-2">
-                <label htmlFor="subject" className="block text-sm font-medium ">
-                  Subject *
-                </label>
-                <select
-                  id="subject"
-                  value={formData.subject}
-                  onChange={(e) => updateField("subject", e.target.value)}
-                  className="w-full px-4 py-2 border border-border-light bg-input-bg rounded-lg focus:outline-none focus:border-blue-500"
-                  required
-                >
-                  <option value="">Select subject</option>
-                  <option value="Computer Science">Computer Science</option>
-                  <option value="Mathematics">Mathematics</option>
-                  <option value="Physics">Physics</option>
-                  <option value="Chemistry">Chemistry</option>
-                  <option value="Engineering">Engineering</option>
-                  <option value="Economics">Economics</option>
-                  <option value="Biology">Biology</option>
-                  <option value="Business">Business</option>
-                </select>
-              </div>
+            {/* Instructor */}
+            <div className="space-y-2">
+              <label htmlFor="instructor" className="block text-sm font-medium">
+                Instructor *
+              </label>
+              <select
+                id="instructor"
+                value={formData.instructor}
+                onChange={(e) => updateField("instructor", e.target.value)}
+                className="w-full px-4 py-2 border border-border-light bg-input-bg rounded-lg focus:outline-none focus:border-blue-500"
+                required
+              >
+                <option value="">Select instructor</option>
+                {instructors
+                  .filter((i) => i.isActive)
+                  .map((instructor) => (
+                    <option key={instructor._id} value={instructor._id}>
+                      {instructor.title} {instructor.name}
+                    </option>
+                  ))}
+              </select>
             </div>
 
             {/* Year and Semester */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label htmlFor="year" className="block text-sm font-medium ">
+                <label htmlFor="year" className="block text-sm font-medium">
                   Year *
                 </label>
                 <select
@@ -442,10 +460,7 @@ export default function UploadPage() {
               </div>
 
               <div className="space-y-2">
-                <label
-                  htmlFor="semester"
-                  className="block text-sm font-medium "
-                >
+                <label htmlFor="semester" className="block text-sm font-medium">
                   Semester *
                 </label>
                 <select
@@ -463,104 +478,29 @@ export default function UploadPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Exam Type */}
-              <div className="space-y-2">
-                <label
-                  htmlFor="examType"
-                  className="block text-sm font-medium "
-                >
-                  Exam Type *
-                </label>
-                <select
-                  id="examType"
-                  value={formData.examType}
-                  onChange={(e) => updateField("examType", e.target.value)}
-                  className="w-full px-4 py-2 border border-border-light bg-input-bg rounded-lg focus:outline-none focus:border-blue-500"
-                  required
-                >
-                  <option value="">Select exam type</option>
-                  <option value="Final Exam">Final Exam</option>
-                  <option value="Midterm">Midterm</option>
-                </select>
-              </div>
-
-              {/* Department */}
-              <div className="space-y-2">
-                <label
-                  htmlFor="department"
-                  className="block text-sm font-medium "
-                >
-                  Department *
-                </label>
-                <select
-                  id="department"
-                  value={formData.department}
-                  onChange={(e) => updateField("department", e.target.value)}
-                  className="w-full px-4 py-2 border border-border-light bg-input-bg rounded-lg focus:outline-none focus:border-blue-500"
-                  required
-                >
-                  <option value="">Select department</option>
-                  <option value="Computer Science">Computer Science</option>
-                  <option value="Software Engineering">
-                    Software Engineering
-                  </option>
-                  <option value="MLT">MLT</option>
-                  <option value="Civil Engineering">Civil Engineering</option>
-                  <option value="Electrical Engineering">
-                    Electrical Engineering
-                  </option>
-                </select>
-              </div>
-            </div>
-
-            {/* Instructor */}
+            {/* Exam Type */}
             <div className="space-y-2">
-              <label
-                htmlFor="instructor"
-                className="block text-sm font-medium "
-              >
-                Instructor *
+              <label htmlFor="examType" className="block text-sm font-medium">
+                Exam Type *
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-[20%_80%] gap-4">
-                <select
-                  id="instructor"
-                  value={formData.instructor.title}
-                  onChange={(e) =>
-                    updateField("instructor", {
-                      ...formData.instructor,
-                      title: e.target.value,
-                    })
-                  }
-                  className="w-full px-4 py-2 border border-border-light bg-input-bg rounded-lg focus:outline-none focus:border-blue-500"
-                  required
-                >
-                  <option value="">Select title</option>
-                  <option value="Mrs.">Mrs.</option>
-                  <option value="Mr.">Mr.</option>
-                </select>
-                <input
-                  type="text"
-                  id="instructor"
-                  placeholder="Enter instructor name"
-                  value={formData.instructor.name}
-                  onChange={(e) =>
-                    updateField("instructor", {
-                      ...formData.instructor,
-                      name: e.target.value,
-                    })
-                  }
-                  className="w-full px-4 py-2 border border-border-light  rounded-lg focus:outline-none focus:border-blue-500"
-                  required
-                />
-              </div>
+              <select
+                id="examType"
+                value={formData.examType}
+                onChange={(e) => updateField("examType", e.target.value)}
+                className="w-full px-4 py-2 border border-border-light bg-input-bg rounded-lg focus:outline-none focus:border-blue-500"
+                required
+              >
+                <option value="">Select exam type</option>
+                <option value="Final Exam">Final Exam</option>
+                <option value="Midterm">Midterm</option>
+              </select>
             </div>
 
             {/* Description */}
             <div className="space-y-2">
               <label
                 htmlFor="description"
-                className="block text-sm font-medium "
+                className="block text-sm font-medium"
               >
                 Description (Optional)
               </label>
@@ -570,7 +510,7 @@ export default function UploadPage() {
                 value={formData.description}
                 onChange={(e) => updateField("description", e.target.value)}
                 rows={4}
-                className="w-full px-4 py-2 border border-border-light rounded-lg  focus:outline-none focus:border-blue-500 resize-vertical"
+                className="w-full px-4 py-2 border border-border-light rounded-lg focus:outline-none focus:border-blue-500 resize-vertical"
               />
             </div>
 
@@ -595,25 +535,19 @@ export default function UploadPage() {
             {/* Submit Button */}
             <div className="flex flex-col sm:flex-row gap-3 pt-4">
               <motion.button
-                whileHover={{
-                  y: -2,
-                }}
-                whileTap={{
-                  scale: 0.98,
-                }}
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.98 }}
                 type="submit"
                 disabled={
                   uploadLoading ||
                   selectedFiles.length === 0 ||
-                  !formData.subject ||
-                  !formData.courseCode ||
+                  !formData.course ||
                   !formData.department ||
+                  !formData.instructor ||
                   !formData.examType ||
                   !formData.semester ||
-                  !formData.title ||
                   !formData.year
                 }
-                // className="inline-flex items-center justify-center gap-2 px-6 py-3 border border-border-light text-input-text disabled:bg-background-secondary disabled:text-input-text disabled:cursor-not-allowed rounded-lg font-medium transition-colors flex-1 h-12"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3 border border-border-light bg-primary-button-bg text-input-text disabled:bg-background-secondary disabled:text-foreground disabled:cursor-not-allowed rounded-lg font-medium transition-colors flex-1 h-12"
               >
                 {uploadLoading ? (
@@ -631,18 +565,13 @@ export default function UploadPage() {
               <button
                 type="button"
                 disabled={uploadLoading}
-                className="px-6 py-3  disabled:opacity-50 disabled:cursor-not-allowed border border-border-light rounded-lg hover:bg-border-light font-medium transition-colors sm:w-auto h-12"
+                className="px-6 py-3 disabled:opacity-50 disabled:cursor-not-allowed border border-border-light rounded-lg hover:bg-border-light font-medium transition-colors sm:w-auto h-12"
                 onClick={() => {
                   setFormData({
-                    title: "",
-                    courseCode: "",
-                    subject: "",
-                    year: "",
+                    course: "",
                     department: "",
-                    instructor: {
-                      title: "",
-                      name: "",
-                    },
+                    instructor: "",
+                    year: "",
                     semester: "",
                     examType: "",
                     description: "",
@@ -704,18 +633,9 @@ export default function UploadPage() {
 
       {/* Community Impact */}
       <motion.div
-        initial={{
-          opacity: 0,
-          y: 30,
-        }}
-        whileInView={{
-          opacity: 1,
-          y: 0,
-        }}
-        transition={{
-          duration: 0.7,
-          ease: "easeOut",
-        }}
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7, ease: "easeOut" }}
         viewport={{ once: true, amount: 0.2 }}
         whileHover={{
           scale: 1.01,
@@ -726,7 +646,6 @@ export default function UploadPage() {
       >
         <div className="p-6">
           <div className="flex flex-col sm:flex-row items-center gap-4">
-            {/* Animated icon with pulse */}
             <motion.div
               whileHover={{
                 scale: 1.15,
@@ -749,7 +668,6 @@ export default function UploadPage() {
               </motion.div>
             </motion.div>
 
-            {/* Text content with staggered entrance */}
             <div className="text-center sm:text-left">
               <motion.h3
                 initial={{ opacity: 0, x: -15 }}

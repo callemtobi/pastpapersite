@@ -22,32 +22,20 @@ const imageSchema = new mongoose.Schema({
 });
 
 const paperSchema = new mongoose.Schema({
-  title: {
-    type: String,
-    required: true,
-  },
-  courseCode: {
-    type: String,
-    required: true,
-  },
-  subject: {
-    type: String,
+  course: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Course",
     required: true,
   },
   department: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Department",
     required: true,
   },
   instructor: {
-    title: {
-      type: String,
-      enum: ["Mrs.", "Mr."],
-      required: true,
-    },
-    name: {
-      type: String,
-      required: true,
-    },
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Instructor",
+    required: true,
   },
   year: {
     type: String,
@@ -75,10 +63,6 @@ const paperSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
-  rating: {
-    type: Number,
-    default: 0,
-  },
   pages: {
     type: Number,
     default: 0,
@@ -96,5 +80,13 @@ const paperSchema = new mongoose.Schema({
     default: Date.now,
   },
 });
+
+paperSchema.index({ course: 1 });
+paperSchema.index({ department: 1 });
+paperSchema.index({ instructor: 1 });
+paperSchema.index({ year: 1 });
+paperSchema.index({ semester: 1 });
+paperSchema.index({ examType: 1 });
+paperSchema.index({ status: 1 });
 
 export default mongoose.model("Paper", paperSchema);

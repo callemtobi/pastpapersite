@@ -1,15 +1,17 @@
 import Paper from "../models/Paper.js";
+import Department from "../models/Department.js";
+import Course from "../models/Course.js";
+import Instructor from "../models/Instructor.js";
+import mongoose from "mongoose";
 import fs from "fs/promises";
 import path from "path";
-import crypto from "crypto";
 import Tesseract from "tesseract.js";
-import { log } from "console";
 
 /**
  * Validation rules
  */
 const VALIDATION_RULES = {
-  MAX_FILE_SIZE: 2 * 1024 * 1024, // 1 MB
+  MAX_FILE_SIZE: 2 * 1024 * 1024, // 2 MB
   MAX_FILES: 5,
   ALLOWED_TYPES: ["image/png", "image/jpeg", "image/jpg"],
 };
@@ -254,25 +256,20 @@ const determineApprovalStatus = (confidence, rawScore) => {
 export const uploadPaper = async (req, res) => {
   try {
     const {
-      title,
-      courseCode,
-      subject,
-      year,
+      course, // Changed from 'name' to 'course' (ObjectId)
       department,
       instructor,
+      year,
       semester,
       examType,
       description,
     } = req.body;
     const files = req.files;
 
-    console.log(`File title: ${title}`);
-
-    // Validate required fields
+    // ── Validate required fields ──────────────────────────────
+    // Changed: 'name' → 'course'
     if (
-      !title ||
-      !courseCode ||
-      !subject ||
+      !course ||
       !year ||
       !department ||
       !instructor ||
@@ -281,11 +278,40 @@ export const uploadPaper = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message: "Missing required fields",
+        message:
+          "Missing required fields: course, year, department, instructor, semester, examType",
       });
     }
 
-    // Validate files
+    // ── Validate that references exist ─────────────────────────
+    const [courseExists, deptExists, instructorExists] = await Promise.all([
+      Course.findOne({ _id: course, isActive: true }),
+      Department.findOne({ _id: department, isActive: true }),
+      Instructor.findOne({ _id: instructor, isActive: true }),
+    ]);
+
+    if (!courseExists) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or inactive course selected",
+      });
+    }
+
+    if (!deptExists) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or inactive department selected",
+      });
+    }
+
+    if (!instructorExists) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or inactive instructor selected",
+      });
+    }
+
+    // ── Validate files ──────────────────────────────────────────
     const validation = validateUploadedFiles(files);
     if (!validation.valid) {
       return res.status(400).json({
@@ -295,25 +321,19 @@ export const uploadPaper = async (req, res) => {
       });
     }
 
-    // Process each file
+    // ── Process each file ──────────────────────────────────────
     const imageData = [];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
 
       try {
-        // Detect keywords from filename
-        // const keywords = detectExamKeywords(file.originalname);
-        // console.log(`Filename keywords:`, keywords);
-
-        // Extract text using OCR and calculate weighted pattern score
         const ocrResult = await extractAndScoreText(file.path);
         console.log(
           `OCR Score: ${ocrResult.score}, Confidence: ${ocrResult.confidence}, Matched Patterns:`,
           ocrResult.matchedPatterns,
         );
 
-        // Determine approval status based on OCR confidence and raw score
         const approvalStatus = determineApprovalStatus(
           ocrResult.confidence,
           ocrResult.rawScore,
@@ -322,7 +342,6 @@ export const uploadPaper = async (req, res) => {
           `Status: ${approvalStatus.status}, Reason: ${approvalStatus.reason}`,
         );
 
-        // Store image data
         imageData.push({
           filename: file.filename,
           originalName: file.originalname,
@@ -342,7 +361,6 @@ export const uploadPaper = async (req, res) => {
         });
       } catch (error) {
         console.error(`Error processing file ${file.originalname}:`, error);
-        // Clean up uploaded file on error
         try {
           await fs.unlink(file.path);
         } catch (unlinkError) {
@@ -352,12 +370,11 @@ export const uploadPaper = async (req, res) => {
       }
     }
 
-    // Check if any image was rejected due to low OCR confidence
+    // ── Check for rejected images ──────────────────────────────
     const rejectedImages = imageData.filter(
       (img) => img.verificationStatus === "rejected",
     );
     if (rejectedImages.length > 0) {
-      // Clean up all uploaded files
       for (const img of imageData) {
         try {
           await fs.unlink(img.path);
@@ -389,31 +406,22 @@ export const uploadPaper = async (req, res) => {
       (img) => img.verificationStatus === "pending",
     );
 
-    // Create paper record
+    // ── Create paper record ─────────────────────────────────────
+    // Changed: removed instructor.title/name, using ObjectId reference
     const paperData = {
-      title,
-      courseCode,
-      subject,
+      course, // Now storing ObjectId reference
+      department, // Now storing ObjectId reference
+      instructor, // Now storing ObjectId reference
       year,
-      department,
-      instructor: {
-        title: instructor.title,
-        name: instructor.name,
-      },
       semester,
       examType,
-      description,
+      description: description || "",
       pages: imageData.length,
       images: imageData,
       status: hasPendingReview ? "pending" : "approved",
       uploadedBy: req.user?.id || null,
       createdAt: new Date(),
     };
-
-    // Only set uploadedBy if user is authenticated
-    if (req.user?.id) {
-      paperData.uploadedBy = req.user.id;
-    }
 
     const paper = await Paper.create(paperData);
 
@@ -422,8 +430,7 @@ export const uploadPaper = async (req, res) => {
       message: `Successfully uploaded ${imageData.length} image(s)`,
       paper: {
         id: paper._id,
-        title: paper.title,
-        courseCode: paper.courseCode,
+        course: paper.course,
         imagesCount: paper.images.length,
       },
     });
@@ -436,7 +443,6 @@ export const uploadPaper = async (req, res) => {
     });
   }
 };
-
 /**
  * Get paper by ID
  * GET /api/papers/:id
@@ -445,7 +451,12 @@ export const getPaperById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const paper = await Paper.findById(id);
+    const paper = await Paper.findById(id)
+      .populate("course", "name")
+      .populate("department", "name")
+      .populate("instructor", "title name")
+      .select("-images.path");
+
     if (!paper) {
       return res.status(404).json({
         success: false,
@@ -473,21 +484,80 @@ export const getPaperById = async (req, res) => {
  */
 export const getPapers = async (req, res) => {
   try {
-    const { page = 1, limit = 5, subject, examType, year } = req.query;
-    const skip = (page - 1) * limit;
+    const {
+      page = 1,
+      limit = 10,
+      search = "",
+      department = "",
+      examType = "",
+      year = "",
+      semester = "",
+    } = req.query;
 
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // ── Build filters ───────────────────────────────────────────
     const filters = {};
-    if (subject) filters.subject = subject;
+
+    // Only add filters if they have values
     if (examType) filters.examType = examType;
     if (year) filters.year = year;
+    if (semester) filters.semester = semester;
 
-    const papers = await Paper.find(filters)
-      .skip(skip)
-      .limit(parseInt(limit))
-      .select("-images.path") // Don't send file paths
-      .sort({ createdAt: -1 });
+    // Department filter (by ObjectId or name)
+    if (department) {
+      // If department is a valid ObjectId, use it directly
+      if (mongoose.Types.ObjectId.isValid(department)) {
+        filters.department = department;
+      } else {
+        // If it's a name, find the department first
+        const dept = await Department.findOne({
+          name: { $regex: department, $options: "i" },
+        });
+        if (dept) filters.department = dept._id;
+      }
+    }
 
-    const total = await Paper.countDocuments(filters);
+    // ── Search across populated fields ──────────────────────────
+    let searchFilter = {};
+    if (search) {
+      // First, find matching courses, departments, instructors
+      const matchingCourses = await Course.find({
+        name: { $regex: search, $options: "i" },
+      }).select("_id");
+
+      const matchingDepartments = await Department.find({
+        name: { $regex: search, $options: "i" },
+      }).select("_id");
+
+      const matchingInstructors = await Instructor.find({
+        name: { $regex: search, $options: "i" },
+      }).select("_id");
+
+      searchFilter = {
+        $or: [
+          { course: { $in: matchingCourses.map((c) => c._id) } },
+          { department: { $in: matchingDepartments.map((d) => d._id) } },
+          { instructor: { $in: matchingInstructors.map((i) => i._id) } },
+        ],
+      };
+    }
+
+    // ── Combine filters ──────────────────────────────────────────
+    const finalFilters = { ...filters, ...searchFilter };
+
+    // ── Query with populate ──────────────────────────────────────
+    const [papers, total] = await Promise.all([
+      Paper.find(finalFilters)
+        .populate("course", "name") // Get course name
+        .populate("department", "name") // Get department name
+        .populate("instructor", "title name") // Get instructor title & name
+        .select("-images.path") // Exclude file paths
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit)),
+      Paper.countDocuments(finalFilters),
+    ]);
 
     return res.status(200).json({
       success: true,
@@ -567,14 +637,18 @@ export const previewPaper = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const paper = await Paper.findById(id);
+    const paper = await Paper.findById(id)
+      .populate("course", "name")
+      .populate("department", "name")
+      .populate("instructor", "title name");
+
     if (!paper) {
       return res.status(404).json({
         success: false,
         message: "Paper not found",
       });
     }
-    console.log(`Viewing paper: ${paper.title}`);
+    console.log(`Viewing paper: ${paper.course?.name || "Unknown Course"}`);
     return res.status(200).json({
       success: true,
       paper,
@@ -611,186 +685,4 @@ export const incrementDownload = async (req, res) => {
     console.error("Download increment error:", error);
     res.status(500).json({ message: "Server error" });
   }
-};
-
-// ------------------ ADMIN
-// export const updatePaper = async (req, res) => {
-//   try {
-//     console.log("⌛ Update underway........");
-//     const { id } = req.params;
-//     const {
-//       title,
-//       courseCode,
-//       subject,
-//       department,
-//       instructor,
-//       year,
-//       semester,
-//       examType,
-//       description,
-//     } = req.body;
-
-//     const paper = await Paper.findById(id);
-//     if (!paper) {
-//       return res
-//         .status(404)
-//         .json({ success: false, message: "Paper not found" });
-//     }
-
-//     paper.title = title;
-//     paper.courseCode = courseCode;
-//     paper.subject = subject;
-//     paper.department = department;
-//     paper.instructor = instructor;
-//     paper.year = year;
-//     paper.semester = semester;
-//     paper.examType = examType;
-//     paper.description = description;
-
-//     await paper.save();
-//     console.log("✅ Update Successful!");
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "Paper updated successfully.",
-//       data: paper,
-//     });
-//   } catch (error) {
-//     console.error("Update paper error:", error);
-
-//     return res.status(500).json({
-//       success: false,
-//       message: "Failed to update paper",
-//       error: process.env.NODE_ENV === "development" ? error.message : undefined,
-//     });
-//   }
-// };
-export const updatePaper = async (req, res) => {
-  try {
-    console.log("⌛ Update underway........");
-    const { id } = req.params;
-    const {
-      title,
-      courseCode,
-      subject,
-      department,
-      instructor,
-      year,
-      semester,
-      examType,
-      description,
-      status,
-    } = req.body;
-
-    const paper = await Paper.findById(id);
-    if (!paper) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Paper not found" });
-    }
-
-    // ── Update metadata fields if provided ─────────────────────
-    if (title !== undefined) paper.title = title;
-    if (courseCode !== undefined) paper.courseCode = courseCode;
-    if (subject !== undefined) paper.subject = subject;
-    if (department !== undefined) paper.department = department;
-    if (instructor !== undefined) paper.instructor = instructor;
-    if (year !== undefined) paper.year = year;
-    if (semester !== undefined) paper.semester = semester;
-    if (examType !== undefined) paper.examType = examType;
-    if (description !== undefined) paper.description = description;
-
-    // ── Update status if provided ──────────────────────────────
-    if (status !== undefined) {
-      // Validate status
-      const validStatuses = ["approved", "pending", "rejected"];
-      if (!validStatuses.includes(status)) {
-        return res.status(400).json({
-          success: false,
-          message: `Invalid status. Must be one of: ${validStatuses.join(", ")}`,
-        });
-      }
-      paper.status = status;
-    }
-
-    await paper.save();
-    console.log("✅ Update Successful!");
-
-    return res.status(200).json({
-      success: true,
-      message: "Paper updated successfully.",
-      data: paper,
-    });
-  } catch (error) {
-    console.error("Update paper error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Failed to update paper",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
-    });
-  }
-};
-
-export const verifyPaper = async (req, res) => {
-  try {
-    const { id } = req.params;
-  } catch (error) {
-    console.error(`Error: ${error}`);
-    return res.status(400).json({
-      success: false,
-      message: "Failed to verify paper.",
-      error: process.env.NODE_ENV == "development" ? error.message : undefined,
-    });
-  }
-};
-
-export const deletePaper = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const paper = await Paper.findByIdAndDelete(id);
-    if (!paper) {
-      return res.status(404).json({
-        success: false,
-        message: "Paper not found",
-      });
-    }
-
-    // Delete uploaded image files
-    if (paper.images && paper.images.length > 0) {
-      for (const image of paper.images) {
-        try {
-          await fs.unlink(image.path);
-        } catch (error) {
-          console.error(`Failed to delete file ${image.path}:`, error);
-        }
-      }
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Paper deleted successfully",
-    });
-  } catch (error) {
-    console.error("Delete paper error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to delete paper",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
-    });
-  }
-};
-
-export default {
-  uploadPaper,
-  getPaperById,
-  getPapers,
-  deletePaper,
-  validateUploadedFiles,
-  downloadPaper,
-  previewPaper,
-  incrementDownload,
-  updatePaper,
-  // detectExamKeywords,
 };

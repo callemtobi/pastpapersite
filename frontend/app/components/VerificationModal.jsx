@@ -1,7 +1,18 @@
 // components/VerificationModal.jsx
 "use client";
 
-import { Shield, X, Check, Loader2, Clock, AlertTriangle } from "lucide-react";
+import {
+  Shield,
+  X,
+  Check,
+  Loader2,
+  Clock,
+  AlertTriangle,
+  Building,
+  User,
+  Calendar,
+  FileText,
+} from "lucide-react";
 
 export default function VerificationModal({
   isOpen,
@@ -12,6 +23,25 @@ export default function VerificationModal({
   isLoading,
 }) {
   if (!isOpen || !paper) return null;
+
+  // ── Helper functions ────────────────────────────────────────────
+  const getCourseName = () => {
+    if (!paper) return "Unknown Course";
+    return paper.course?.name || paper.course || "Unknown Course";
+  };
+
+  const getDepartmentName = () => {
+    if (!paper) return "Unknown Department";
+    return paper.department?.name || paper.department || "Unknown Department";
+  };
+
+  const getInstructorName = () => {
+    if (!paper) return "Unknown Instructor";
+    if (paper.instructor?.title && paper.instructor?.name) {
+      return `${paper.instructor.title} ${paper.instructor.name}`;
+    }
+    return paper.instructor?.name || paper.instructor || "Unknown Instructor";
+  };
 
   const getOcrScoreColor = (score) => {
     if (score >= 70) return "bg-green-500";
@@ -31,6 +61,9 @@ export default function VerificationModal({
   const ocrScore = paper.images?.[0]?.ocrScore || 0;
   const imageStatus = paper.images?.[0]?.verificationStatus || "pending";
   const statusBadge = getStatusBadge(imageStatus);
+  const courseName = getCourseName();
+  const departmentName = getDepartmentName();
+  const instructorName = getInstructorName();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -65,23 +98,9 @@ export default function VerificationModal({
           {/* Paper Info */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Title</p>
-              <p className="font-medium text-gray-900 dark:text-white text-sm truncate">
-                {paper.title}
-              </p>
-            </div>
-            <div>
               <p className="text-xs text-gray-500 dark:text-gray-400">Course</p>
-              <p className="font-medium text-gray-900 dark:text-white text-sm">
-                {paper.courseCode}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Subject
-              </p>
               <p className="font-medium text-gray-900 dark:text-white text-sm truncate">
-                {paper.subject}
+                {courseName}
               </p>
             </div>
             <div>
@@ -89,7 +108,23 @@ export default function VerificationModal({
                 Department
               </p>
               <p className="font-medium text-gray-900 dark:text-white text-sm truncate">
-                {paper.department}
+                {departmentName}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Instructor
+              </p>
+              <p className="font-medium text-gray-900 dark:text-white text-sm truncate">
+                {instructorName}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Exam Type
+              </p>
+              <p className="font-medium text-gray-900 dark:text-white text-sm">
+                {paper.examType || "N/A"}
               </p>
             </div>
           </div>
@@ -160,7 +195,8 @@ export default function VerificationModal({
 
           {/* Images Info */}
           <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-            <span>📄 {paper.images?.length || 0} image(s)</span>
+            <FileText className="w-4 h-4" />
+            <span>{paper.images?.length || 0} image(s)</span>
           </div>
         </div>
 

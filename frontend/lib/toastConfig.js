@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 export const showSuccessToast = (message) => {
   toast.success(message, {
     duration: 4000,
-    position: "top-center",
+    position: "top-right",
   });
 };
 
@@ -18,7 +18,7 @@ export const showSuccessToast = (message) => {
 export const showErrorToast = (message) => {
   toast.error(message, {
     duration: 5000,
-    position: "top-center",
+    position: "top-right",
   });
 };
 

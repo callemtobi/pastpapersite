@@ -55,8 +55,8 @@ export default function Sidebar({ isOpen, setIsOpen }) {
           icon: User,
         },
         {
-          path: "/admin/departments",
-          label: "Departments",
+          path: "/admin/academic-data",
+          label: "Academic Data",
           icon: GraduationCap,
         },
       ],

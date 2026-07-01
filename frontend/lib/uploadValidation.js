@@ -136,13 +136,3 @@ export const detectExamKeywords = async (file) => {
     reader.readAsDataURL(file);
   });
 };
-
-export default {
-  VALIDATION_RULES,
-  EXAM_KEYWORDS,
-  validateFileSize,
-  validateFileType,
-  validateFileCount,
-  validateFiles,
-  detectExamKeywords,
-};

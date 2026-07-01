@@ -55,6 +55,7 @@ export default function Papers() {
         const response = await axios.get("http://localhost:8000/api/papers");
         if (!cancelled) {
           if (response.data.success && response.data.papers) {
+            // The API already populates course, department, instructor
             setPapers(response.data.papers);
           } else {
             setPapers([]);
@@ -82,17 +83,25 @@ export default function Papers() {
     let filtered = papers;
 
     if (searchQuery) {
-      filtered = filtered.filter(
-        (paper) =>
-          paper.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          paper.courseCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          paper.subject?.toLowerCase().includes(searchQuery.toLowerCase()),
-      );
+      filtered = filtered.filter((paper) => {
+        const courseName = paper.course?.name || "";
+        const deptName = paper.department?.name || "";
+        const instructorName = paper.instructor?.name || "";
+        const searchLower = searchQuery.toLowerCase();
+        return (
+          courseName.toLowerCase().includes(searchLower) ||
+          deptName.toLowerCase().includes(searchLower) ||
+          instructorName.toLowerCase().includes(searchLower) ||
+          paper.examType?.toLowerCase().includes(searchLower) ||
+          paper.semester?.toLowerCase().includes(searchLower) ||
+          paper.year?.toLowerCase().includes(searchLower)
+        );
+      });
     }
 
     if (filterDepartment !== "all") {
       filtered = filtered.filter(
-        (paper) => paper.department === filterDepartment,
+        (paper) => paper.department?.name === filterDepartment,
       );
     }
 
@@ -377,10 +386,15 @@ export default function Papers() {
                   className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC]"
                 >
                   <option value="all">All Departments</option>
-                  <option value="Computer Science">Computer Science</option>
-                  <option value="Mathematics">Mathematics</option>
-                  <option value="Physics">Physics</option>
-                  <option value="Chemistry">Chemistry</option>
+                  {[
+                    ...new Set(
+                      papers.map((p) => p.department?.name).filter(Boolean),
+                    ),
+                  ].map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept}
+                    </option>
+                  ))}
                 </select>
 
                 <select
@@ -400,9 +414,13 @@ export default function Papers() {
                   className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC]"
                 >
                   <option value="all">All Years</option>
-                  <option value="2024">2024</option>
-                  <option value="2023">2023</option>
-                  <option value="2022">2022</option>
+                  {[...new Set(papers.map((p) => p.year).filter(Boolean))].map(
+                    (year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ),
+                  )}
                 </select>
 
                 <button
@@ -443,7 +461,7 @@ export default function Papers() {
                       Paper
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Course
+                      Course / Exam
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">
                       Department
@@ -485,26 +503,27 @@ export default function Papers() {
                               href={`/papers/${paper._id}`}
                               className="font-medium text-gray-900 dark:text-white text-sm hover:text-[#4FC3FC] transition-colors"
                             >
-                              {paper.title}
+                              {paper.course?.name || "Unknown Course"}
                             </Link>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                              {paper.instructor?.title} {paper.instructor?.name}
+                              {paper.instructor?.title}{" "}
+                              {paper.instructor?.name || "Unknown Instructor"}
                             </p>
                           </div>
                         </td>
                         <td className="px-4 py-3">
                           <div>
                             <p className="text-sm text-gray-900 dark:text-white">
-                              {paper.courseCode}
+                              {paper.examType}
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
-                              {paper.examType} • {paper.semester} {paper.year}
+                              {paper.semester} {paper.year}
                             </p>
                           </div>
                         </td>
                         <td className="px-4 py-3 hidden md:table-cell">
                           <span className="text-sm text-gray-600 dark:text-gray-300">
-                            {paper.department}
+                            {paper.department?.name || "Unknown"}
                           </span>
                         </td>
                         <td className="px-4 py-3 hidden sm:table-cell">
@@ -517,24 +536,55 @@ export default function Papers() {
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <Link
-                              href={`/admin/papers/${paper._id}`}
-                              className="p-1.5 rounded-lg transition-colors"
-                              title="View"
-                            >
-                              <button
-                                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                                  paper.status === "rejected"
-                                    ? "bg-red-500 hover:bg-red-600 text-white"
-                                    : paper.status === "pending"
-                                      ? "bg-yellow-500 hover:bg-yellow-600 text-white"
-                                      : "bg-[#4FC3FC] hover:bg-[#29b6f6] text-white"
-                                }`}
+                            {isPending ? (
+                              <Link
+                                href={`/admin/papers/${paper._id}`}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-medium transition-colors"
                               >
-                                <Eye className="w-4 h-4" />
-                                View
-                              </button>
-                            </Link>
+                                <Shield className="w-4 h-4" />
+                                Verify
+                              </Link>
+                            ) : (
+                              <>
+                                <Link
+                                  href={`/admin/papers/${paper._id}`}
+                                  className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                                    paper.status === "rejected"
+                                      ? "bg-red-500 hover:bg-red-600 text-white"
+                                      : "bg-[#4FC3FC] hover:bg-[#29b6f6] text-white"
+                                  }`}
+                                >
+                                  <Eye className="w-4 h-4" />
+                                  View
+                                </Link>
+                                <Link
+                                  href={`/admin/papers/${paper._id}/edit`}
+                                  className="p-1.5 text-gray-400 hover:text-blue-500 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                  title="Edit"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Link>
+                                <button
+                                  onClick={() => {
+                                    if (
+                                      confirm(
+                                        `Delete "${paper.course?.name || paper._id}"?`,
+                                      )
+                                    ) {
+                                      setPapers(
+                                        papers.filter(
+                                          (p) => p._id !== paper._id,
+                                        ),
+                                      );
+                                    }
+                                  }}
+                                  className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                  title="Delete"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>

@@ -1,6 +1,7 @@
+// app/admin/papers/create/page.jsx
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import {
@@ -20,19 +21,19 @@ import {
   dismissToast,
 } from "@/lib/toastConfig";
 
-export default function UploadPage() {
+export default function CreatePaperPage() {
   const router = useRouter();
   const fileInputRef = useRef(null);
+  const [loading, setLoading] = useState(false);
+  const [departments, setDepartments] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [instructors, setInstructors] = useState([]);
+
   const [formData, setFormData] = useState({
-    title: "",
-    courseCode: "",
-    subject: "",
-    year: "",
+    course: "",
     department: "",
-    instructor: {
-      title: "",
-      name: "",
-    },
+    instructor: "",
+    year: "",
     semester: "",
     examType: "",
     description: "",
@@ -44,47 +45,45 @@ export default function UploadPage() {
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  const departments = [
-    "Computer Science",
-    "Software Engineering",
-    "MLT",
-    "Civil Engineering",
-    "Electrical Engineering",
-    "Mathematics",
-    "Physics",
-    "Chemistry",
-    "Economics",
-    "Business",
-  ];
-
-  const subjects = [
-    "Computer Science",
-    "Mathematics",
-    "Physics",
-    "Chemistry",
-    "Engineering",
-    "Economics",
-    "Biology",
-    "Business",
-  ];
-
   const semesters = ["Spring", "Summer", "Fall"];
   const examTypes = ["Midterm", "Final Exam"];
-  const instructorTitles = ["Mr.", "Mrs."];
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 10 }, (_, i) =>
     (currentYear - i).toString(),
   );
 
+  // ── Fetch departments, courses, and instructors ──────────────
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [deptRes, courseRes, instructorRes] = await Promise.all([
+          axios.get("http://localhost:8000/api/admin/departments"),
+          axios.get("http://localhost:8000/api/admin/courses"),
+          axios.get("http://localhost:8000/api/admin/instructors"),
+        ]);
+
+        if (deptRes.data.success) {
+          setDepartments(deptRes.data.departments || []);
+        }
+        if (courseRes.data.success) {
+          setCourses(courseRes.data.courses || []);
+        }
+        if (instructorRes.data.success) {
+          setInstructors(instructorRes.data.instructors || []);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        showErrorToast("Failed to load form data. Please refresh.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
   const updateField = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const updateInstructor = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      instructor: { ...prev.instructor, [field]: value },
-    }));
   };
 
   const handleFileChange = async (e) => {
@@ -93,7 +92,6 @@ export default function UploadPage() {
 
     if (!files || files.length === 0) return;
 
-    // Check total file count (max 5)
     const totalFiles = selectedFiles.length + files.length;
     if (totalFiles > 5) {
       setValidationErrors([
@@ -105,7 +103,6 @@ export default function UploadPage() {
       return;
     }
 
-    // Validate files using the imported validation
     const validation = validateFiles(files);
     if (!validation.valid) {
       setValidationErrors(validation.errors);
@@ -115,14 +112,12 @@ export default function UploadPage() {
       return;
     }
 
-    // Process files with keyword detection
     const newFiles = Array.from(files);
     try {
       const filesWithKeywords = await Promise.all(
         newFiles.map(async (file) => {
           try {
             const keywords = await detectExamKeywords(file);
-            // Ensure we have valid data even if the function returns incomplete results
             return {
               file,
               keywords: {
@@ -137,7 +132,6 @@ export default function UploadPage() {
               file.name,
               keywordError,
             );
-            // Return with default values if keyword detection fails
             return {
               file,
               keywords: {
@@ -151,7 +145,6 @@ export default function UploadPage() {
 
       setSelectedFiles((prevFiles) => [...prevFiles, ...filesWithKeywords]);
 
-      // Reset file input after successful addition
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -169,7 +162,6 @@ export default function UploadPage() {
     setValidationErrors([]);
   };
 
-  // Check if any files have low keyword score (warning for admin)
   const hasLowKeywordScore = selectedFiles.some(
     (item) => (item.keywords?.score ?? 0) < 0.3,
   );
@@ -177,24 +169,22 @@ export default function UploadPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate required fields
+    // ── Validate required fields ──────────────────────────────────
     const requiredFields = [
-      "title",
-      "courseCode",
-      "subject",
-      "year",
-      "department",
-      "semester",
-      "examType",
+      { key: "course", label: "Course" },
+      { key: "department", label: "Department" },
+      { key: "instructor", label: "Instructor" },
+      { key: "year", label: "Year" },
+      { key: "semester", label: "Semester" },
+      { key: "examType", label: "Exam Type" },
     ];
     const missingFields = requiredFields.filter(
-      (field) => !formData[field]?.trim(),
+      (field) => !formData[field.key]?.trim(),
     );
 
     if (missingFields.length > 0) {
-      showErrorToast(
-        `Please fill in all required fields: ${missingFields.join(", ")}`,
-      );
+      const missingLabels = missingFields.map((f) => f.label).join(", ");
+      showErrorToast(`Please fill in all required fields: ${missingLabels}`);
       return;
     }
 
@@ -203,12 +193,27 @@ export default function UploadPage() {
       return;
     }
 
-    if (!formData.instructor.name.trim()) {
-      showErrorToast("Please enter the instructor's name");
+    // ── Verify selected references exist ──────────────────────────
+    const selectedCourse = courses.find((c) => c._id === formData.course);
+    const selectedDept = departments.find((d) => d._id === formData.department);
+    const selectedInstructor = instructors.find(
+      (i) => i._id === formData.instructor,
+    );
+
+    if (!selectedCourse || !selectedCourse.isActive) {
+      showErrorToast("Selected course is invalid or inactive");
+      return;
+    }
+    if (!selectedDept || !selectedDept.isActive) {
+      showErrorToast("Selected department is invalid or inactive");
+      return;
+    }
+    if (!selectedInstructor || !selectedInstructor.isActive) {
+      showErrorToast("Selected instructor is invalid or inactive");
       return;
     }
 
-    // Show warning if low keyword score
+    // ── Low keyword score warning ─────────────────────────────────
     if (hasLowKeywordScore) {
       const confirmUpload = confirm(
         "Some images have low exam-related keyword scores. Do you want to continue?",
@@ -222,18 +227,17 @@ export default function UploadPage() {
 
     try {
       const formDataToSend = new FormData();
-      formDataToSend.append("title", formData.title);
-      formDataToSend.append("courseCode", formData.courseCode);
-      formDataToSend.append("subject", formData.subject);
+
+      // ── Send ObjectId references ─────────────────────────────────
+      formDataToSend.append("course", formData.course);
+      formDataToSend.append("department", formData.department);
+      formDataToSend.append("instructor", formData.instructor);
       formDataToSend.append("year", formData.year);
       formDataToSend.append("semester", formData.semester);
       formDataToSend.append("examType", formData.examType);
       formDataToSend.append("description", formData.description || "");
-      formDataToSend.append("department", formData.department);
-      formDataToSend.append("instructorTitle", formData.instructor.title);
-      formDataToSend.append("instructorName", formData.instructor.name);
 
-      // Add files and their metadata with fallbacks
+      // ── Add files and their metadata ─────────────────────────────
       selectedFiles.forEach((item, index) => {
         formDataToSend.append("images", item.file);
         formDataToSend.append(
@@ -272,26 +276,21 @@ export default function UploadPage() {
       }
 
       if (response.data.success) {
+        const courseName = selectedCourse?.name || "Paper";
         showSuccessToast(
-          `Paper "${formData.title}" uploaded with ${selectedFiles.length} image(s)!`,
+          `"${courseName}" uploaded with ${selectedFiles.length} image(s)!`,
         );
         setUploadSuccess(true);
 
-        // Reset form after success
         setTimeout(() => {
           setUploadSuccess(false);
           setFormData({
-            title: "",
-            courseCode: "",
-            subject: "",
-            year: "",
+            course: "",
             department: "",
-            instructor: {
-              title: "",
-              name: "",
-            },
-            semester: "Spring",
-            examType: "Midterm",
+            instructor: "",
+            year: "",
+            semester: "",
+            examType: "",
             description: "",
           });
           setSelectedFiles([]);
@@ -327,7 +326,7 @@ export default function UploadPage() {
           <div className="flex items-center justify-between px-4 sm:px-6 h-16">
             <div className="flex items-center gap-3">
               <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Upload Paper
+                Create Paper
               </h1>
             </div>
             <div className="flex items-center gap-2">
@@ -391,7 +390,6 @@ export default function UploadPage() {
                         </p>
                       </div>
 
-                      {/* Selected Files List */}
                       <div className="mt-4 space-y-2 max-h-48 overflow-y-auto">
                         {selectedFiles.map((item, idx) => {
                           const keywords = item.keywords || {
@@ -487,7 +485,6 @@ export default function UploadPage() {
                   )}
                 </div>
 
-                {/* Low Keyword Score Warning */}
                 {hasLowKeywordScore && selectedFiles.length > 0 && (
                   <div className="flex items-start gap-2 text-sm text-yellow-600 dark:text-yellow-400 mt-2">
                     <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
@@ -498,7 +495,6 @@ export default function UploadPage() {
                   </div>
                 )}
 
-                {/* Validation Errors */}
                 {validationErrors.length > 0 && (
                   <div className="flex items-start gap-2 text-sm text-red-500 dark:text-red-400 mt-2">
                     <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
@@ -527,70 +523,33 @@ export default function UploadPage() {
                 </div>
               )}
 
-              {/* Title */}
+              {/* ── Course (Paper Name) ────────────────────────────── */}
               <div className="space-y-2">
                 <label
-                  htmlFor="title"
+                  htmlFor="course"
                   className="block text-sm font-medium text-gray-700 dark:text-gray-300"
                 >
-                  Paper Title <span className="text-red-500">*</span>
+                  Course <span className="text-red-500">*</span>
                 </label>
-                <input
-                  id="title"
-                  type="text"
-                  placeholder="e.g., Calculus II - Final Exam 2025"
-                  value={formData.title}
-                  onChange={(e) => updateField("title", e.target.value)}
+                <select
+                  id="course"
+                  value={formData.course}
+                  onChange={(e) => updateField("course", e.target.value)}
                   className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC] focus:ring-1 focus:ring-[#4FC3FC]"
                   required
-                />
-              </div>
-
-              {/* Course Code and Subject */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label
-                    htmlFor="courseCode"
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                  >
-                    Course Code <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="courseCode"
-                    type="text"
-                    placeholder="e.g., CS-401"
-                    value={formData.courseCode}
-                    onChange={(e) => updateField("courseCode", e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC] focus:ring-1 focus:ring-[#4FC3FC]"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label
-                    htmlFor="subject"
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                  >
-                    Subject <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    id="subject"
-                    value={formData.subject}
-                    onChange={(e) => updateField("subject", e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC] focus:ring-1 focus:ring-[#4FC3FC]"
-                    required
-                  >
-                    <option value="">Select subject</option>
-                    {subjects.map((subject) => (
-                      <option key={subject} value={subject}>
-                        {subject}
+                >
+                  <option value="">Select a course</option>
+                  {courses
+                    .filter((c) => c.isActive)
+                    .map((course) => (
+                      <option key={course._id} value={course._id}>
+                        {course.name}
                       </option>
                     ))}
-                  </select>
-                </div>
+                </select>
               </div>
 
-              {/* Department */}
+              {/* ── Department ───────────────────────────────────────── */}
               <div className="space-y-2">
                 <label
                   htmlFor="department"
@@ -606,44 +565,43 @@ export default function UploadPage() {
                   required
                 >
                   <option value="">Select department</option>
-                  {departments.map((dept) => (
-                    <option key={dept} value={dept}>
-                      {dept}
-                    </option>
-                  ))}
+                  {departments
+                    .filter((d) => d.isActive)
+                    .map((dept) => (
+                      <option key={dept._id} value={dept._id}>
+                        {dept.name}
+                      </option>
+                    ))}
                 </select>
               </div>
 
-              {/* Instructor */}
+              {/* ── Instructor ───────────────────────────────────────── */}
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label
+                  htmlFor="instructor"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
                   Instructor <span className="text-red-500">*</span>
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-[120px_1fr] gap-4">
-                  <select
-                    value={formData.instructor.title}
-                    onChange={(e) => updateInstructor("title", e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC] focus:ring-1 focus:ring-[#4FC3FC]"
-                  >
-                    <option value="">Select title</option>
-                    {instructorTitles.map((title) => (
-                      <option key={title} value={title}>
-                        {title}
+                <select
+                  id="instructor"
+                  value={formData.instructor}
+                  onChange={(e) => updateField("instructor", e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC] focus:ring-1 focus:ring-[#4FC3FC]"
+                  required
+                >
+                  <option value="">Select instructor</option>
+                  {instructors
+                    .filter((i) => i.isActive)
+                    .map((instructor) => (
+                      <option key={instructor._id} value={instructor._id}>
+                        {instructor.title} {instructor.name}
                       </option>
                     ))}
-                  </select>
-                  <input
-                    type="text"
-                    placeholder="Enter instructor name"
-                    value={formData.instructor.name}
-                    onChange={(e) => updateInstructor("name", e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC] focus:ring-1 focus:ring-[#4FC3FC]"
-                    required
-                  />
-                </div>
+                </select>
               </div>
 
-              {/* Year, Semester, Exam Type */}
+              {/* ── Year, Semester, Exam Type ───────────────────────── */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <label
@@ -715,7 +673,7 @@ export default function UploadPage() {
                 </div>
               </div>
 
-              {/* Description */}
+              {/* ── Description ───────────────────────────────────────── */}
               <div className="space-y-2">
                 <label
                   htmlFor="description"
@@ -733,7 +691,7 @@ export default function UploadPage() {
                 />
               </div>
 
-              {/* Guidelines */}
+              {/* ── Guidelines ────────────────────────────────────────── */}
               <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 rounded-lg p-4">
                 <div className="flex gap-3">
                   <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
@@ -750,7 +708,7 @@ export default function UploadPage() {
                 </div>
               </div>
 
-              {/* Submit Buttons */}
+              {/* ── Submit Buttons ────────────────────────────────────── */}
               <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <button
                   type="submit"
@@ -774,12 +732,10 @@ export default function UploadPage() {
                   disabled={uploadLoading}
                   onClick={() => {
                     setFormData({
-                      title: "",
-                      courseCode: "",
-                      subject: "",
-                      year: "",
+                      course: "",
                       department: "",
-                      instructor: { title: "", name: "" },
+                      instructor: "",
+                      year: "",
                       semester: "",
                       examType: "",
                       description: "",

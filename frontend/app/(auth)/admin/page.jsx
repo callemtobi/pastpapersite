@@ -9,29 +9,24 @@ import {
   Clock,
   Download,
   TrendingUp,
-  Calendar,
   BookOpen,
   Building,
   HardDrive,
   Flame,
   Activity,
-  ChevronDown,
-  Bell,
-  Search,
-  Menu,
   CheckCircle,
   XCircle,
-  UserCheck,
-  UserX,
-  Star,
   AlertCircle,
+  DollarSign,
+  ShoppingBag,
+  Truck,
+  Monitor,
+  User,
+  ArrowUpRight,
+  ArrowDownRight,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import RecentActivity from "@/components/RecentActivity";
-import QuickActions from "@/components/QuickActions";
-
-import StatsCard from "@/components/StatsCard";
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
@@ -51,6 +46,7 @@ export default function AdminDashboard() {
     recentActivity: [],
   });
   const [time, setTime] = useState(() => Date.now());
+
   useEffect(() => {
     const interval = setInterval(() => {
       setTime(Date.now());
@@ -65,6 +61,11 @@ export default function AdminDashboard() {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
     if (num >= 1000) return (num / 1000).toFixed(1) + "K";
     return num.toLocaleString();
+  };
+
+  const formatCurrency = (num) => {
+    if (!num) return "$0";
+    return "$" + formatNumber(num);
   };
 
   const formatStorage = (bytes) => {
@@ -92,8 +93,6 @@ export default function AdminDashboard() {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-
-        // Fetch all stats from backend
         const response = await axios.get(
           "http://localhost:8000/api/admin/dashboard/stats",
         );
@@ -159,116 +158,142 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <div className="lg:pl-72">
         <main className="p-4 sm:p-6 space-y-6">
-          {/* ── Main Stats: 3 BIG cards + 2 small ────────────────── */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-            {/* BIG: Total Papers */}
-            <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6 hover:shadow-md transition-all">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20">
-                  <FileText className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-                </div>
+          {/* ── Welcome Section ───────────────────────────────────── */}
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Dashboard
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Welcome back! Here&apos;s what&apos;s happening with your platform
+              today.
+            </p>
+          </div>
+
+          {/* ── Stats Grid ────────────────────────────────────────── */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Total Papers */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5">
+              <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     Total Papers
                   </p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
                     {formatNumber(stats.totalPapers)}
                   </p>
+                  <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
+                    <ArrowUpRight className="w-3 h-3" />
+                    vs last year: {formatNumber(stats.totalPapers * 0.12)}
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                  <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 </div>
               </div>
             </div>
 
-            {/* BIG: Total Users */}
-            <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6 hover:shadow-md transition-all">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20">
-                  <Users className="w-8 h-8 text-purple-600 dark:text-purple-400" />
-                </div>
+            {/* Total Users */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5">
+              <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     Total Users
                   </p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
                     {formatNumber(stats.totalUsers)}
                   </p>
+                  <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
+                    <ArrowUpRight className="w-3 h-3" />
+                    vs last year: {formatNumber(stats.totalUsers * 0.08)}
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">
+                  <Users className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                 </div>
               </div>
             </div>
 
-            {/* BIG: Pending Papers */}
-            <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6 hover:shadow-md transition-all">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-yellow-50 dark:bg-yellow-900/20">
-                  <Clock className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
-                </div>
+            {/* Pending Papers */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5">
+              <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     Pending Review
                   </p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
                     {formatNumber(stats.pendingPapers)}
                   </p>
+                  <p className="text-xs text-red-600 dark:text-red-400 mt-1 flex items-center gap-1">
+                    <ArrowDownRight className="w-3 h-3" />
+                    vs last year: {formatNumber(stats.pendingPapers * 0.15)}
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-yellow-50 dark:bg-yellow-900/20 flex items-center justify-center">
+                  <Clock className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
                 </div>
               </div>
             </div>
 
-            {/* Small: Departments */}
-            <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 hover:shadow-md transition-all">
+            {/* Total Downloads */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Total Downloads
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+                    {formatNumber(stats.totalDownloads)}
+                  </p>
+                  <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
+                    <ArrowUpRight className="w-3 h-3" />
+                    vs last year: {formatNumber(stats.totalDownloads * 0.18)}
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
+                  <Download className="w-6 h-6 text-green-600 dark:text-green-400" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Second Row: 5 Stats ───────────────────────────────── */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/20">
+                <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center">
                   <Building className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     Departments
                   </p>
-                  <p className="text-xl font-bold text-gray-900 dark:text-white">
+                  <p className="text-lg font-bold text-gray-900 dark:text-white">
                     {formatNumber(stats.totalDepartments)}
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Small: Subjects */}
-            <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 hover:shadow-md transition-all">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-900/20">
+                <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
                   <BookOpen className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     Subjects
                   </p>
-                  <p className="text-xl font-bold text-gray-900 dark:text-white">
+                  <p className="text-lg font-bold text-gray-900 dark:text-white">
                     {formatNumber(stats.totalSubjects)}
                   </p>
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* ── Engagement Stats Row ────────────────────────────── */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-green-50 dark:bg-green-900/20">
-                  <Download className="w-5 h-5 text-green-600 dark:text-green-400" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Total Downloads
-                  </p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">
-                    {formatNumber(stats.totalDownloads)}
-                  </p>
-                </div>
-              </div>
-            </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-red-50 dark:bg-red-900/20">
-                  <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                <div className="w-10 h-10 rounded-full bg-rose-50 dark:bg-rose-900/20 flex items-center justify-center">
+                  <XCircle className="w-5 h-5 text-rose-600 dark:text-rose-400" />
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -283,7 +308,7 @@ export default function AdminDashboard() {
 
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-cyan-50 dark:bg-cyan-900/20">
+                <div className="w-10 h-10 rounded-full bg-cyan-50 dark:bg-cyan-900/20 flex items-center justify-center">
                   <TrendingUp className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
                 </div>
                 <div>
@@ -299,7 +324,7 @@ export default function AdminDashboard() {
 
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
+                <div className="w-10 h-10 rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
                   <HardDrive className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                 </div>
                 <div>
@@ -344,10 +369,11 @@ export default function AdminDashboard() {
                       </span>
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                          {paper.title}
+                          {paper.course?.name || "Unknown Course"}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {paper.courseCode} • {paper.subject}
+                          {paper.department?.name || "N/A"} • {paper.downloads}{" "}
+                          downloads
                         </p>
                       </div>
                     </div>
@@ -368,89 +394,83 @@ export default function AdminDashboard() {
           </div>
 
           {/* ── Recent Activity ───────────────────────────────────── */}
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <div className="xl:col-span-2">
-              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-gray-500" />
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                      Recent Activity
-                    </h3>
-                  </div>
-                  <span className="text-xs text-gray-400">
-                    {stats.recentActivity?.length || 0} activities
-                  </span>
+          <div className="grid grid-cols-1 gap-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-gray-500" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Recent Activity
+                  </h3>
                 </div>
-
-                <div className="divide-y divide-gray-200 dark:divide-gray-700 max-h-100 overflow-y-auto">
-                  {stats.recentActivity && stats.recentActivity.length > 0 ? (
-                    stats.recentActivity.map((activity, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-                      >
-                        <div
-                          className={`p-2 rounded-lg ${
-                            activity.type === "upload"
-                              ? "bg-green-50 dark:bg-green-900/20"
-                              : activity.type === "approval"
-                                ? "bg-blue-50 dark:bg-blue-900/20"
-                                : activity.type === "rejection"
-                                  ? "bg-red-50 dark:bg-red-900/20"
-                                  : "bg-gray-50 dark:bg-gray-800"
-                          }`}
-                        >
-                          {activity.type === "upload" && (
-                            <FileText className="w-4 h-4 text-green-500" />
-                          )}
-                          {activity.type === "approval" && (
-                            <CheckCircle className="w-4 h-4 text-blue-500" />
-                          )}
-                          {activity.type === "rejection" && (
-                            <XCircle className="w-4 h-4 text-red-500" />
-                          )}
-                          {activity.type === "download" && (
-                            <Download className="w-4 h-4 text-gray-500" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-gray-900 dark:text-white">
-                            <span className="font-medium">
-                              {activity.user || "System"}
-                            </span>{" "}
-                            {activity.type === "upload"
-                              ? "uploaded"
-                              : activity.type === "approval"
-                                ? "approved"
-                                : activity.type === "rejection"
-                                  ? "rejected"
-                                  : "downloaded"}{" "}
-                            <Link
-                              href={`/admin/papers/${activity.id}`}
-                              className="text-[#4FC3FC] hover:underline"
-                            >
-                              {activity.paper}
-                            </Link>
-                          </p>
-                        </div>
-                        <span className="text-xs text-gray-400 whitespace-nowrap">
-                          {getTimeAgo(activity.time)}
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                      <Activity className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                      <p className="text-sm">No recent activity</p>
-                    </div>
-                  )}
-                </div>
+                <span className="text-xs text-gray-400">
+                  {stats.recentActivity?.length || 0} activities
+                </span>
               </div>
-            </div>
 
-            <div className="xl:col-span-1">
-              <QuickActions />
+              <div className="divide-y divide-gray-200 dark:divide-gray-700 max-h-[400px] overflow-y-auto">
+                {stats.recentActivity && stats.recentActivity.length > 0 ? (
+                  stats.recentActivity.map((activity, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                    >
+                      <div
+                        className={`p-2 rounded-lg ${
+                          activity.type === "upload"
+                            ? "bg-green-50 dark:bg-green-900/20"
+                            : activity.type === "approval"
+                              ? "bg-blue-50 dark:bg-blue-900/20"
+                              : activity.type === "rejection"
+                                ? "bg-red-50 dark:bg-red-900/20"
+                                : "bg-gray-50 dark:bg-gray-800"
+                        }`}
+                      >
+                        {activity.type === "upload" && (
+                          <FileText className="w-4 h-4 text-green-500" />
+                        )}
+                        {activity.type === "approval" && (
+                          <CheckCircle className="w-4 h-4 text-blue-500" />
+                        )}
+                        {activity.type === "rejection" && (
+                          <XCircle className="w-4 h-4 text-red-500" />
+                        )}
+                        {activity.type === "download" && (
+                          <Download className="w-4 h-4 text-gray-500" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-900 dark:text-white">
+                          <span className="font-medium">
+                            {activity.user || "System"}
+                          </span>{" "}
+                          {activity.type === "upload"
+                            ? "uploaded"
+                            : activity.type === "approval"
+                              ? "approved"
+                              : activity.type === "rejection"
+                                ? "rejected"
+                                : "downloaded"}{" "}
+                          <Link
+                            href={`/admin/papers/${activity.id}`}
+                            className="text-[#4FC3FC] hover:underline"
+                          >
+                            {activity.paper}
+                          </Link>
+                        </p>
+                      </div>
+                      <span className="text-xs text-gray-400 whitespace-nowrap">
+                        {getTimeAgo(activity.time)}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <Activity className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">No recent activity</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </main>

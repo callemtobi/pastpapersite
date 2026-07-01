@@ -1,3 +1,4 @@
+// app/(home)/download/page.jsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -13,37 +14,12 @@ import {
   FileText,
   Eye,
   Loader,
+  User,
+  Building,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { resultsContainer, resultCard } from "@/lib/animations";
 import axios from "axios";
-
-const allPapers = [
-  {
-    id: 1,
-    title: "Calculus II - Final Exam 2025",
-    course: "MATH 2420",
-    subject: "Mathematics",
-    year: "2025",
-    semester: "Spring",
-    type: "Final Exam",
-    downloads: 234,
-    rating: 4.8,
-    pages: 8,
-  },
-  {
-    id: 2,
-    title: "Data Structures - Midterm 2024",
-    course: "CS 3450",
-    subject: "Computer Science",
-    year: "2024",
-    semester: "Fall",
-    type: "Midterm",
-    downloads: 456,
-    rating: 4.9,
-    pages: 12,
-  },
-];
 
 export default function DownloadPage() {
   const router = useRouter();
@@ -51,6 +27,7 @@ export default function DownloadPage() {
   const [subjectFilter, setSubjectFilter] = useState("all");
   const [yearFilter, setYearFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [departmentFilter, setDepartmentFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isLoading, setLoading] = useState(false);
@@ -65,13 +42,21 @@ export default function DownloadPage() {
       try {
         setLoading(true);
         const response = await axios.get("http://localhost:8000/api/papers");
-        const token = document.cookie
-          .split("; ")
-          .find((row) => row.startsWith("accessToken="))
-          ?.split("=")[1];
         if (!cancelled) {
           if (response.data.success && response.data.papers) {
-            setPapers(response.data.papers);
+            // Populate the paper data with populated fields
+            const populatedPapers = response.data.papers.map((paper) => ({
+              ...paper,
+              courseName:
+                paper.course?.name || paper.course || "Unknown Course",
+              departmentName:
+                paper.department?.name ||
+                paper.department ||
+                "Unknown Department",
+              instructorName: paper.instructor?.name || "Unknown Instructor",
+              instructorTitle: paper.instructor?.title || "",
+            }));
+            setPapers(populatedPapers);
           } else {
             setPapers([]);
           }
@@ -95,15 +80,21 @@ export default function DownloadPage() {
 
   const filteredPapers = papers.filter((paper) => {
     const matchesSearch =
-      paper.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      paper.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      paper.courseCode?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesSubject =
-      subjectFilter === "all" || paper.subject === subjectFilter;
-    const matchesYear = yearFilter === "all" || paper.year === yearFilter;
-    const matchesType = typeFilter === "all" || paper.type === typeFilter;
+      paper.courseName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      paper.course?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      paper.departmentName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      paper.instructorName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      false;
 
-    return matchesSearch && matchesSubject && matchesYear && matchesType;
+    const matchesDepartment =
+      departmentFilter === "all" ||
+      paper.department?.name === departmentFilter ||
+      paper.departmentName === departmentFilter;
+
+    const matchesYear = yearFilter === "all" || paper.year === yearFilter;
+    const matchesType = typeFilter === "all" || paper.examType === typeFilter;
+
+    return matchesSearch && matchesDepartment && matchesYear && matchesType;
   });
 
   useEffect(() => {
@@ -119,20 +110,18 @@ export default function DownloadPage() {
     };
   }, []);
 
+  // Get unique departments for filter
+  const departments = [
+    ...new Set(papers.map((p) => p.department?.name || p.departmentName)),
+  ].filter(Boolean);
+
   return (
     <div className={`max-w-4xl mx-auto space-y-6`}>
       {/* Header */}
       <div className="space-y-4">
-        {/* Page Heading - Fade up with Y: 20 → 0 */}
         <motion.div
-          initial={{
-            opacity: 0,
-            y: 20,
-          }}
-          animate={{
-            opacity: 1,
-            y: 0,
-          }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
           <h1 className="text-3xl font-bold text-foreground mb-2">
@@ -143,50 +132,31 @@ export default function DownloadPage() {
           </p>
         </motion.div>
 
-        {/* Search and Filter Bar - Animate together with delay */}
+        {/* Search and Filter Bar */}
         <div className="space-y-4">
           <motion.div
-            initial={{
-              opacity: 0,
-              y: 30,
-            }}
-            animate={{
-              opacity: 1,
-              y: 0,
-            }}
-            transition={{
-              duration: 0.6,
-              delay: 0.2,
-            }}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
             className="flex flex-col sm:flex-row gap-3"
           >
             <div className="relative flex-1">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <motion.input
                 type="text"
-                placeholder="Search by course code, title, or keyword..."
+                placeholder="Search by course, department, or instructor..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                whileFocus={{
-                  scale: 1.01,
-                }}
-                transition={{
-                  type: "spring",
-                  stiffness: 300,
-                  damping: 20,
-                }}
+                whileFocus={{ scale: 1.01 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 className="border border-border-light bg-input-bg w-full pl-12 pr-4 h-12 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200"
               />
             </div>
             <motion.button
               onClick={() => setShowFilters(!showFilters)}
-              whileHover={{
-                y: -2,
-              }}
-              whileTap={{
-                scale: 0.98,
-              }}
-              className="border border-border-light bg-primary-button-bg text-input-text inline-flex items-center gap-2 px-6 h-12  rounded-lg font-medium transition-colors"
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              className="border border-border-light bg-primary-button-bg text-input-text inline-flex items-center gap-2 px-6 h-12 rounded-lg font-medium transition-colors"
             >
               <Filter className="w-5 h-5" />
               Filters
@@ -205,51 +175,63 @@ export default function DownloadPage() {
               className="border border-border-light rounded-lg shadow-sm"
             >
               <div className="p-6">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium ">Subject</label>
+                    <label className="text-sm font-medium">Department</label>
                     <select
-                      value={subjectFilter}
-                      onChange={(e) => setSubjectFilter(e.target.value)}
-                      className="border border-border-light bg-input-bg w-full px-4 py-2  rounded-lg focus:outline-none focus:border-blue-500"
+                      value={departmentFilter}
+                      onChange={(e) => setDepartmentFilter(e.target.value)}
+                      className="border border-border-light bg-input-bg w-full px-4 py-2 rounded-lg focus:outline-none focus:border-blue-500"
                     >
-                      <option value="all">All Subjects</option>
-                      <option value="Computer Science">Computer Science</option>
-                      <option value="Mathematics">Mathematics</option>
-                      <option value="Physics">Physics</option>
-                      <option value="Chemistry">Chemistry</option>
-                      <option value="Engineering">Engineering</option>
-                      <option value="Economics">Economics</option>
+                      <option value="all">All Departments</option>
+                      {departments.map((dept) => (
+                        <option key={dept} value={dept}>
+                          {dept}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium ">Year</label>
+                    <label className="text-sm font-medium">Year</label>
                     <select
                       value={yearFilter}
                       onChange={(e) => setYearFilter(e.target.value)}
-                      className="border border-border-light bg-input-bg w-full px-4 py-2 rounded-lg  focus:outline-none focus:border-blue-500"
+                      className="border border-border-light bg-input-bg w-full px-4 py-2 rounded-lg focus:outline-none focus:border-blue-500"
                     >
                       <option value="all">All Years</option>
                       <option value="2025">2025</option>
                       <option value="2024">2024</option>
                       <option value="2023">2023</option>
                       <option value="2022">2022</option>
+                      <option value="2021">2021</option>
                     </select>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium ">Type</label>
+                    <label className="text-sm font-medium">Exam Type</label>
                     <select
                       value={typeFilter}
                       onChange={(e) => setTypeFilter(e.target.value)}
-                      className="border border-border-light bg-input-bg w-full px-4 py-2 rounded-lg  focus:outline-none focus:border-blue-500"
+                      className="border border-border-light bg-input-bg w-full px-4 py-2 rounded-lg focus:outline-none focus:border-blue-500"
                     >
                       <option value="all">All Types</option>
                       <option value="Final Exam">Final Exam</option>
                       <option value="Midterm">Midterm</option>
-                      <option value="Quiz">Quiz</option>
-                      <option value="Practice">Practice</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Semester</label>
+                    <select
+                      value={subjectFilter}
+                      onChange={(e) => setSubjectFilter(e.target.value)}
+                      className="border border-border-light bg-input-bg w-full px-4 py-2 rounded-lg focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="all">All Semesters</option>
+                      <option value="Spring">Spring</option>
+                      <option value="Summer">Summer</option>
+                      <option value="Fall">Fall</option>
                     </select>
                   </div>
                 </div>
@@ -260,6 +242,7 @@ export default function DownloadPage() {
                       setSubjectFilter("all");
                       setYearFilter("all");
                       setTypeFilter("all");
+                      setDepartmentFilter("all");
                     }}
                     className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
                   >
@@ -271,7 +254,7 @@ export default function DownloadPage() {
           )}
         </div>
 
-        {/* Results Counter - Fade in only, no movement */}
+        {/* Results Counter */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -288,103 +271,129 @@ export default function DownloadPage() {
         </motion.div>
       </div>
 
-      {/* Papers Grid with stagger animation */}
+      {/* Papers Grid */}
       <motion.div
         variants={resultsContainer}
         initial="hidden"
         animate="visible"
         className="grid grid-cols-1 gap-6"
       >
-        {filteredPapers.map((paper) => (
-          <motion.div
-            key={paper._id}
-            variants={resultCard}
-            className="border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:shadow-md transition-all"
-          >
-            <div className="p-6">
-              <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
-                <div className="flex-1 space-y-3">
-                  <div>
-                    <div className="flex items-start gap-3 mb-2">
-                      <div className="p-2 rounded-lg bg-primary/10 bg-amber-200">
-                        <BookOpen className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg text-foreground mb-1">
-                          {paper.subject}
-                        </h3>
-                        <div className="flex flex-wrap items-center gap-2 text-gray-400">
-                          <div className="bg-primary text-gray-400">
-                            {paper.courseCode}
+        {filteredPapers.map((paper) => {
+          const courseName =
+            paper.course?.name || paper.courseName || "Unknown Course";
+          const departmentName =
+            paper.department?.name ||
+            paper.departmentName ||
+            "Unknown Department";
+          const instructorName =
+            paper.instructor?.name ||
+            paper.instructorName ||
+            "Unknown Instructor";
+          const instructorTitle =
+            paper.instructor?.title || paper.instructorTitle || "";
+
+          return (
+            <motion.div
+              key={paper._id}
+              variants={resultCard}
+              className="border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:shadow-md transition-all"
+            >
+              <div className="p-6">
+                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                  <div className="flex-1 space-y-3">
+                    <div>
+                      <div className="flex items-start gap-3 mb-2">
+                        <div className="p-2 rounded-lg bg-primary/10 bg-amber-200">
+                          <BookOpen className="w-5 h-5 text-primary" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-lg text-foreground mb-1">
+                            {courseName}
+                          </h3>
+                          <div className="flex flex-wrap items-center gap-2 text-gray-400">
+                            <span className="text-sm text-gray-600 dark:text-gray-300">
+                              {instructorTitle} {instructorName}
+                            </span>
+                            <span className="text-gray-400">•</span>
+                            <span className="text-sm text-gray-600 dark:text-gray-300">
+                              {paper.examType}
+                            </span>
+                            <span className="text-gray-400">•</span>
+                            <span className="text-sm text-gray-600 dark:text-gray-300">
+                              {paper.semester} {paper.year}
+                            </span>
                           </div>
-                          {" • "}
-                          <div variant="outline">{paper.instructor.title}</div>
-                          <div variant="outline">{paper.instructor.name}</div>
-                          {" • "}
-                          <div variant="outline">{paper.examType}</div>
                         </div>
                       </div>
                     </div>
+
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1 shadow-sm rounded-full p-3 py-1">
+                        <Calendar className="w-4 h-4 stroke-[1.5]" />
+                        {paper.semester} {paper.year}
+                      </span>
+
+                      <span className="flex items-center gap-1 shadow-sm rounded-full p-3 py-1">
+                        <Download className="w-4 h-4 stroke-[1.5]" />
+                        {paper.downloads || 0} downloads
+                      </span>
+
+                      <span className="flex items-center gap-1 shadow-sm rounded-full p-3 py-1">
+                        <Star className="w-4 h-4 stroke-[1.5] fill-yellow-400 text-yellow-400" />
+                        {paper.rating || 0}
+                      </span>
+
+                      <span className="flex items-center gap-1 shadow-sm rounded-full p-3 py-1">
+                        <FileText className="w-4 h-4 stroke-[1.5]" />
+                        {paper.pages || 0} pages
+                      </span>
+
+                      <span className="flex items-center gap-1 shadow-sm rounded-full p-3 py-1">
+                        <Building className="w-4 h-4 stroke-[1.5]" />
+                        {departmentName}
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1 shadow-sm rounded-full p-3 py-1">
-                      <Calendar className="w-4 h-4 stroke-[1.5]" />
-                      {paper.semester} {paper.year}
-                    </span>
-
-                    <span className="flex items-center gap-1 shadow-sm rounded-full p-3 py-1">
-                      <Download className="w-4 h-4 stroke-[1.5]" />
-                      {paper.downloads} downloads
-                    </span>
-
-                    <span className="flex items-center gap-1 shadow-sm rounded-full p-3 py-1">
-                      <Star className="w-4 h-4 stroke-[1.5] fill-yellow-400 text-yellow-400" />
-                      {paper.rating}
-                    </span>
-
-                    <span className="flex items-center gap-1 shadow-sm rounded-full p-3 py-1">
-                      <FileText className="w-4 h-4 stroke-[1.5]" />
-                      {paper.pages} pages
-                    </span>
-
-                    <span className="flex items-center gap-1 shadow-sm rounded-full p-3 py-1">
-                      <BookOpen className="w-4 h-4 stroke-[1.5]" />
-                      {paper.department}
-                    </span>
+                  <div className="flex sm:flex-col gap-2 lg:items-end">
+                    <motion.button
+                      onClick={() => {
+                        router.push(`/download/${paper._id}`);
+                      }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="gap-2 px-8 h-12 w-40 rounded-xl bg-[#DDE3EA] dark:border-gray-600 hover:bg-[#DDE3EA]/70 dark:hover:bg-gray-900 inline-flex items-center font-medium text-gray-900 dark:text-white transition-colors"
+                    >
+                      <Eye className="w-4 h-4" />
+                      View
+                    </motion.button>
                   </div>
-                </div>
-
-                <div className="flex sm:flex-col gap-2 lg:items-end">
-                  <motion.button
-                    onClick={() => {
-                      router.push(`/download/${paper._id}`);
-                    }}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="gap-2 px-8 h-12 w-40 rounded-xl bg-[#DDE3EA] dark:border-gray-600 hover:bg-[#DDE3EA]/70 dark:hover:bg-gray-900 inline-flex items-center font-medium text-gray-900 dark:text-white transition-colors"
-                  >
-                    <Eye className="w-4 h-4" />
-                    View
-                  </motion.button>
                 </div>
               </div>
-            </div>
-          </motion.div>
-        ))}
+            </motion.div>
+          );
+        })}
       </motion.div>
 
-      {/* Empty State Animation */}
-      {filteredPapers.length === 0 && (
+      {/* Loading State */}
+      {isLoading && (
         <motion.div
-          initial={{
-            opacity: 0,
-            y: 15,
-          }}
-          animate={{
-            opacity: 1,
-            y: 0,
-          }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex items-center justify-center py-12"
+        >
+          <Loader className="w-8 h-8 animate-spin text-[#4FC3FC]" />
+          <span className="ml-3 text-gray-600 dark:text-gray-300">
+            Loading papers...
+          </span>
+        </motion.div>
+      )}
+
+      {/* Empty State */}
+      {filteredPapers.length === 0 && !isLoading && (
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           className="border border-border-light rounded-lg shadow-sm"
         >

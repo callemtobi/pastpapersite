@@ -6,11 +6,9 @@ import {
   uploadPaper,
   getPaperById,
   getPapers,
-  deletePaper,
   downloadPaper,
   previewPaper,
   incrementDownload,
-  updatePaper,
 } from "../controllers/paperController.js";
 import { authenticate } from "../middleware/auth.js";
 import {
@@ -18,6 +16,7 @@ import {
   getRecentActivity,
   getTopDownloadedPapers,
 } from "../controllers/dashboardController.js";
+import { getActiveAnnouncements } from "../controllers/announcementController.js";
 
 const router = express.Router();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -65,6 +64,8 @@ router.get("/:id/preview", previewPaper);
 router.post("/upload", authenticate, upload.array("images", 5), uploadPaper);
 router.put("/:id/increment-download", incrementDownload);
 
-router.delete("/:id", authenticate, deletePaper);
+router.get("/announcements/active", getActiveAnnouncements);
+
+// router.delete("/:id", authenticate, deletePaper);
 
 export default router;

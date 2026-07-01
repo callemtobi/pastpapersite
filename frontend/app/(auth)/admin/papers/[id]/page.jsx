@@ -21,6 +21,7 @@ import {
   Check,
   X,
   XCircle,
+  Building,
 } from "lucide-react";
 import axios from "axios";
 import { useParams, useRouter } from "next/navigation";
@@ -51,6 +52,27 @@ export default function PaperViewerPage() {
     useState(null);
   const [verificationInProgress, setVerificationInProgress] = useState(false);
 
+  // ── Helper: Get course name ────────────────────────────────────
+  const getCourseName = () => {
+    if (!paper) return "Unknown Course";
+    return paper.course?.name || paper.course || "Unknown Course";
+  };
+
+  // ── Helper: Get department name ────────────────────────────────
+  const getDepartmentName = () => {
+    if (!paper) return "Unknown Department";
+    return paper.department?.name || paper.department || "Unknown Department";
+  };
+
+  // ── Helper: Get instructor full name ───────────────────────────
+  const getInstructorName = () => {
+    if (!paper) return "Unknown Instructor";
+    if (paper.instructor?.title && paper.instructor?.name) {
+      return `${paper.instructor.title} ${paper.instructor.name}`;
+    }
+    return paper.instructor?.name || paper.instructor || "Unknown Instructor";
+  };
+
   // Paper details from backend
   useEffect(() => {
     let cancelled = false;
@@ -59,7 +81,7 @@ export default function PaperViewerPage() {
       try {
         setLoading(true);
         const response = await axios.get(
-          `http://localhost:8000/api/papers/${id}`,
+          `http://localhost:8000/api/admin/papers/${id}`,
         );
 
         if (!cancelled) {
@@ -110,9 +132,10 @@ export default function PaperViewerPage() {
         link.href = url;
 
         const ext = image.originalName?.split(".").pop() || "png";
+        const courseName = getCourseName().replace(/\s+/g, "_");
         link.setAttribute(
           "download",
-          `${paper.courseCode}_${paper.examType}_${paper.year}_img${i + 1}.${ext}`,
+          `${courseName}_${paper.examType}_${paper.year}_img${i + 1}.${ext}`,
         );
 
         document.body.appendChild(link);
@@ -211,7 +234,8 @@ export default function PaperViewerPage() {
         );
       }
 
-      doc.save(`${paper.courseCode}_${paper.examType}_${paper.year}.pdf`);
+      const courseName = getCourseName().replace(/\s+/g, "_");
+      doc.save(`${courseName}_${paper.examType}_${paper.year}.pdf`);
       await axios.put(
         `http://localhost:8000/api/papers/${id}/increment-download`,
       );
@@ -232,13 +256,14 @@ export default function PaperViewerPage() {
 
   // ── Delete Paper Function ─────────────────────────────────────
   const handleDeletePaper = async () => {
-    if (!confirm(`Are you sure you want to delete "${paper.title}"?`)) return;
+    const courseName = getCourseName();
+    if (!confirm(`Are you sure you want to delete "${courseName}"?`)) return;
 
     const loadingToast = showLoadingToast("Deleting paper...");
 
     try {
       const response = await axios.delete(
-        `http://localhost:8000/api/papers/${id}`,
+        `http://localhost:8000/api/admin/papers/${id}`,
       );
 
       dismissToast(loadingToast);
@@ -260,7 +285,17 @@ export default function PaperViewerPage() {
   // ── Verification Functions ─────────────────────────────────────
 
   const openVerificationModal = () => {
-    setSelectedPaperForVerification(paper);
+    // Ensure paper data is properly formatted before passing to modal
+    const formattedPaper = {
+      ...paper,
+      courseName: paper.course?.name || "Unknown Course",
+      departmentName: paper.department?.name || "Unknown Department",
+      instructorName:
+        paper.instructor?.title && paper.instructor?.name
+          ? `${paper.instructor.title} ${paper.instructor.name}`
+          : paper.instructor?.name || "Unknown Instructor",
+    };
+    setSelectedPaperForVerification(formattedPaper);
     setShowVerificationModal(true);
   };
 
@@ -272,7 +307,7 @@ export default function PaperViewerPage() {
 
     try {
       const response = await axios.patch(
-        `http://localhost:8000/api/papers/admin/${selectedPaperForVerification._id}`,
+        `http://localhost:8000/api/admin/papers/${selectedPaperForVerification._id}`,
         { status: "approved" },
       );
 
@@ -302,7 +337,7 @@ export default function PaperViewerPage() {
 
     try {
       const response = await axios.patch(
-        `http://localhost:8000/api/papers/admin/${selectedPaperForVerification._id}`,
+        `http://localhost:8000/api/admin/papers/${selectedPaperForVerification._id}`,
         { status: "rejected" },
       );
 
@@ -354,8 +389,8 @@ export default function PaperViewerPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-        <div className="lg:pl-72">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
+        <div className="text-center space-y-4">
           <Loader2 className="w-12 h-12 animate-spin text-[#4FC3FC] mx-auto" />
           <p className="text-gray-600 dark:text-gray-300">
             Loading paper details...
@@ -367,9 +402,8 @@ export default function PaperViewerPage() {
 
   if (error || !paper) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-        <div className="lg:pl-72">
-          {" "}
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center space-y-4">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20">
             <AlertCircle className="w-8 h-8 text-red-500" />
           </div>
@@ -393,6 +427,9 @@ export default function PaperViewerPage() {
   const StatusIcon = statusBadge.icon;
   const isPending = paper.status === "pending";
   const isRejected = paper.status === "rejected";
+  const courseName = getCourseName();
+  const departmentName = getDepartmentName();
+  const instructorName = getInstructorName();
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -425,26 +462,26 @@ export default function PaperViewerPage() {
               {/* Paper Info Card */}
               <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
                 <div className="p-6 space-y-6">
-                  {/* Subject Badge */}
+                  {/* Department Badge */}
                   <div className="flex items-start justify-between">
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
-                      <BookOpen className="w-4 h-4" />
-                      {paper.subject}
+                      <Building className="w-4 h-4" />
+                      {departmentName}
                     </div>
                     <div className="flex items-center gap-1 text-yellow-500">
                       <Star className="w-5 h-5 fill-current" />
                       <span className="font-semibold text-gray-900 dark:text-white">
-                        {paper.rating}
+                        {paper.rating || 0}
                       </span>
                     </div>
                   </div>
 
-                  {/* Title */}
+                  {/* Title - Course Name */}
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">
-                    {paper.title}
+                    {courseName}
                   </h1>
 
-                  {/* Status Badge - Visible here too */}
+                  {/* Status Badge */}
                   <div
                     className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border ${statusBadge.border} ${statusBadge.color}`}
                   >
@@ -458,16 +495,16 @@ export default function PaperViewerPage() {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                       <span className="font-mono text-sm bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-                        {paper.courseCode}
+                        {paper.examType}
                       </span>
                       <span className="text-gray-400">•</span>
-                      <span>{paper.examType}</span>
+                      <span>
+                        {paper.semester} {paper.year}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                       <User className="w-4 h-4" />
-                      <span>
-                        {paper.instructor?.title} {paper.instructor?.name}
-                      </span>
+                      <span>{instructorName}</span>
                     </div>
                   </div>
 
@@ -488,7 +525,7 @@ export default function PaperViewerPage() {
                       </p>
                       <div className="flex items-center gap-1 text-sm text-gray-900 dark:text-white">
                         <FileText className="w-4 h-4" />
-                        {paper.pages} pages
+                        {paper.pages || 0} pages
                       </div>
                     </div>
                     <div className="space-y-1">
@@ -689,26 +726,10 @@ export default function PaperViewerPage() {
                         <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 space-y-2">
                           <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
                             <span className="text-gray-600 dark:text-gray-400">
-                              Title
+                              Course
                             </span>
                             <span className="text-gray-900 dark:text-white font-medium">
-                              {paper.title}
-                            </span>
-                          </div>
-                          <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
-                            <span className="text-gray-600 dark:text-gray-400">
-                              Course Code
-                            </span>
-                            <span className="text-gray-900 dark:text-white font-mono text-sm">
-                              {paper.courseCode}
-                            </span>
-                          </div>
-                          <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
-                            <span className="text-gray-600 dark:text-gray-400">
-                              Subject
-                            </span>
-                            <span className="text-gray-900 dark:text-white">
-                              {paper.subject}
+                              {courseName}
                             </span>
                           </div>
                           <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
@@ -716,7 +737,7 @@ export default function PaperViewerPage() {
                               Department
                             </span>
                             <span className="text-gray-900 dark:text-white">
-                              {paper.department}
+                              {departmentName}
                             </span>
                           </div>
                           <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
@@ -724,7 +745,7 @@ export default function PaperViewerPage() {
                               Instructor
                             </span>
                             <span className="text-gray-900 dark:text-white">
-                              {paper.instructor?.title} {paper.instructor?.name}
+                              {instructorName}
                             </span>
                           </div>
                           <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
@@ -748,7 +769,7 @@ export default function PaperViewerPage() {
                               Pages
                             </span>
                             <span className="text-gray-900 dark:text-white">
-                              {paper.pages}
+                              {paper.pages || 0}
                             </span>
                           </div>
                           <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
@@ -784,7 +805,7 @@ export default function PaperViewerPage() {
                           Usage Statistics
                         </h4>
                         <div className="grid grid-cols-2 gap-4">
-                          <div className="bg-linear-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-4">
+                          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-4">
                             <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                               {paper.downloads?.toLocaleString() || 0}
                             </p>
@@ -792,7 +813,7 @@ export default function PaperViewerPage() {
                               Total Downloads
                             </p>
                           </div>
-                          <div className="bg-linear-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg p-4">
+                          <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg p-4">
                             <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                               {paper.rating || "N/A"}
                             </p>

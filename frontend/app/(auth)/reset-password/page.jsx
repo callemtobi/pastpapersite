@@ -69,31 +69,31 @@ export default function ResetPasswordPage() {
     verifyToken();
   }, [token]);
 
-  //   const validatePassword = (password) => {
-  //     const errors = [];
+  const validatePassword = (password) => {
+    const errors = [];
 
-  //     if (!password) {
-  //       errors.push("Password is required");
-  //     } else {
-  //       if (password.length < 8) {
-  //         errors.push("Password must be at least 8 characters");
-  //       }
-  //       if (!/[A-Z]/.test(password)) {
-  //         errors.push("Password must contain at least one uppercase letter");
-  //       }
-  //       if (!/[a-z]/.test(password)) {
-  //         errors.push("Password must contain at least one lowercase letter");
-  //       }
-  //       if (!/[0-9]/.test(password)) {
-  //         errors.push("Password must contain at least one number");
-  //       }
-  //       if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-  //         errors.push("Password must contain at least one special character");
-  //       }
-  //     }
+    if (!password) {
+      errors.push("Password is required");
+    } else {
+      if (password.length < 8) {
+        errors.push("Password must be at least 8 characters");
+      }
+      // if (!/[A-Z]/.test(password)) {
+      //   errors.push("Password must contain at least one uppercase letter");
+      // }
+      // if (!/[a-z]/.test(password)) {
+      //   errors.push("Password must contain at least one lowercase letter");
+      // }
+      if (!/[0-9]/.test(password)) {
+        errors.push("Password must contain at least one number");
+      }
+      // if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      //   errors.push("Password must contain at least one special character");
+      // }
+    }
 
-  //     return errors;
-  //   };
+    return errors;
+  };
 
   const checkPasswordStrength = (password) => {
     setPasswordStrength({
@@ -111,12 +111,12 @@ export default function ResetPasswordPage() {
 
     if (name === "password") {
       checkPasswordStrength(value);
-      //   const errors = validatePassword(value);
-      //   if (errors.length > 0) {
-      //     setPasswordError(errors[0]);
-      //   } else {
-      //     setPasswordError("");
-      //   }
+      const errors = validatePassword(value);
+      if (errors.length > 0) {
+        setPasswordError(errors[0]);
+      } else {
+        setPasswordError("");
+      }
 
       // Check confirm password match
       if (formData.confirmPassword && value !== formData.confirmPassword) {
@@ -142,11 +142,11 @@ export default function ResetPasswordPage() {
     e.preventDefault();
 
     // Validate password
-    // const passwordErrors = validatePassword(formData.password);
-    // if (passwordErrors.length > 0) {
-    //   setPasswordError(passwordErrors[0]);
-    //   return;
-    // }
+    const passwordErrors = validatePassword(formData.password);
+    if (passwordErrors.length > 0) {
+      setPasswordError(passwordErrors[0]);
+      return;
+    }
 
     // Check if passwords match
     if (formData.password !== formData.confirmPassword) {
