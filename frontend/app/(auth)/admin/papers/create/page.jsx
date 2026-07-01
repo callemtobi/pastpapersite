@@ -58,9 +58,9 @@ export default function CreatePaperPage() {
       try {
         setLoading(true);
         const [deptRes, courseRes, instructorRes] = await Promise.all([
-          axios.get("http://localhost:8000/api/admin/departments"),
-          axios.get("http://localhost:8000/api/admin/courses"),
-          axios.get("http://localhost:8000/api/admin/instructors"),
+          axios.get("http://localhost:8000/api/papers/departments"),
+          axios.get("http://localhost:8000/api/papers/courses"),
+          axios.get("http://localhost:8000/api/papers/instructors"),
         ]);
 
         if (deptRes.data.success) {
@@ -539,13 +539,19 @@ export default function CreatePaperPage() {
                   required
                 >
                   <option value="">Select a course</option>
-                  {courses
-                    .filter((c) => c.isActive)
-                    .map((course) => (
-                      <option key={course._id} value={course._id}>
-                        {course.name}
-                      </option>
-                    ))}
+                  {courses && courses.length > 0 ? (
+                    courses
+                      .filter((d) => d.isActive !== false)
+                      .map((cour) => (
+                        <option key={cour._id} value={cour._id}>
+                          {cour.name}
+                        </option>
+                      ))
+                  ) : (
+                    <option value="" disabled>
+                      No courses available
+                    </option>
+                  )}
                 </select>
               </div>
 
@@ -564,14 +570,20 @@ export default function CreatePaperPage() {
                   className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC] focus:ring-1 focus:ring-[#4FC3FC]"
                   required
                 >
-                  <option value="">Select department</option>
-                  {departments
-                    .filter((d) => d.isActive)
-                    .map((dept) => (
-                      <option key={dept._id} value={dept._id}>
-                        {dept.name}
-                      </option>
-                    ))}
+                  <option value="">Select a department</option>
+                  {departments && departments.length > 0 ? (
+                    departments
+                      .filter((d) => d.isActive !== false)
+                      .map((dept) => (
+                        <option key={dept._id} value={dept._id}>
+                          {dept.name}
+                        </option>
+                      ))
+                  ) : (
+                    <option value="" disabled>
+                      No departments available
+                    </option>
+                  )}
                 </select>
               </div>
 
@@ -590,14 +602,20 @@ export default function CreatePaperPage() {
                   className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC] focus:ring-1 focus:ring-[#4FC3FC]"
                   required
                 >
-                  <option value="">Select instructor</option>
-                  {instructors
-                    .filter((i) => i.isActive)
-                    .map((instructor) => (
-                      <option key={instructor._id} value={instructor._id}>
-                        {instructor.title} {instructor.name}
-                      </option>
-                    ))}
+                  <option value="">Select a instructor</option>
+                  {instructors && instructors.length > 0 ? (
+                    instructors
+                      .filter((d) => d.isActive !== false)
+                      .map((inst) => (
+                        <option key={inst._id} value={inst._id}>
+                          {inst.name}
+                        </option>
+                      ))
+                  ) : (
+                    <option value="" disabled>
+                      No instructors available
+                    </option>
+                  )}
                 </select>
               </div>
 

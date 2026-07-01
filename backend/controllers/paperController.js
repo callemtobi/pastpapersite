@@ -443,10 +443,7 @@ export const uploadPaper = async (req, res) => {
     });
   }
 };
-/**
- * Get paper by ID
- * GET /api/papers/:id
- */
+
 export const getPaperById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -478,10 +475,6 @@ export const getPaperById = async (req, res) => {
   }
 };
 
-/**
- * Get all papers with pagination
- * GET /api/papers?page=1&limit=10&subject=Mathematics
- */
 export const getPapers = async (req, res) => {
   try {
     const {
@@ -684,5 +677,68 @@ export const incrementDownload = async (req, res) => {
   } catch (error) {
     console.error("Download increment error:", error);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const getDepartments = async (req, res) => {
+  try {
+    const departments = await Department.find({ isActive: true })
+      .select("name")
+      .sort({ name: 1 })
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      departments,
+    });
+  } catch (error) {
+    console.error("Get departments error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch departments",
+    });
+  }
+};
+
+// ── Get courses for dropdown ─────────────────────────────────────
+export const getCourses = async (req, res) => {
+  try {
+    const courses = await Course.find({ isActive: true })
+      .populate("department", "name")
+      .select("name department")
+      .sort({ name: 1 })
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      courses,
+    });
+  } catch (error) {
+    console.error("Get courses error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch courses",
+    });
+  }
+};
+
+// ── Get instructors for dropdown ─────────────────────────────────
+export const getInstructors = async (req, res) => {
+  try {
+    const instructors = await Instructor.find({ isActive: true })
+      .select("title name")
+      .sort({ name: 1 })
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      instructors,
+    });
+  } catch (error) {
+    console.error("Get instructors error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch instructors",
+    });
   }
 };

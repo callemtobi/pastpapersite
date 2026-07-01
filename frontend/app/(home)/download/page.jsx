@@ -16,6 +16,8 @@ import {
   Loader,
   User,
   Building,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { resultsContainer, resultCard } from "@/lib/animations";
@@ -33,18 +35,38 @@ export default function DownloadPage() {
   const [isLoading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [papers, setPapers] = useState([]);
+  const [totalPapers, setTotalPapers] = useState(0);
 
-  // Fetch data from backend
+  // ── Pagination state ────────────────────────────────────────────
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Fetch data from backend with pagination and filters
   useEffect(() => {
     let cancelled = false;
 
     const getPapers = async () => {
       try {
         setLoading(true);
-        const response = await axios.get("http://localhost:8000/api/papers");
+
+        // Build query parameters
+        const params = new URLSearchParams();
+        params.append("page", currentPage);
+        params.append("limit", itemsPerPage);
+
+        if (searchQuery) params.append("search", searchQuery);
+        if (departmentFilter !== "all")
+          params.append("department", departmentFilter);
+        if (yearFilter !== "all") params.append("year", yearFilter);
+        if (typeFilter !== "all") params.append("examType", typeFilter);
+        if (subjectFilter !== "all") params.append("semester", subjectFilter);
+
+        const response = await axios.get(
+          `http://localhost:8000/api/papers?${params.toString()}`,
+        );
+
         if (!cancelled) {
           if (response.data.success && response.data.papers) {
-            // Populate the paper data with populated fields
             const populatedPapers = response.data.papers.map((paper) => ({
               ...paper,
               courseName:
@@ -57,8 +79,10 @@ export default function DownloadPage() {
               instructorTitle: paper.instructor?.title || "",
             }));
             setPapers(populatedPapers);
+            setTotalPapers(response.data.pagination?.total || 0);
           } else {
             setPapers([]);
+            setTotalPapers(0);
           }
         }
       } catch (err) {
@@ -71,31 +95,35 @@ export default function DownloadPage() {
         if (!cancelled) setLoading(false);
       }
     };
+
     getPapers();
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [
+    currentPage,
+    itemsPerPage,
+    searchQuery,
+    departmentFilter,
+    yearFilter,
+    typeFilter,
+    subjectFilter,
+  ]);
 
-  const filteredPapers = papers.filter((paper) => {
-    const matchesSearch =
-      paper.courseName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      paper.course?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      paper.departmentName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      paper.instructorName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      false;
+  // ── Reset page when filters change ─────────────────────────────
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, departmentFilter, yearFilter, typeFilter, subjectFilter]);
 
-    const matchesDepartment =
-      departmentFilter === "all" ||
-      paper.department?.name === departmentFilter ||
-      paper.departmentName === departmentFilter;
+  // ── Pagination calculations ────────────────────────────────────
+  const totalPages = Math.ceil(totalPapers / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage + 1;
+  const endIndex = Math.min(startIndex + itemsPerPage - 1, totalPapers);
 
-    const matchesYear = yearFilter === "all" || paper.year === yearFilter;
-    const matchesType = typeFilter === "all" || paper.examType === typeFilter;
-
-    return matchesSearch && matchesDepartment && matchesYear && matchesType;
-  });
+  const goToPage = (page) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -146,7 +174,9 @@ export default function DownloadPage() {
                 type="text"
                 placeholder="Search by course, department, or instructor..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                }}
                 whileFocus={{ scale: 1.01 }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 className="border border-border-light bg-input-bg w-full pl-12 pr-4 h-12 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200"
@@ -200,11 +230,14 @@ export default function DownloadPage() {
                       className="border border-border-light bg-input-bg w-full px-4 py-2 rounded-lg focus:outline-none focus:border-blue-500"
                     >
                       <option value="all">All Years</option>
-                      <option value="2025">2025</option>
-                      <option value="2024">2024</option>
-                      <option value="2023">2023</option>
-                      <option value="2022">2022</option>
-                      <option value="2021">2021</option>
+                      {Array.from(
+                        { length: 7 },
+                        (_, i) => new Date().getFullYear() - i,
+                      ).map((year) => (
+                        <option key={year} value={year}>
+                          {year}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
@@ -264,8 +297,14 @@ export default function DownloadPage() {
           <p className="text-sm text-muted-foreground">
             Showing{" "}
             <span className="font-medium text-foreground">
-              {filteredPapers.length}
+              {totalPapers > 0 ? startIndex : 0}
             </span>{" "}
+            to{" "}
+            <span className="font-medium text-foreground">
+              {totalPapers > 0 ? endIndex : 0}
+            </span>{" "}
+            of{" "}
+            <span className="font-medium text-foreground">{totalPapers}</span>{" "}
             papers
           </p>
         </motion.div>
@@ -278,7 +317,7 @@ export default function DownloadPage() {
         animate="visible"
         className="grid grid-cols-1 gap-6"
       >
-        {filteredPapers.map((paper) => {
+        {papers.map((paper) => {
           const courseName =
             paper.course?.name || paper.courseName || "Unknown Course";
           const departmentName =
@@ -390,7 +429,7 @@ export default function DownloadPage() {
       )}
 
       {/* Empty State */}
-      {filteredPapers.length === 0 && !isLoading && (
+      {papers.length === 0 && !isLoading && (
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -417,6 +456,86 @@ export default function DownloadPage() {
             <p className="text-muted-foreground">
               Try adjusting your search or filters
             </p>
+          </div>
+        </motion.div>
+      )}
+
+      {/* ── Pagination ───────────────────────────────────────────── */}
+      {totalPapers > 0 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200 dark:border-gray-700"
+        >
+          <div className="flex items-center gap-3 text-sm">
+            <span className="text-gray-600 dark:text-gray-300">
+              Showing <span className="font-medium">{startIndex}</span> to{" "}
+              <span className="font-medium">{endIndex}</span> of{" "}
+              <span className="font-medium">{totalPapers}</span> results
+            </span>
+            <select
+              value={itemsPerPage}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC]"
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+
+                if (pageNum < 1 || pageNum > totalPages) return null;
+
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => goToPage(pageNum)}
+                    className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                      currentPage === pageNum
+                        ? "bg-[#4FC3FC] text-white"
+                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
         </motion.div>
       )}

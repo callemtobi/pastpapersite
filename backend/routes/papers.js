@@ -9,6 +9,9 @@ import {
   downloadPaper,
   previewPaper,
   incrementDownload,
+  getDepartments,
+  getCourses,
+  getInstructors,
 } from "../controllers/paperController.js";
 import { authenticate } from "../middleware/auth.js";
 import {
@@ -56,16 +59,20 @@ const upload = multer({
   },
 });
 
+// ── Dropdown data routes (public) ──────────────────────────────
+router.get("/departments", getDepartments);
+router.get("/courses", getCourses);
+router.get("/instructors", getInstructors);
+
+// ── Public routes ────────────────────────────────────────────────
 router.get("/", getPapers);
 router.get("/:id", getPaperById);
 router.get("/:id/download", downloadPaper);
 router.get("/:id/preview", previewPaper);
-
-router.post("/upload", authenticate, upload.array("images", 5), uploadPaper);
 router.put("/:id/increment-download", incrementDownload);
 
-router.get("/announcements/active", getActiveAnnouncements);
+router.post("/upload", authenticate, upload.array("images", 5), uploadPaper);
 
-// router.delete("/:id", authenticate, deletePaper);
+router.get("/announcements/active", getActiveAnnouncements);
 
 export default router;

@@ -162,6 +162,7 @@ export default function Register() {
     password: "",
     confirmPassword: "",
   });
+  const [departments, setDepartments] = useState([]);
 
   // ── OTP state ────────────────────────────────────────────────
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -190,6 +191,24 @@ export default function Register() {
   };
 
   useEffect(() => () => clearInterval(cooldownRef.current), []);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:8000/api/papers/departments",
+        );
+
+        if (response.data.success) {
+          setDepartments(response.data.departments || []);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        showErrorToast("Failed to load form data. Please refresh.");
+      }
+    };
+    fetchData();
+  }, []);
 
   // ── Step 1 — Registration submit ─────────────────────────────
   const handleSubmit = async (e) => {
@@ -318,6 +337,10 @@ export default function Register() {
     }
   };
 
+  const updateField = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-white dark:bg-background">
       {/* ── Landscape card (desktop) ── */}
@@ -374,7 +397,7 @@ export default function Register() {
                 <div className="grid grid-cols-2 gap-x-3 gap-y-1">
                   {departments.map((d) => (
                     <div
-                      key={d.value}
+                      key={d._id}
                       className={`text-xs py-1 px-2 rounded-md transition-colors ${
                         formData.department === d.value
                           ? "bg-white/30 text-white font-medium"
@@ -483,12 +506,20 @@ export default function Register() {
                       }
                       className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC]"
                     >
-                      <option value="">Select department</option>
-                      {departments.map((d) => (
-                        <option key={d.value} value={d.value}>
-                          {d.label}
+                      <option value="">Select a department</option>
+                      {departments && departments.length > 0 ? (
+                        departments
+                          .filter((d) => d.isActive !== false)
+                          .map((dept) => (
+                            <option key={dept._id} value={dept._id}>
+                              {dept.name}
+                            </option>
+                          ))
+                      ) : (
+                        <option value="" disabled>
+                          No departments available
                         </option>
-                      ))}
+                      )}
                     </select>
                   </div>
                 </div>
@@ -719,7 +750,7 @@ export default function Register() {
                   >
                     <option value="">Select your department</option>
                     {departments.map((d) => (
-                      <option key={d.value} value={d.value}>
+                      <option key={d._id} value={d._id}>
                         {d.label}
                       </option>
                     ))}
