@@ -163,7 +163,6 @@ export default function Register() {
     confirmPassword: "",
   });
   const [departments, setDepartments] = useState([]);
-
   // ── OTP state ────────────────────────────────────────────────
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [otpLoading, setOtpLoading] = useState(false);

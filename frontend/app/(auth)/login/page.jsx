@@ -55,9 +55,10 @@ export default function Login() {
         },
       );
 
+      const role = response.data.user.role;
       showSuccessToast("Logged in successfully.");
 
-      router.push("/");
+      router.push(role === "admin" ? "/admin" : "/home");
     } catch (error) {
       const status = error.response?.status;
       const message = error.response?.data?.message || "Something went wrong.";

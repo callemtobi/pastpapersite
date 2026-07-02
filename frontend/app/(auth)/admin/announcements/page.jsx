@@ -1,22 +1,18 @@
 // app/admin/announcements/page.jsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Megaphone,
   Plus,
   Trash2,
   Edit,
   Search,
-  ChevronDown,
   X,
   Loader2,
   Save,
   Eye,
   EyeOff,
-  CheckCircle,
-  XCircle,
-  Clock,
 } from "lucide-react";
 import axios from "axios";
 import {
@@ -41,28 +37,41 @@ export default function AnnouncementsPage() {
     isActive: true,
   });
 
-  // Fetch announcements
-  useEffect(() => {
-    const fetchAnnouncements = async () => {
-      try {
-        setLoading(true);
-        const response = await axios.get(
-          "http://localhost:8000/api/admin/announcements",
-        );
-        if (response.data.success) {
-          setAnnouncements(response.data.announcements);
-        }
-      } catch (err) {
-        showErrorToast("Failed to fetch announcements");
-      } finally {
-        setLoading(false);
+  // ── Fetch announcements ────────────────────────────────────────
+  const fetchAnnouncements = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(
+        "http://localhost:8000/api/admin/announcements",
+        { withCredentials: true },
+      );
+      if (response.data.success) {
+        setAnnouncements(response.data.announcements);
       }
-    };
-    fetchAnnouncements();
+    } catch (err) {
+      showErrorToast(
+        err.response?.data?.message || "Failed to fetch announcements",
+      );
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  // ── Initial fetch ──────────────────────────────────────────────
+  useEffect(() => {
+    fetchAnnouncements();
+  }, [fetchAnnouncements]);
+
+  // ── Reset form ─────────────────────────────────────────────────
+  const resetForm = () => {
+    setFormData({ title: "", content: "", isActive: true });
+    setEditingAnnouncement(null);
+  };
+
+  // ── Handle submit ──────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!formData.title.trim() || !formData.content.trim()) {
       showErrorToast("Title and content are required");
       return;
@@ -80,7 +89,10 @@ export default function AnnouncementsPage() {
 
       const method = editingAnnouncement ? "patch" : "post";
 
-      const response = await axios[method](url, formData);
+      const response = await axios[method](url, formData, {
+        withCredentials: true,
+      });
+
       dismissToast(toast);
 
       if (response.data.success) {
@@ -91,7 +103,7 @@ export default function AnnouncementsPage() {
         );
         setShowModal(false);
         resetForm();
-        fetchAnnouncements();
+        await fetchAnnouncements();
       }
     } catch (err) {
       dismissToast(toast);
@@ -101,12 +113,14 @@ export default function AnnouncementsPage() {
     }
   };
 
+  // ── Toggle status ──────────────────────────────────────────────
   const handleToggleStatus = async (announcement) => {
     const toast = showLoadingToast("Updating status...");
     try {
       const response = await axios.patch(
         `http://localhost:8000/api/admin/announcements/${announcement._id}`,
         { isActive: !announcement.isActive },
+        { withCredentials: true },
       );
       dismissToast(toast);
       if (response.data.success) {
@@ -115,33 +129,35 @@ export default function AnnouncementsPage() {
             ? "Announcement hidden"
             : "Announcement published",
         );
-        fetchAnnouncements();
+        await fetchAnnouncements();
       }
     } catch (err) {
       dismissToast(toast);
-      showErrorToast("Failed to update status");
+      showErrorToast(err.response?.data?.message || "Failed to update status");
     }
   };
 
+  // ── Delete announcement ────────────────────────────────────────
   const handleDelete = async (id) => {
     if (!confirm("Delete this announcement?")) return;
     const toast = showLoadingToast("Deleting...");
     try {
-      await axios.delete(`http://localhost:8000/api/admin/announcements/${id}`);
+      await axios.delete(
+        `http://localhost:8000/api/admin/announcements/${id}`,
+        {
+          withCredentials: true,
+        },
+      );
       dismissToast(toast);
       showSuccessToast("Announcement deleted");
-      fetchAnnouncements();
+      await fetchAnnouncements();
     } catch (err) {
       dismissToast(toast);
-      showErrorToast("Failed to delete");
+      showErrorToast(err.response?.data?.message || "Failed to delete");
     }
   };
 
-  const resetForm = () => {
-    setFormData({ title: "", content: "", isActive: true });
-    setEditingAnnouncement(null);
-  };
-
+  // ── Open edit modal ────────────────────────────────────────────
   const openEditModal = (announcement) => {
     setEditingAnnouncement(announcement);
     setFormData({
@@ -152,6 +168,7 @@ export default function AnnouncementsPage() {
     setShowModal(true);
   };
 
+  // ── Filters ─────────────────────────────────────────────────────
   const filteredAnnouncements = announcements.filter((a) => {
     const matchesSearch = a.title
       .toLowerCase()

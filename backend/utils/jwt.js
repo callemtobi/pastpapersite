@@ -3,8 +3,8 @@ import argon2 from "argon2";
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
-export async function generateToken(userId) {
-  return await new SignJWT({ userId })
+export async function generateToken({ id, role }) {
+  return await new SignJWT({ id, role })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("1d")

@@ -13,10 +13,10 @@ export default function AnnouncementPopup() {
 
   useEffect(() => {
     // Check if user has already seen announcements this session
-    const sessionKey = "announcements_shown";
-    if (sessionStorage.getItem(sessionKey)) {
-      return;
-    }
+    // const sessionKey = "announcements_shown";
+    // if (sessionStorage.getItem(sessionKey)) {
+    //   return;
+    // }
 
     const fetchAnnouncements = async () => {
       try {
@@ -26,7 +26,7 @@ export default function AnnouncementPopup() {
         if (response.data.success && response.data.announcements.length > 0) {
           setAnnouncements(response.data.announcements);
           setIsVisible(true);
-          sessionStorage.setItem(sessionKey, "true");
+          // sessionStorage.setItem(sessionKey, "true");
         }
       } catch (err) {
         console.error("Failed to fetch announcements:", err);

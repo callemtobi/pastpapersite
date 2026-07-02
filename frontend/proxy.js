@@ -1,48 +1,39 @@
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
+const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
-export async function proxy(req) {
-  const { pathname } = req.nextUrl;
-  const token = req.cookies.get("accessToken")?.value;
+export async function proxy(request) {
+  const { pathname } = request.nextUrl;
+  const token = request.cookies.get("accessToken")?.value;
 
   const isAdminRoute = pathname.startsWith("/admin");
   const isUploadRoute = pathname.startsWith("/upload");
+  console.log("PATH:", pathname, "TOKEN FOUND:", !!token);
 
-  if (!isAdminRoute && !isUploadRoute) {
-    return NextResponse.next();
-  }
+  if (!isAdminRoute && !isUploadRoute) return NextResponse.next();
 
   if (!token) {
-    const loginUrl = new URL("/login", req.url);
-    loginUrl.searchParams.set("redirect", pathname);
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("from", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  let payload;
   try {
-    const { payload: verified } = await jwtVerify(token, JWT_SECRET);
-    payload = verified;
-  } catch (err) {
-    const loginUrl = new URL("/login", req.url);
-    loginUrl.searchParams.set("redirect", pathname);
-    const res = NextResponse.redirect(loginUrl);
-    res.cookies.delete("accessToken");
-    return res;
-  }
+    const { payload } = await jwtVerify(token, secret);
+    console.log("PAYLOAD:", payload);
 
-  if (
-    isAdminRoute &&
-    payload.role !== "admin" &&
-    payload.role !== "super_admin"
-  ) {
-    return NextResponse.redirect(new URL("/", req.url));
-  }
+    if (isAdminRoute && payload.role !== "admin") {
+      return NextResponse.redirect(new URL("/home", request.url));
+    }
 
-  return NextResponse.next();
+    return NextResponse.next();
+  } catch {
+    console.log("VERIFY FAILED:", err.message);
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
 }
 
 export const config = {
-  matcher: ["/admin", "/admin/:path*", "/upload", "/upload/:path*"],
+  matcher: ["/admin/:path*", "/upload/:path*"],
 };

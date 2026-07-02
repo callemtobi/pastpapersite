@@ -134,14 +134,22 @@ export const login = async (req, res) => {
       });
     }
 
-    const token = await generateToken(user._id);
+    const token = await generateToken({
+      id: user._id.toString(),
+      role: user.role,
+    });
 
     res.cookie("accessToken", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "lax",
       maxAge: 24 * 60 * 60 * 1000,
     });
+
+    // sameSite: "none" + secure: true is required if frontend (Netlify)
+    // and backend are on different domains —
+    // otherwise the cookie won't be sent cross-site.
+    // use "lax" in dev and "none" (with secure: true) in production,
 
     return res.status(200).json({
       success: true,
@@ -152,6 +160,7 @@ export const login = async (req, res) => {
         email: user.email,
         studentId: user.studentId,
         department: user.department,
+        role: user.role,
       },
     });
   } catch (error) {
@@ -239,7 +248,7 @@ export const logout = async (req, res) => {
     res.clearCookie("accessToken", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "lax",
     });
     return res.json({ message: "Logged out" });
   } catch (error) {

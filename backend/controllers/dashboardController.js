@@ -4,6 +4,53 @@ import User from "../models/User.js";
 import fs from "fs";
 import path from "path";
 
+// ── Helper: Calculate total storage size ─────────────────────
+async function calculateTotalStorageSize() {
+  const papers = await Paper.find().select("images");
+  let totalBytes = 0;
+
+  for (const paper of papers) {
+    for (const image of paper.images || []) {
+      if (image.path) {
+        const filePath = path.join(process.cwd(), image.path);
+        try {
+          const stats = fs.statSync(filePath);
+          totalBytes += stats.size;
+        } catch (err) {
+          // File not found, skip
+        }
+      }
+    }
+  }
+
+  return totalBytes;
+}
+
+// ── Helper: Get recent activity ───────────────────────────────
+async function getRecentActivityFunc(limit = 10) {
+  const activities = [];
+
+  // Get recent uploads
+  const recentUploads = await Paper.find()
+    .sort({ createdAt: -1 })
+    .limit(5)
+    .select("title courseCode createdAt");
+
+  recentUploads.forEach((paper) => {
+    activities.push({
+      type: "upload",
+      user: "Unknown User", // You can populate this with user info
+      paper: `- ${paper.name}`,
+      time: paper.createdAt,
+    });
+  });
+
+  // Sort all activities by time
+  activities.sort((a, b) => new Date(b.time) - new Date(a.time));
+
+  return activities.slice(0, limit);
+}
+
 export const getDashboardStats = async (req, res) => {
   try {
     // ── Parallel queries for performance ─────────────────────────
@@ -99,53 +146,6 @@ export const getDashboardStats = async (req, res) => {
     });
   }
 };
-
-// ── Helper: Calculate total storage size ─────────────────────
-async function calculateTotalStorageSize() {
-  const papers = await Paper.find().select("images");
-  let totalBytes = 0;
-
-  for (const paper of papers) {
-    for (const image of paper.images || []) {
-      if (image.path) {
-        const filePath = path.join(process.cwd(), image.path);
-        try {
-          const stats = fs.statSync(filePath);
-          totalBytes += stats.size;
-        } catch (err) {
-          // File not found, skip
-        }
-      }
-    }
-  }
-
-  return totalBytes;
-}
-
-// ── Helper: Get recent activity ───────────────────────────────
-async function getRecentActivityFunc(limit = 10) {
-  const activities = [];
-
-  // Get recent uploads
-  const recentUploads = await Paper.find()
-    .sort({ createdAt: -1 })
-    .limit(5)
-    .select("title courseCode createdAt");
-
-  recentUploads.forEach((paper) => {
-    activities.push({
-      type: "upload",
-      user: "Unknown User", // You can populate this with user info
-      paper: `- ${paper.name}`,
-      time: paper.createdAt,
-    });
-  });
-
-  // Sort all activities by time
-  activities.sort((a, b) => new Date(b.time) - new Date(a.time));
-
-  return activities.slice(0, limit);
-}
 
 export const getTopDownloadedPapers = async (req, res) => {
   try {

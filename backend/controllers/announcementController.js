@@ -79,10 +79,11 @@ export const updateAnnouncement = async (req, res) => {
     const { id } = req.params;
     const { title, content, isActive } = req.body;
 
+    // ✅ FIXED: Use returnDocument: 'after' instead of new: true
     const announcement = await Announcement.findByIdAndUpdate(
       id,
       { title, content, isActive },
-      { new: true, runValidators: true },
+      { returnDocument: "after", runValidators: true },
     );
 
     if (!announcement) {
@@ -105,7 +106,6 @@ export const updateAnnouncement = async (req, res) => {
   }
 };
 
-// ── Delete announcement (Admin) ─────────────────────────────────
 export const deleteAnnouncement = async (req, res) => {
   try {
     const { id } = req.params;

@@ -22,8 +22,8 @@ import {
 import { getActiveAnnouncements } from "../controllers/announcementController.js";
 
 const router = express.Router();
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -39,7 +39,6 @@ const storage = multer.diskStorage({
     cb(null, `${timestamp}_${random}_${name}${ext}`);
   },
 });
-
 // File filter to allow only images
 const fileFilter = (req, file, cb) => {
   const allowedMimes = ["image/png", "image/jpeg", "image/jpg"];
@@ -49,7 +48,6 @@ const fileFilter = (req, file, cb) => {
     cb(new Error(`Invalid file type: ${file.mimetype}`), false);
   }
 };
-
 const upload = multer({
   storage,
   fileFilter,

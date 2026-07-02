@@ -8,7 +8,6 @@ import fs from "fs/promises";
 
 // ── Admin User Management Functions ─────────────────────────────
 
-// ── Get All Users (Admin) ──────────────────────────────────────
 export const adminGetUsers = async (req, res) => {
   try {
     const {
@@ -62,7 +61,6 @@ export const adminGetUsers = async (req, res) => {
   }
 };
 
-// ── Get Single User (Admin) ────────────────────────────────────
 export const adminGetUserById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -90,7 +88,6 @@ export const adminGetUserById = async (req, res) => {
   }
 };
 
-// ── Create User (Admin) ─────────────────────────────────────────
 export const adminCreateUser = async (req, res) => {
   try {
     const {
@@ -158,7 +155,6 @@ export const adminCreateUser = async (req, res) => {
   }
 };
 
-// ── Update User (Admin) ─────────────────────────────────────────
 export const adminUpdateUser = async (req, res) => {
   try {
     const { id } = req.params;
@@ -239,7 +235,6 @@ export const adminUpdateUser = async (req, res) => {
   }
 };
 
-// ── Delete User (Admin) ─────────────────────────────────────────
 export const adminDeleteUser = async (req, res) => {
   try {
     const { id } = req.params;
@@ -289,7 +284,6 @@ export const adminDeleteUser = async (req, res) => {
   }
 };
 
-// ── Bulk Delete Users (Admin) ──────────────────────────────────
 export const adminBulkDeleteUsers = async (req, res) => {
   try {
     const { ids } = req.body;
@@ -347,7 +341,6 @@ export const adminBulkDeleteUsers = async (req, res) => {
   }
 };
 
-// ── Get User Stats (Admin) ──────────────────────────────────────
 export const adminGetUserStats = async (req, res) => {
   try {
     const [total, active, inactive, admins, verified, unverified] =
@@ -375,7 +368,6 @@ export const adminGetUserStats = async (req, res) => {
 
 // ── DEPARTMENT CONTROLLERS ──────────────────────────────────────
 
-// Get all departments
 export const adminGetDepartments = async (req, res) => {
   try {
     const {
@@ -421,7 +413,6 @@ export const adminGetDepartments = async (req, res) => {
   }
 };
 
-// Get single department
 export const adminGetDepartmentById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -447,7 +438,6 @@ export const adminGetDepartmentById = async (req, res) => {
   }
 };
 
-// Create department
 export const adminCreateDepartment = async (req, res) => {
   try {
     const { name } = req.body;
@@ -489,7 +479,6 @@ export const adminCreateDepartment = async (req, res) => {
   }
 };
 
-// Update department
 export const adminUpdateDepartment = async (req, res) => {
   try {
     const { id } = req.params;
@@ -554,7 +543,6 @@ export const adminUpdateDepartment = async (req, res) => {
 
 // ── COURSE CONTROLLERS ──────────────────────────────────────────
 
-// Get all courses
 export const adminGetCourses = async (req, res) => {
   try {
     const {
@@ -601,7 +589,6 @@ export const adminGetCourses = async (req, res) => {
   }
 };
 
-// Get single course
 export const adminGetCourseById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -627,7 +614,6 @@ export const adminGetCourseById = async (req, res) => {
   }
 };
 
-// Create course
 export const adminCreateCourse = async (req, res) => {
   try {
     const { name, department } = req.body;
@@ -682,7 +668,6 @@ export const adminCreateCourse = async (req, res) => {
   }
 };
 
-// Update course
 export const adminUpdateCourse = async (req, res) => {
   try {
     const { id } = req.params;
@@ -764,7 +749,6 @@ export const adminUpdateCourse = async (req, res) => {
 
 // ── INSTRUCTOR CONTROLLERS ──────────────────────────────────────
 
-// Get all instructors
 export const adminGetInstructors = async (req, res) => {
   try {
     const {
@@ -813,7 +797,6 @@ export const adminGetInstructors = async (req, res) => {
   }
 };
 
-// Get single instructor
 export const adminGetInstructorById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -839,7 +822,6 @@ export const adminGetInstructorById = async (req, res) => {
   }
 };
 
-// Create instructor
 export const adminCreateInstructor = async (req, res) => {
   try {
     const { title, name } = req.body;
@@ -883,7 +865,6 @@ export const adminCreateInstructor = async (req, res) => {
   }
 };
 
-// Update instructor
 export const adminUpdateInstructor = async (req, res) => {
   try {
     const { id } = req.params;

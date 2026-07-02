@@ -34,7 +34,7 @@ import {
   getRecentActivity,
   getTopDownloadedPapers,
 } from "../controllers/dashboardController.js";
-import { authenticate, isAdmin } from "../middleware/auth.js";
+import { authenticate, isAdmin, requireRole } from "../middleware/auth.js";
 import {
   getAnnouncements,
   getActiveAnnouncements,
@@ -45,7 +45,8 @@ import {
 
 const router = express.Router();
 // ── All routes require authentication and admin role ────────────
-router.use(authenticate, isAdmin);
+// router.use(authenticate, isAdmin);
+// router.use(authenticate, requireRole("admin"));
 
 router.get("/dashboard/stats", getDashboardStats);
 // router.get("/dashboard/", getRecentActivity);
@@ -85,7 +86,7 @@ router.patch("/papers/:id", adminUpdatePaper);
 router.delete("/papers/:id", adminDeletePaper);
 router.delete("/papers/bulk", adminBulkDeletePapers);
 
-// ── Paper Routes ──────────────────────────────────────────────────
+// ── Announcement Routes ──────────────────────────────────────────────────
 router.get("/announcements", getAnnouncements);
 router.post("/announcements", createAnnouncement);
 router.patch("/announcements/:id", updateAnnouncement);
