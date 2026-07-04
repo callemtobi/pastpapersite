@@ -34,6 +34,7 @@ export const adminGetUsers = async (req, res) => {
 
     const [users, total] = await Promise.all([
       User.find(filter)
+        .populate("department", "name")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit))

@@ -46,7 +46,7 @@ import {
 const router = express.Router();
 // ── All routes require authentication and admin role ────────────
 // router.use(authenticate, isAdmin);
-// router.use(authenticate, requireRole("admin"));
+router.use(authenticate, requireRole("admin"));
 
 router.get("/dashboard/stats", getDashboardStats);
 router.get("/dashboard/recent-activity", getRecentActivity);

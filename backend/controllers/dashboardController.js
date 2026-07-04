@@ -234,7 +234,6 @@ export const getRecentActivity = async (req, res) => {
 
     // Sort by time and limit
     activities.sort((a, b) => new Date(b.time) - new Date(a.time));
-    console.log(activities);
 
     return res.status(200).json({
       success: true,

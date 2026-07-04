@@ -611,6 +611,7 @@ export default function UsersPage() {
         if (!cancelled) {
           if (response.data.success && response.data.users) {
             setUsers(response.data.users);
+            console.log(users);
           } else {
             setUsers([]);
           }
@@ -1130,7 +1131,7 @@ export default function UsersPage() {
                         </td>
                         <td className="px-4 py-3 hidden md:table-cell">
                           <span className="text-sm text-gray-600 dark:text-gray-300">
-                            {user.department}
+                            {user.department?.name}
                           </span>
                         </td>
                         <td className="px-4 py-3 hidden lg:table-cell">

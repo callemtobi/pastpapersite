@@ -11,10 +11,19 @@ import {
   getUserById,
   getMe,
 } from "../controllers/authController.js";
+import {
+  getDashboardStats,
+  getRecentActivity,
+  getTopDownloadedPapers,
+} from "../controllers/dashboardController.js";
 import { loginRateLimiter } from "../middleware/loginRateLimiter.js";
 import { authenticate } from "../middleware/auth.js";
 
 const router = express.Router();
+
+router.get("/dashboard/stats", getDashboardStats);
+router.get("/dashboard/recent-activity", getRecentActivity);
+router.get("/dashboard/top-downloads", getTopDownloadedPapers);
 
 router.get("/", getUsers);
 router.get("/me", authenticate, getMe);
