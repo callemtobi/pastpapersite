@@ -8,7 +8,6 @@ import { verifyToken } from "../utils/jwt.js";
 export const authenticate = async (req, res, next) => {
   try {
     const token = req.cookies?.accessToken;
-    console.log("Token:", token);
 
     if (!token) {
       return res.status(401).json({
@@ -31,17 +30,17 @@ export const authenticate = async (req, res, next) => {
   }
 };
 
-export const isAdmin = (req, res, next) => {
-  if (
-    !req.user ||
-    (req.user.role !== "admin" && req.user.role !== "super_admin")
-  ) {
-    return res
-      .status(403)
-      .json({ success: false, message: "Admin access required" });
-  }
-  next();
-};
+// export const isAdmin = (req, res, next) => {
+//   if (
+//     !req.user ||
+//     (req.user.role !== "admin" && req.user.role !== "super_admin")
+//   ) {
+//     return res
+//       .status(403)
+//       .json({ success: false, message: "Admin access required" });
+//   }
+//   next();
+// };
 
 export const requireRole = (...roles) => {
   return (req, res, next) => {

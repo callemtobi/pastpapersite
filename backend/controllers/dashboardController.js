@@ -34,7 +34,7 @@ async function getRecentActivityFunc(limit = 10) {
   const recentUploads = await Paper.find()
     .sort({ createdAt: -1 })
     .limit(5)
-    .select("title courseCode createdAt");
+    .select("course createdAt");
 
   recentUploads.forEach((paper) => {
     activities.push({
@@ -152,9 +152,15 @@ export const getTopDownloadedPapers = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
 
     const topPapers = await Paper.find()
+      .populate({
+        path: "course",
+        populate: {
+          path: "department",
+        },
+      })
       .sort({ downloads: -1 })
       .limit(limit)
-      .select("title courseCode subject downloads pages createdAt");
+      .select("course downloads pages createdAt");
 
     return res.status(200).json({
       success: true,
@@ -176,15 +182,16 @@ export const getRecentActivity = async (req, res) => {
 
     // Get recent uploads
     const recentUploads = await Paper.find()
+      .populate({ path: "course" })
       .sort({ createdAt: -1 })
       .limit(Math.ceil(limit / 3))
-      .select("title courseCode createdAt uploadedBy");
+      .select("course createdAt uploadedBy");
 
     recentUploads.forEach((paper) => {
       activities.push({
         type: "upload",
         user: paper.uploadedBy || "System",
-        paper: `- ${paper.name}`,
+        paper: `- ${paper.course.name}`,
         time: paper.createdAt,
         id: paper._id,
       });
@@ -192,15 +199,16 @@ export const getRecentActivity = async (req, res) => {
 
     // Get recent status changes (approvals/rejections)
     const recentStatusChanges = await Paper.find()
+      .populate({ path: "course" })
       .sort({ updatedAt: -1 })
       .limit(Math.ceil(limit / 3))
-      .select("title courseCode status updatedAt");
+      .select("title course status updatedAt");
 
     recentStatusChanges.forEach((paper) => {
       activities.push({
         type: paper.status === "approved" ? "approval" : "rejection",
         user: "Admin",
-        paper: `- ${paper.name}`,
+        paper: `- ${paper.course.name}`,
         time: paper.updatedAt,
         id: paper._id,
       });
@@ -209,15 +217,16 @@ export const getRecentActivity = async (req, res) => {
     // Get recent downloads (from log or inferred)
     // You may need a separate Download model for this
     const recentDownloads = await Paper.find()
+      .populate({ path: "course" })
       .sort({ updatedAt: -1 })
       .limit(Math.ceil(limit / 3))
-      .select("title courseCode downloads updatedAt");
+      .select("title course downloads updatedAt");
 
     recentDownloads.forEach((paper) => {
       activities.push({
         type: "download",
         user: "User",
-        paper: `- ${paper.name}`,
+        paper: `- ${paper.course.name}`,
         time: paper.updatedAt,
         id: paper._id,
       });
@@ -225,6 +234,7 @@ export const getRecentActivity = async (req, res) => {
 
     // Sort by time and limit
     activities.sort((a, b) => new Date(b.time) - new Date(a.time));
+    console.log(activities);
 
     return res.status(200).json({
       success: true,

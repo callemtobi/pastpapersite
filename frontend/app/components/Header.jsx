@@ -27,10 +27,12 @@ import {
   showSuccessToast,
 } from "@/lib/toastConfig";
 import { navbarAnimation } from "@/lib/animations";
+import { useAuth } from "@/app/context/AuthContext";
 
-export default function Header({ user }) {
+export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
+  const { user, loading, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
@@ -44,18 +46,21 @@ export default function Header({ user }) {
   }, [isDark]);
 
   const handleLogout = async () => {
-    try {
-      await axios.post(
-        "http://localhost:8000/api/auth/logout",
-        {},
-        { withCredentials: true },
-      );
-      showSuccessToast("You have been logged out.");
-      router.push("/login");
-    } catch (err) {
-      console.error("Logout error:", err);
-      router.push("/login");
-    }
+    setShowUserDropdown(false);
+    logout();
+    // try {
+    //   await axios.post(
+    //     "http://localhost:8000/api/auth/logout",
+    //     {},
+    //     { withCredentials: true },
+    //   );
+    //   showSuccessToast("You have been logged out.");
+    //   router.push("/home");
+    // } catch (err) {
+    //   console.error("Logout error:", err);
+    //   showErrorToast("Logout error");
+    //   router.push("/login");
+    // }
   };
 
   const toggleTheme = () => {
@@ -75,6 +80,11 @@ export default function Header({ user }) {
     }
     return pathname === path;
   };
+
+  if (loading) {
+    return <div className="w-7 h-7 rounded-full bg-gray-200 animate-pulse" />;
+    // or reuse your existing SkeletonUI.jsx here
+  }
 
   return (
     <motion.nav variants={navbarAnimation} initial="hidden" animate="visible">
@@ -157,14 +167,16 @@ export default function Header({ user }) {
                         {user.email}
                       </p>
                     </div>
-                    <Link
-                      href="/profile"
-                      onClick={() => setShowUserDropdown(false)}
-                      className="flex items-center gap-3 px-4 py-2 w-full text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    >
-                      <User className="w-4 h-4" />
-                      Profile
-                    </Link>
+                    {user.role === "admin" && (
+                      <Link
+                        href="/admin"
+                        onClick={() => setShowUserDropdown(false)}
+                        className="flex items-center gap-3 px-4 py-2 w-full text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <User className="w-4 h-4" />
+                        Admin Dashboard
+                      </Link>
+                    )}
                     <button
                       onClick={handleLogout}
                       className="flex items-center gap-3 px-4 py-2 w-full text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
@@ -247,6 +259,16 @@ export default function Header({ user }) {
                       {user.email}
                     </p>
                   </div>
+                  {user.role === "admin" && (
+                    <Link
+                      href="/admin"
+                      onClick={() => setShowUserDropdown(false)}
+                      className="flex items-center gap-3 px-4 py-2 w-full text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      <User className="w-4 h-4" />
+                      Admin Dashboard
+                    </Link>
+                  )}
                   <button
                     onClick={() => {
                       setMobileMenuOpen(false);

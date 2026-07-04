@@ -146,7 +146,7 @@ const ViewUserModal = ({ isOpen, onClose, user, onEdit, onDelete }) => {
                 Department
               </span>
               <span className="font-medium text-gray-900 dark:text-white">
-                {user.department}
+                {user.department?.name}
               </span>
             </div>
             <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
@@ -228,6 +228,7 @@ const UserFormModal = ({
   isLoading,
   isEdit = false,
 }) => {
+  const [departments, setDepartments] = useState([]);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -240,18 +241,23 @@ const UserFormModal = ({
   });
   const [errors, setErrors] = useState({});
 
-  const departments = [
-    "Computer Science",
-    "Software Engineering",
-    "MLT",
-    "Civil Engineering",
-    "Electrical Engineering",
-    "Mathematics",
-    "Physics",
-    "Chemistry",
-    "Economics",
-    "Business",
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:8000/api/papers/departments",
+        );
+
+        if (response.data.success) {
+          setDepartments(response.data.departments || []);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        showErrorToast("Failed to load form data. Please refresh.");
+      }
+    };
+    fetchData();
+  }, []);
 
   useEffect(() => {
     const setFormDataFunc = async () => {
@@ -367,7 +373,7 @@ const UserFormModal = ({
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-              Full Name <span className="text-red-500">*</span>
+              Name <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -442,8 +448,11 @@ const UserFormModal = ({
               >
                 <option value="">Select department</option>
                 {departments?.map((dept) => (
-                  <option key={dept} value={dept}>
-                    {dept}
+                  <option
+                    key={dept._id || dept.name}
+                    value={dept._id || dept.name}
+                  >
+                    {dept.name}
                   </option>
                 ))}
               </select>
@@ -571,6 +580,7 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUsers, setSelectedUsers] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
   const [filterRole, setFilterRole] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");

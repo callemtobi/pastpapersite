@@ -9,12 +9,15 @@ import {
   resetPassword,
   getUsers,
   getUserById,
+  getMe,
 } from "../controllers/authController.js";
 import { loginRateLimiter } from "../middleware/loginRateLimiter.js";
+import { authenticate } from "../middleware/auth.js";
 
 const router = express.Router();
 
 router.get("/", getUsers);
+router.get("/me", authenticate, getMe);
 router.get("/:id", getUserById);
 
 router.post("/login", loginRateLimiter, login);

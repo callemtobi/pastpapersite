@@ -63,7 +63,7 @@ export const getUsers = async (req, res) => {
       message: "User's fetched successfully.",
       users,
     });
-  } catch (err) {
+  } catch (error) {
     console.error("Get papers error:", error);
     return res.status(500).json({
       success: false,
@@ -89,11 +89,30 @@ export const getUserById = async (req, res) => {
       success: true,
       user,
     });
-  } catch (err) {
+  } catch (error) {
     console.error("Get user error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch user",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};
+
+export const getMe = async (req, res) => {
+  if (!req.user?.id) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+  try {
+    // req.user comes from requireAuth middleware (decoded token: { id, role })
+    const user = await User.findById(req.user.id).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json({ user });
+  } catch (error) {
+    console.error("Get me error: ", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch me",
       error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
@@ -243,13 +262,13 @@ export const register = async (req, res) => {
 };
 
 export const logout = async (req, res) => {
-  console.log("Cookies is cleared.");
   try {
     res.clearCookie("accessToken", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
     });
+    console.log("Cookies is cleared.");
     return res.json({ message: "Logged out" });
   } catch (error) {
     console.error("logout error:", error);
@@ -546,4 +565,5 @@ export default {
   resendOtp,
   forgotPassword,
   resetPassword,
+  getMe,
 };

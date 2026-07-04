@@ -19,17 +19,6 @@ import {
   showSuccessToast,
 } from "@/lib/toastConfig";
 
-const departments = [
-  { value: "cs", label: "Computer Science" },
-  { value: "eng", label: "Engineering" },
-  { value: "math", label: "Mathematics" },
-  { value: "physics", label: "Physics" },
-  { value: "chem", label: "Chemistry" },
-  { value: "bio", label: "Biology" },
-  { value: "econ", label: "Economics" },
-  { value: "bus", label: "Business" },
-];
-
 const RESEND_COOLDOWN = 60; // seconds
 
 // Place this ABOVE the `export default function Register()` line
@@ -461,7 +450,7 @@ export default function Register() {
                       <input
                         id="email-d"
                         type="email"
-                        placeholder="student@university.edu"
+                        placeholder="student@gmail.com"
                         value={formData.email}
                         onChange={(e) => updateField("email", e.target.value)}
                         required
@@ -700,14 +689,14 @@ export default function Register() {
                     htmlFor="email-m"
                     className="block text-sm font-medium text-gray-900 dark:text-white"
                   >
-                    University Email
+                    Email
                   </label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       id="email-m"
                       type="email"
-                      placeholder="student@university.edu"
+                      placeholder="student@gmail.com"
                       value={formData.email}
                       onChange={(e) => updateField("email", e.target.value)}
                       required
@@ -748,11 +737,19 @@ export default function Register() {
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
                   >
                     <option value="">Select your department</option>
-                    {departments.map((d) => (
-                      <option key={d._id} value={d._id}>
-                        {d.label}
+                    {departments && departments.length > 0 ? (
+                      departments
+                        .filter((d) => d.isActive !== false)
+                        .map((dept) => (
+                          <option key={dept._id} value={dept._id}>
+                            {dept.name}
+                          </option>
+                        ))
+                    ) : (
+                      <option value="" disabled>
+                        No departments available
                       </option>
-                    ))}
+                    )}
                   </select>
                 </div>
 

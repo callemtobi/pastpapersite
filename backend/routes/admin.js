@@ -34,7 +34,7 @@ import {
   getRecentActivity,
   getTopDownloadedPapers,
 } from "../controllers/dashboardController.js";
-import { authenticate, isAdmin, requireRole } from "../middleware/auth.js";
+import { authenticate, requireRole } from "../middleware/auth.js";
 import {
   getAnnouncements,
   getActiveAnnouncements,
@@ -49,8 +49,8 @@ const router = express.Router();
 // router.use(authenticate, requireRole("admin"));
 
 router.get("/dashboard/stats", getDashboardStats);
-// router.get("/dashboard/", getRecentActivity);
-// router.get("/dashboard/", getTopDownloadedPapers);
+router.get("/dashboard/recent-activity", getRecentActivity);
+router.get("/dashboard/top-downloads", getTopDownloadedPapers);
 
 // ── User Routes ──────────────────────────────────────────────────
 router.get("/users", adminGetUsers);

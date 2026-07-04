@@ -16,7 +16,7 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import { showSuccessToast } from "@/lib/toastConfig";
 
-export default function AdminHeader({ user }) {
+export default function AdminHeader() {
   const [showDropdown, setShowDropdown] = useState(false);
   const router = useRouter();
   const pathname = usePathname();

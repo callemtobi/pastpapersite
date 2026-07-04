@@ -5,6 +5,7 @@ import Course from "../models/Course.js";
 import Instructor from "../models/Instructor.js";
 import User from "../models/User.js";
 import fs from "fs/promises";
+import argon2 from "argon2";
 
 // ── Admin User Management Functions ─────────────────────────────
 

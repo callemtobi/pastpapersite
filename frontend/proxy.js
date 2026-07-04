@@ -21,7 +21,6 @@ export async function proxy(request) {
 
   try {
     const { payload } = await jwtVerify(token, secret);
-    console.log("PAYLOAD:", payload);
 
     if (isAdminRoute && payload.role !== "admin") {
       return NextResponse.redirect(new URL("/home", request.url));

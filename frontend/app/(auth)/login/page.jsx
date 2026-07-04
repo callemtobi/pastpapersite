@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { GraduationCap, Mail, Lock, Loader } from "lucide-react";
 import axios from "axios";
 import { showErrorToast, showSuccessToast } from "@/lib/toastConfig";
+import { useAuth } from "@/app/context/AuthContext";
 
 const REDIRECT_MESSAGES = {
   auth_required: "Please log in to access that page.",
@@ -15,6 +16,7 @@ const REDIRECT_MESSAGES = {
 export default function Login() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { refetchUser } = useAuth();
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [emailError, setEmailError] = useState("");
@@ -57,6 +59,7 @@ export default function Login() {
 
       const role = response.data.user.role;
       showSuccessToast("Logged in successfully.");
+      await refetchUser();
 
       router.push(role === "admin" ? "/admin" : "/home");
     } catch (error) {

@@ -17,16 +17,140 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  DollarSign,
+  ArrowUpRight,
+  ArrowDownRight,
+  User,
   ShoppingBag,
   Truck,
   Monitor,
-  User,
-  ArrowUpRight,
-  ArrowDownRight,
+  DollarSign,
 } from "lucide-react";
 import Link from "next/link";
-import RecentActivity from "@/components/RecentActivity";
+
+// ── SVG Background Components ────────────────────────────────────
+const ChartSvg1 = () => (
+  <svg
+    className="absolute bottom-0 right-0 opacity-10"
+    width="120"
+    height="80"
+    viewBox="0 0 120 80"
+  >
+    <polyline
+      points="0,60 20,40 40,50 60,20 80,30 100,10 120,20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    />
+    <polyline
+      points="0,75 20,55 40,65 60,35 80,45 100,25 120,35"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      opacity="0.5"
+    />
+    <circle cx="60" cy="20" r="3" fill="currentColor" />
+    <circle cx="100" cy="10" r="3" fill="currentColor" />
+  </svg>
+);
+
+const ChartSvg2 = () => (
+  <svg
+    className="absolute bottom-0 right-0 opacity-10"
+    width="120"
+    height="80"
+    viewBox="0 0 120 80"
+  >
+    <rect x="0" y="40" width="15" height="40" rx="2" fill="currentColor" />
+    <rect x="20" y="25" width="15" height="55" rx="2" fill="currentColor" />
+    <rect x="40" y="50" width="15" height="30" rx="2" fill="currentColor" />
+    <rect x="60" y="15" width="15" height="65" rx="2" fill="currentColor" />
+    <rect x="80" y="35" width="15" height="45" rx="2" fill="currentColor" />
+    <rect x="100" y="5" width="15" height="75" rx="2" fill="currentColor" />
+  </svg>
+);
+
+const ChartSvg3 = () => (
+  <svg
+    className="absolute bottom-0 right-0 opacity-10"
+    width="120"
+    height="80"
+    viewBox="0 0 120 80"
+  >
+    <path
+      d="M0,60 Q20,30 40,50 Q60,20 80,40 Q100,10 120,30 L120,80 L0,80 Z"
+      fill="currentColor"
+    />
+    <path
+      d="M0,70 Q30,50 60,60 Q90,40 120,55 L120,80 L0,80 Z"
+      fill="currentColor"
+      opacity="0.5"
+    />
+  </svg>
+);
+
+const ChartSvg4 = () => (
+  <svg
+    className="absolute bottom-0 right-0 opacity-10"
+    width="120"
+    height="80"
+    viewBox="0 0 120 80"
+  >
+    <circle
+      cx="60"
+      cy="40"
+      r="35"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="8"
+    />
+    <circle
+      cx="60"
+      cy="40"
+      r="35"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="8"
+      strokeDasharray="175 220"
+      strokeDashoffset="0"
+      transform="rotate(-90 60 40)"
+    />
+    <circle
+      cx="60"
+      cy="40"
+      r="25"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="5"
+      strokeDasharray="100 157"
+      strokeDashoffset="0"
+      transform="rotate(-90 60 40)"
+      opacity="0.5"
+    />
+  </svg>
+);
+
+const ChartSvg5 = () => (
+  <svg
+    className="absolute bottom-0 right-0 opacity-10"
+    width="120"
+    height="80"
+    viewBox="0 0 120 80"
+  >
+    <polyline
+      points="0,70 15,60 30,65 45,45 60,55 75,35 90,50 105,25 120,40"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    />
+    <polyline
+      points="0,75 15,65 30,70 45,50 60,60 75,40 90,55 105,30 120,45"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      opacity="0.5"
+    />
+  </svg>
+);
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
@@ -51,21 +175,14 @@ export default function AdminDashboard() {
     const interval = setInterval(() => {
       setTime(Date.now());
     }, 1000);
-
     return () => clearInterval(interval);
   }, []);
 
-  // ── Format helpers ────────────────────────────────────────────
   const formatNumber = (num) => {
     if (!num) return "0";
     if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
     if (num >= 1000) return (num / 1000).toFixed(1) + "K";
     return num.toLocaleString();
-  };
-
-  const formatCurrency = (num) => {
-    if (!num) return "$0";
-    return "$" + formatNumber(num);
   };
 
   const formatStorage = (bytes) => {
@@ -93,12 +210,44 @@ export default function AdminDashboard() {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(
-          "http://localhost:8000/api/admin/dashboard/stats",
-        );
 
-        if (!cancelled && response.data.success) {
-          setStats(response.data.data);
+        // ── Fetch all dashboard data ──────────────────────────────
+        const [statsRes, topPapersRes, activityRes] = await Promise.all([
+          axios.get("http://localhost:8000/api/admin/dashboard/stats", {
+            withCredentials: true,
+          }),
+          axios.get("http://localhost:8000/api/admin/dashboard/top-downloads", {
+            withCredentials: true,
+          }),
+          axios.get(
+            "http://localhost:8000/api/admin/dashboard/recent-activity",
+            {
+              withCredentials: true,
+            },
+          ),
+        ]);
+
+        if (!cancelled) {
+          if (statsRes.data.success) {
+            setStats((prev) => ({
+              ...prev,
+              ...statsRes.data.data,
+            }));
+          }
+
+          if (topPapersRes.data.success) {
+            setStats((prev) => ({
+              ...prev,
+              topPapers: topPapersRes.data.data || [],
+            }));
+          }
+
+          if (activityRes.data.success) {
+            setStats((prev) => ({
+              ...prev,
+              recentActivity: activityRes.data.data || [],
+            }));
+          }
         }
       } catch (err) {
         const errorMessage =
@@ -113,7 +262,6 @@ export default function AdminDashboard() {
     };
 
     fetchDashboardData();
-
     return () => {
       cancelled = true;
     };
@@ -169,87 +317,91 @@ export default function AdminDashboard() {
             </p>
           </div>
 
-          {/* ── Stats Grid ────────────────────────────────────────── */}
+          {/* ── Stats Grid with SVG Backgrounds ───────────────────── */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Total Papers */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5">
-              <div className="flex items-center justify-between">
+            <div className="relative bg-linear-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 rounded-xl border border-blue-200 dark:border-blue-800 shadow-sm p-5 overflow-hidden">
+              <ChartSvg1 />
+              <div className="relative flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">
                     Total Papers
                   </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
                     {formatNumber(stats.totalPapers)}
                   </p>
                   <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
-                    <ArrowUpRight className="w-3 h-3" />
-                    vs last year: {formatNumber(stats.totalPapers * 0.12)}
+                    <ArrowUpRight className="w-3 h-3" />+
+                    {formatNumber(stats.totalPapers * 0.12)}
                   </p>
                 </div>
-                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-white/50 dark:bg-white/10 flex items-center justify-center">
                   <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 </div>
               </div>
             </div>
 
             {/* Total Users */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5">
-              <div className="flex items-center justify-between">
+            <div className="relative bg-linear-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/20 rounded-xl border border-purple-200 dark:border-purple-800 shadow-sm p-5 overflow-hidden">
+              <ChartSvg2 />
+              <div className="relative flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">
                     Total Users
                   </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
                     {formatNumber(stats.totalUsers)}
                   </p>
                   <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
-                    <ArrowUpRight className="w-3 h-3" />
-                    vs last year: {formatNumber(stats.totalUsers * 0.08)}
+                    <ArrowUpRight className="w-3 h-3" />+
+                    {formatNumber(stats.totalUsers * 0.08)}
                   </p>
                 </div>
-                <div className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-white/50 dark:bg-white/10 flex items-center justify-center">
                   <Users className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                 </div>
               </div>
             </div>
 
             {/* Pending Papers */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5">
-              <div className="flex items-center justify-between">
+            <div className="relative bg-linear-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/30 dark:to-yellow-800/20 rounded-xl border border-yellow-200 dark:border-yellow-800 shadow-sm p-5 overflow-hidden">
+              <ChartSvg3 />
+              <div className="relative flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">
                     Pending Review
                   </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
                     {formatNumber(stats.pendingPapers)}
                   </p>
                   <p className="text-xs text-red-600 dark:text-red-400 mt-1 flex items-center gap-1">
-                    <ArrowDownRight className="w-3 h-3" />
-                    vs last year: {formatNumber(stats.pendingPapers * 0.15)}
+                    <ArrowDownRight className="w-3 h-3" />-
+                    {formatNumber(stats.pendingPapers * 0.15)}
                   </p>
                 </div>
-                <div className="w-12 h-12 rounded-full bg-yellow-50 dark:bg-yellow-900/20 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-white/50 dark:bg-white/10 flex items-center justify-center">
                   <Clock className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
                 </div>
               </div>
             </div>
 
             {/* Total Downloads */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5">
-              <div className="flex items-center justify-between">
+            <div className="relative bg-linear-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/20 rounded-xl border border-green-200 dark:border-green-800 shadow-sm p-5 overflow-hidden">
+              <ChartSvg4 />
+              <div className="relative flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-sm text-green-600 dark:text-green-400 font-medium">
                     Total Downloads
                   </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
                     {formatNumber(stats.totalDownloads)}
                   </p>
                   <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
-                    <ArrowUpRight className="w-3 h-3" />
-                    vs last year: {formatNumber(stats.totalDownloads * 0.18)}
+                    <ArrowUpRight className="w-3 h-3" />+
+                    {formatNumber(stats.totalDownloads * 0.18)}
                   </p>
                 </div>
-                <div className="w-12 h-12 rounded-full bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-white/50 dark:bg-white/10 flex items-center justify-center">
                   <Download className="w-6 h-6 text-green-600 dark:text-green-400" />
                 </div>
               </div>
@@ -258,80 +410,85 @@ export default function AdminDashboard() {
 
           {/* ── Second Row: 5 Stats ───────────────────────────────── */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center">
+            <div className="relative bg-linear-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/30 dark:to-indigo-800/20 rounded-xl border border-indigo-200 dark:border-indigo-800 shadow-sm p-4 overflow-hidden">
+              <ChartSvg5 />
+              <div className="relative flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-white/50 dark:bg-white/10 flex items-center justify-center">
                   <Building className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                  <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">
                     Departments
                   </p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">
                     {formatNumber(stats.totalDepartments)}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
+            <div className="relative bg-linear-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/30 dark:to-emerald-800/20 rounded-xl border border-emerald-200 dark:border-emerald-800 shadow-sm p-4 overflow-hidden">
+              <ChartSvg1 />
+              <div className="relative flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-white/50 dark:bg-white/10 flex items-center justify-center">
                   <BookOpen className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
                     Subjects
                   </p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">
                     {formatNumber(stats.totalSubjects)}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-rose-50 dark:bg-rose-900/20 flex items-center justify-center">
+            <div className="relative bg-linear-to-br from-rose-50 to-rose-100 dark:from-rose-900/30 dark:to-rose-800/20 rounded-xl border border-rose-200 dark:border-rose-800 shadow-sm p-4 overflow-hidden">
+              <ChartSvg2 />
+              <div className="relative flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-white/50 dark:bg-white/10 flex items-center justify-center">
                   <XCircle className="w-5 h-5 text-rose-600 dark:text-rose-400" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                  <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">
                     Rejected
                   </p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">
                     {formatNumber(stats.rejectedPapers)}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-cyan-50 dark:bg-cyan-900/20 flex items-center justify-center">
+            <div className="relative bg-linear-to-br from-cyan-50 to-cyan-100 dark:from-cyan-900/30 dark:to-cyan-800/20 rounded-xl border border-cyan-200 dark:border-cyan-800 shadow-sm p-4 overflow-hidden">
+              <ChartSvg3 />
+              <div className="relative flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-white/50 dark:bg-white/10 flex items-center justify-center">
                   <TrendingUp className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                  <p className="text-xs text-cyan-600 dark:text-cyan-400 font-medium">
                     Monthly Uploads
                   </p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">
                     {formatNumber(stats.monthlyUploads)}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
+            <div className="relative bg-linear-to-br from-gray-50 to-gray-100 dark:from-gray-700/30 dark:to-gray-600/20 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 overflow-hidden">
+              <ChartSvg4 />
+              <div className="relative flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-white/50 dark:bg-white/10 flex items-center justify-center">
                   <HardDrive className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">
                     Storage Used
                   </p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">
                     {formatStorage(stats.totalStorage)}
                   </p>
                 </div>
@@ -372,8 +529,8 @@ export default function AdminDashboard() {
                           {paper.course?.name || "Unknown Course"}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {paper.department?.name || "N/A"} • {paper.downloads}{" "}
-                          downloads
+                          {paper.course?.department?.name || "N/A"} •{" "}
+                          {paper.downloads} downloads
                         </p>
                       </div>
                     </div>
@@ -451,12 +608,12 @@ export default function AdminDashboard() {
                               : activity.type === "rejection"
                                 ? "rejected"
                                 : "downloaded"}{" "}
-                          <Link
+                          {/* <Link
                             href={`/admin/papers/${activity.id}`}
                             className="text-[#4FC3FC] hover:underline"
-                          >
-                            {activity.paper}
-                          </Link>
+                          > */}
+                          {activity.paper}
+                          {/* </Link> */}
                         </p>
                       </div>
                       <span className="text-xs text-gray-400 whitespace-nowrap">
