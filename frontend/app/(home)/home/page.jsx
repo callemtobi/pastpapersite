@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -16,6 +16,12 @@ import {
   Clock,
   Activity,
   BookOpen,
+  Sparkles,
+  ChevronRight,
+  GraduationCap,
+  Lightbulb,
+  Clock as ClockIcon,
+  Target,
 } from "lucide-react";
 import Loading from "./loading";
 import CountUp from "react-countup";
@@ -35,12 +41,15 @@ export default function Main() {
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [time, setTime] = useState(() => Date.now());
   const [stats, setStats] = useState({
     totalPapers: 0,
     totalDownloads: 0,
     monthlyDownloads: 0,
   });
-  const [recentActivity, setRecentActivity] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [topPapers, setTopPapers] = useState([]);
+  const marqueeRef = useRef(null);
 
   // ── Fetch dashboard data ──────────────────────────────────────
   useEffect(() => {
@@ -49,18 +58,32 @@ export default function Main() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(
-          "http://localhost:8000/api/auth/dashboard/stats",
-          { withCredentials: true },
-        );
+        const [statsRes, topPapersRes, deptRes] = await Promise.all([
+          axios.get("http://localhost:8000/api/auth/dashboard/stats", {
+            withCredentials: true,
+          }),
+          axios.get("http://localhost:8000/api/auth/dashboard/top-downloads", {
+            withCredentials: true,
+          }),
+          axios.get("http://localhost:8000/api/papers/departments"),
+        ]);
 
-        if (!cancelled && response.data.success) {
-          setStats({
-            totalPapers: response.data.data?.totalPapers || 0,
-            totalDownloads: response.data.data?.totalDownloads || 0,
-            monthlyDownloads: response.data.data?.monthlyDownloads || 0,
-          });
-          setRecentActivity(response.data.data?.recentActivity || []);
+        if (!cancelled) {
+          if (statsRes.data.success) {
+            setStats({
+              totalPapers: statsRes.data.data?.totalPapers || 0,
+              totalDownloads: statsRes.data.data?.totalDownloads || 0,
+              monthlyDownloads: statsRes.data.data?.monthlyDownloads || 0,
+            });
+          }
+
+          if (topPapersRes.data.success) {
+            setTopPapers(topPapersRes.data.data || []);
+          }
+
+          if (deptRes.data.success) {
+            setDepartments(deptRes.data.departments || []);
+          }
         }
       } catch (err) {
         const errorMessage =
@@ -105,7 +128,7 @@ export default function Main() {
   }, [searchQuery]);
 
   const getTimeAgo = (date) => {
-    const diff = Date.now() - new Date(date).getTime();
+    const diff = time - new Date(date).getTime();
     const minutes = Math.floor(diff / 60000);
     if (minutes < 1) return "Just now";
     if (minutes < 60) return minutes + "m ago";
@@ -122,10 +145,6 @@ export default function Main() {
     return num.toLocaleString();
   };
 
-  if (loading) {
-    return <Loading />;
-  }
-
   if (error) {
     return (
       <div className="text-center py-12">
@@ -140,15 +159,17 @@ export default function Main() {
     );
   }
 
-  // ── Stats for display ─────────────────────────────────────────
   const displayStats = [
     { label: "Total Papers", value: stats.totalPapers },
     { label: "Total Downloads", value: stats.totalDownloads },
     { label: "Monthly Downloads", value: stats.monthlyDownloads },
   ];
 
+  // ── Double the departments for seamless infinite scroll ──
+  const marqueeDepartments = [...departments, ...departments, ...departments];
+
   return (
-    <div className="space-y-12">
+    <div className="space-y-16">
       {/* Hero Section */}
       <div className="text-center space-y-6 sm:space-y-8 py-8 sm:py-12">
         <div className="space-y-3 sm:space-y-4">
@@ -167,7 +188,8 @@ export default function Main() {
             transition={{ delay: 0.4, duration: 0.8 }}
             className="text-base sm:text-lg max-w-xl mx-auto px-4"
           >
-            Your gateway to academic excellence
+            Access past examination papers from a growing database of university
+            papers.
           </motion.p>
         </div>
 
@@ -238,10 +260,9 @@ export default function Main() {
         </motion.div>
       </div>
 
-      {/* Stats - From Database */}
+      {/* Stats */}
       <motion.div
         viewport={{ once: true, amount: 0.3 }}
-        transition={{ duration: 0.7 }}
         className="grid grid-cols-3 gap-4 sm:gap-6"
       >
         {displayStats.map((stat, index) => (
@@ -270,17 +291,18 @@ export default function Main() {
         ))}
       </motion.div>
 
-      {/* ── Activity Summary ── Replace with "Popular Papers" ── */}
+      {/* ── Popular Papers ── */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <motion.h2
-            initial={{ opacity: 0, x: -40 }}
+            initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.7 }}
+            transition={{ duration: 0.5 }}
             viewport={{ once: true }}
-            className="text-xl font-semibold text-foreground"
+            className="text-xl font-semibold text-foreground flex items-center gap-2"
           >
-            📚 Popular Papers
+            <Sparkles className="w-5 h-5 text-[#4FC3FC]" />
+            Popular Papers
           </motion.h2>
           <Link
             href="/download"
@@ -291,123 +313,204 @@ export default function Main() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {recentActivity.slice(0, 4).map((activity, index) => (
-            <motion.div
-              key={index}
-              className="border border-border-light rounded-lg shadow-sm bg-background-secondary p-4 hover:shadow-md transition-shadow"
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              viewport={{ once: true }}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 dark:text-white truncate">
-                    {activity.paper || "Unknown Paper"}
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {activity.user || "Anonymous"} • {activity.type || "N/A"}
-                  </p>
-                </div>
-                <span className="text-xs text-gray-400 whitespace-nowrap ml-2">
-                  {getTimeAgo(activity.time)}
-                </span>
-              </div>
-              <div className="mt-2 flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-                <span className="flex items-center gap-1">
-                  <Download className="w-3 h-3" />
-                  {activity.downloads || 0}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  {getTimeAgo(activity.time)}
-                </span>
-              </div>
-            </motion.div>
-          ))}
+          {topPapers.length > 0 ? (
+            topPapers.slice(0, 4).map((paper, index) => (
+              <motion.div
+                key={paper._id || index}
+                className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: index * 0.1 }}
+                viewport={{ once: true }}
+              >
+                <Link href={`/download/${paper._id}`}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 dark:text-white truncate">
+                        {paper.course?.name || "Unknown Course"}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                        {paper.course?.department?.name || "N/A"}
+                      </p>
+                    </div>
+                    <span className="text-xs font-medium text-[#4FC3FC] bg-[#4FC3FC]/10 px-2 py-0.5 rounded-full">
+                      #{index + 1}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex items-center gap-4 text-xs text-gray-400">
+                    <span className="flex items-center gap-1">
+                      <Download className="w-3 h-3" />
+                      {paper.downloads || 0}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {getTimeAgo(paper.createdAt)}
+                    </span>
+                  </div>
+                </Link>
+              </motion.div>
+            ))
+          ) : (
+            <div className="col-span-2 text-center py-8 text-gray-500 dark:text-gray-400">
+              <BookOpen className="w-12 h-12 mx-auto mb-2 opacity-30" />
+              <p>No popular papers available</p>
+            </div>
+          )}
         </div>
-
-        {recentActivity.length === 0 && (
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-            <BookOpen className="w-12 h-12 mx-auto mb-2 opacity-30" />
-            <p>No recent papers available</p>
-          </div>
-        )}
       </div>
 
-      {/* ── Recent Activity (Replaces Activity Summary) ── */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
+      {/* ── Browse by Department (Infinite Scroll) ── */}
+      <div className="space-y-6">
+        <div className="text-center space-y-2">
           <motion.h2
-            initial={{ opacity: 0, x: -40 }}
+            initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.7 }}
+            transition={{ duration: 0.5 }}
             viewport={{ once: true }}
-            className="text-xl font-semibold text-foreground"
+            className="text-2xl font-semibold text-foreground flex items-center justify-center gap-2"
           >
-            Recent Activity
+            <GraduationCap className="w-6 h-6 text-[#4FC3FC]" />
+            Browse by Department
           </motion.h2>
-          <TrendingUp className="w-5 h-5 text-gray-600 dark:text-gray-500" />
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Quick access to specialized faculty archives
+          </p>
         </div>
 
-        <div className="border border-border-light rounded-lg shadow-sm bg-background-secondary">
-          <div className="p-0">
-            <motion.div
-              variants={activityContainer}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, amount: 0.2 }}
-              className="divide-y divide-border-light"
+        <div className="relative overflow-hidden py-4">
+          <div className="absolute left-0 top-0 bottom-0 w-20 bg-linear-to-r from-white dark:from-gray-950 to-transparent z-10"></div>
+          <div className="absolute right-0 top-0 bottom-0 w-20 bg-linear-to-l from-white dark:from-gray-950 to-transparent z-10"></div>
+
+          <motion.div
+            ref={marqueeRef}
+            className="flex gap-8 whitespace-nowrap"
+            animate={{
+              x: ["0%", "-50%"],
+            }}
+            transition={{
+              duration: 30,
+              ease: "linear",
+              repeat: Infinity,
+            }}
+          >
+            {marqueeDepartments.map((dept, index) => (
+              <Link
+                key={`${dept._id || index}-${index}`}
+                href={`/download?department=${dept._id}`}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-[#4FC3FC]/5 hover:bg-[#4FC3FC]/10 rounded-full border border-[#4FC3FC]/10 transition-all duration-300 hover:scale-105"
+              >
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {dept.name}
+                </span>
+                <ChevronRight className="w-3 h-3 text-[#4FC3FC]" />
+              </Link>
+            ))}
+          </motion.div>
+        </div>
+      </div>
+
+      {/* ── Study Tips & Advice ── */}
+      <div className="space-y-6">
+        <div className="text-center space-y-2">
+          <motion.h2
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5 }}
+            viewport={{ once: true }}
+            className="text-2xl font-semibold text-foreground flex items-center justify-center gap-2"
+          >
+            <Lightbulb className="w-6 h-6 text-yellow-500" />
+            Study Tips & Advice
+          </motion.h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Expert strategies for exam success
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Tip 1 */}
+          <motion.div
+            className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            viewport={{ once: true }}
+          >
+            <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center mb-4">
+              <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            </div>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+              Start Early, Not the Night Before
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+              Waiting until the last few days limits how many papers you can
+              practice. Spreading your revision over time leads to better
+              retention and less stress.
+            </p>
+            <Link
+              href="/download"
+              className="inline-flex items-center gap-1 mt-4 text-sm text-[#4FC3FC] hover:text-[#29b6f6] transition-colors"
             >
-              {recentActivity.length > 0 ? (
-                recentActivity.slice(0, 6).map((activity, index) => (
-                  <motion.div
-                    key={index}
-                    variants={activityItem}
-                    className="p-4 hover:bg-background dark:hover:bg-gray-800/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-                        <span className="text-sm font-medium text-blue-600 dark:text-blue-300">
-                          {activity.user?.charAt(0).toUpperCase() || "U"}
-                        </span>
-                      </div>
+              Learn More
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+          </motion.div>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-foreground text-sm">
-                            {activity.user || "Anonymous"}
-                          </span>
-                          <span className="text-xs text-gray-600 dark:text-gray-400">
-                            {activity.type === "upload"
-                              ? "uploaded"
-                              : "downloaded"}
-                          </span>
-                          {activity.type === "upload" ? (
-                            <ArrowUpRight className="w-3 h-3 text-green-500" />
-                          ) : (
-                            <ArrowDownRight className="w-3 h-3 text-blue-500" />
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                          {activity.paper || "Unknown Paper"}
-                        </p>
-                      </div>
+          {/* Tip 2 */}
+          <motion.div
+            className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            viewport={{ once: true }}
+          >
+            <div className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center mb-4">
+              <Target className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            </div>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+              Practice Under Real Exam Conditions
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+              Set a timer, avoid distractions, and complete the paper without
+              notes. This helps improve speed, confidence, and time management
+              before the actual exam
+            </p>
+            <Link
+              href="/about"
+              className="inline-flex items-center gap-1 mt-4 text-sm text-[#4FC3FC] hover:text-[#29b6f6] transition-colors"
+            >
+              Learn More
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+          </motion.div>
 
-                      <div className="text-xs text-gray-600 dark:text-gray-400 shrink-0">
-                        {getTimeAgo(activity.time)}
-                      </div>
-                    </div>
-                  </motion.div>
-                ))
-              ) : (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  <Activity className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                  <p>No recent activity</p>
-                </div>
-              )}
-            </motion.div>
-          </div>
+          {/* Tip 3 */}
+          <motion.div
+            className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            viewport={{ once: true }}
+          >
+            <div className="w-12 h-12 rounded-full bg-green-50 dark:bg-green-900/20 flex items-center justify-center mb-4">
+              <ClockIcon className="w-6 h-6 text-green-600 dark:text-green-400" />
+            </div>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+              Focus on High-Weight Topics
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+              Review multiple past papers to identify topics that appear
+              frequently. Prioritize understanding these concepts before
+              spending time on less common material.
+            </p>
+            <Link
+              href="/upload"
+              className="inline-flex items-center gap-1 mt-4 text-sm text-[#4FC3FC] hover:text-[#29b6f6] transition-colors"
+            >
+              Learn More
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+          </motion.div>
         </div>
       </div>
     </div>

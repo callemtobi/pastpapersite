@@ -23,6 +23,13 @@ export default function Login() {
   const [passwordError, setPasswordError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  useEffect(() => {
+    const from = searchParams.get("from");
+    if (from === "/upload") {
+      showErrorToast("You need to be logged in to access that page.");
+    }
+  }, [searchParams]);
+
   const handleChange = (e) => {
     setError("");
     setEmailError("");
