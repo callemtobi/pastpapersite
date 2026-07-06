@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "cypress:open": "cypress open",
+    "cypress:run": "cypress run",
+    "cypress:run:e2e": "cypress run --e2e",
+    "cypress:run:component": "cypress run --component"
   },
   "dependencies": {
     "@aejkatappaja/phantom-ui": "^1.4.0",
@@ -26,6 +30,7 @@
     "@netlify/plugin-nextjs": "^5.15.11",
     "@tailwindcss/postcss": "^4",
     "babel-plugin-react-compiler": "1.0.0",
+    "cypress": "^15.18.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "tailwindcss": "^4"
