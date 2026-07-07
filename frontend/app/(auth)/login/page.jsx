@@ -242,6 +242,7 @@ export default function Login() {
             </div>
 
             <button
+              id="submit-d"
               type="submit"
               disabled={isLoading}
               className="w-full bg-[#4FC3FC] hover:bg-[#29b6f6] disabled:bg-gray-400 text-white py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"

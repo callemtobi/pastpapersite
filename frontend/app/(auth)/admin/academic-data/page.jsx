@@ -58,6 +58,7 @@ const DepartmentManager = () => {
         setLoading(true);
         const response = await axios.get(
           "http://localhost:8000/api/admin/departments",
+          { withCredentials: true },
         );
         if (response.data.success) {
           setDepartments(response.data.departments);
@@ -80,6 +81,7 @@ const DepartmentManager = () => {
     try {
       const response = await axios.post(
         "http://localhost:8000/api/admin/departments",
+        { withCredentials: true },
         formData,
       );
       dismissToast(toast);
@@ -107,6 +109,7 @@ const DepartmentManager = () => {
     try {
       const response = await axios.patch(
         `http://localhost:8000/api/admin/departments/${selectedDepartment._id}`,
+        { withCredentials: true },
         { name: formData.course },
       );
       dismissToast(toast);
@@ -141,6 +144,7 @@ const DepartmentManager = () => {
     try {
       const response = await axios.patch(
         `http://localhost:8000/api/admin/departments/${department._id}`,
+        { withCredentials: true },
         { isActive: !department.isActive },
       );
       dismissToast(toast);
@@ -474,6 +478,7 @@ const InstructorManager = () => {
         setLoading(true);
         const response = await axios.get(
           "http://localhost:8000/api/admin/instructors",
+          { withCredentials: true },
         );
         if (response.data.success) {
           setInstructors(response.data.instructors);
@@ -496,6 +501,7 @@ const InstructorManager = () => {
     try {
       const response = await axios.post(
         "http://localhost:8000/api/admin/instructors",
+        { withCredentials: true },
         formData,
       );
       dismissToast(toast);
@@ -523,6 +529,7 @@ const InstructorManager = () => {
     try {
       const response = await axios.patch(
         `http://localhost:8000/api/admin/instructors/${selectedInstructor._id}`,
+        { withCredentials: true },
         formData,
       );
       dismissToast(toast);
@@ -561,6 +568,7 @@ const InstructorManager = () => {
     try {
       const response = await axios.patch(
         `http://localhost:8000/api/admin/instructors/${instructor._id}`,
+        { withCredentials: true },
         { isActive: !instructor.isActive },
       );
       dismissToast(toast);
@@ -933,6 +941,7 @@ const CourseManager = () => {
         setLoading(true);
         const response = await axios.get(
           "http://localhost:8000/api/admin/courses",
+          { withCredentials: true },
         );
         if (response.data.success) {
           setCourses(response.data.courses);
@@ -949,6 +958,7 @@ const CourseManager = () => {
       try {
         const response = await axios.get(
           "http://localhost:8000/api/admin/departments",
+          { withCredentials: true },
         );
         if (response.data.success) {
           setDepartments(response.data.departments);
@@ -973,6 +983,7 @@ const CourseManager = () => {
     try {
       const response = await axios.post(
         "http://localhost:8000/api/admin/courses",
+        { withCredentials: true },
         formData,
       );
       dismissToast(toast);
@@ -998,6 +1009,7 @@ const CourseManager = () => {
     try {
       const response = await axios.patch(
         `http://localhost:8000/api/admin/courses/${selectedCourse._id}`,
+        { withCredentials: true },
         formData,
       );
       dismissToast(toast);
@@ -1030,6 +1042,7 @@ const CourseManager = () => {
     try {
       const response = await axios.patch(
         `http://localhost:8000/api/admin/courses/${course._id}`,
+        { withCredentials: true },
         { isActive: !course.isActive },
       );
       dismissToast(toast);

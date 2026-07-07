@@ -1,16 +1,24 @@
 describe("Upload page access", () => {
-  it("redirects unauthenticated users to login", () => {
+  it("Redirects unauthenticated users to login page", () => {
     cy.visit("/upload");
     cy.url().should("include", "/login");
     cy.url().should("include", "from=%2Fupload");
   });
-  it.only("allows logged-in users to reach upload", () => {
-    cy.visit("/home");
-    cy.visit("/upload");
-    cy.url().should("include", "/login");
-    cy.log("callemtobi@gmail.com", "123");
-    cy.visit("/home");
-    // cy.visit("/upload");
-    // cy.url().should("include", "/upload");
-  });
 });
+
+// describe("User VS Admin log in", () => {
+//   it("Admin log in", () => {
+//     cy.visit("/login");
+//     cy.get("#email-d").type("fe9nton@gmail.com");
+//     cy.get("#password-d").type("123");
+//     cy.get("#submit-d").click();
+//     cy.url().should("include", "/admin");
+//   });
+//   it.only("User log in", () => {
+//     cy.visit("/login");
+//     cy.get("#email-d").type("callemtobi@gmail.com");
+//     cy.get("#password-d").type("123");
+//     cy.get("#submit-d").click();
+//     cy.url().should("include", "/home");
+//   });
+// });

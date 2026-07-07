@@ -159,7 +159,7 @@ export default function AdminDashboard() {
     totalPapers: 0,
     totalUsers: 0,
     totalDepartments: 0,
-    totalSubjects: 0,
+    totalCourses: 0,
     totalDownloads: 0,
     pendingPapers: 0,
     rejectedPapers: 0,
@@ -435,10 +435,10 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                    Subjects
+                    Courses
                   </p>
                   <p className="text-xl font-bold text-gray-900 dark:text-white">
-                    {formatNumber(stats.totalSubjects)}
+                    {formatNumber(stats.totalCourses)}
                   </p>
                 </div>
               </div>

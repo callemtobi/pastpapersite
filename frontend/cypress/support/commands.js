@@ -27,7 +27,7 @@
 Cypress.Commands.add("login", (email, password) => {
   cy.request({
     method: "POST",
-    url: `${Cypress.env("NEXT_PUBLIC_API_URL")}/auth/login`,
+    url: `${cy.env("NEXT_PUBLIC_API_URL")}/auth/login`,
     body: { email, password },
   });
 });

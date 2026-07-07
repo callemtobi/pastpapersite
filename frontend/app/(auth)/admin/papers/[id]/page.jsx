@@ -82,6 +82,7 @@ export default function PaperViewerPage() {
         setLoading(true);
         const response = await axios.get(
           `http://localhost:8000/api/admin/papers/${id}`,
+          { withCredentials: true },
         );
 
         if (!cancelled) {
@@ -264,6 +265,7 @@ export default function PaperViewerPage() {
     try {
       const response = await axios.delete(
         `http://localhost:8000/api/admin/papers/${id}`,
+        { withCredentials: true },
       );
 
       dismissToast(loadingToast);
@@ -308,6 +310,7 @@ export default function PaperViewerPage() {
     try {
       const response = await axios.patch(
         `http://localhost:8000/api/admin/papers/${selectedPaperForVerification._id}`,
+        { withCredentials: true },
         { status: "approved" },
       );
 
@@ -338,6 +341,7 @@ export default function PaperViewerPage() {
     try {
       const response = await axios.patch(
         `http://localhost:8000/api/admin/papers/${selectedPaperForVerification._id}`,
+        { withCredentials: true },
         { status: "rejected" },
       );
 

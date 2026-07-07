@@ -1,6 +1,8 @@
 // controllers/dashboardController.js
 import Paper from "../models/Paper.js";
 import User from "../models/User.js";
+import Department from "../models/Department.js";
+import Course from "../models/Course.js";
 import fs from "fs";
 import path from "path";
 
@@ -58,7 +60,7 @@ export const getDashboardStats = async (req, res) => {
       totalPapers,
       totalUsers,
       departments,
-      subjects,
+      courses,
       totalDownloads,
       pendingPapers,
       rejectedPapers,
@@ -74,11 +76,11 @@ export const getDashboardStats = async (req, res) => {
       // Total users
       User.countDocuments(),
 
-      // Distinct departments
-      Paper.distinct("department"),
+      // departments
+      Department.countDocuments({ isActive: true }),
 
-      // Distinct subjects
-      Paper.distinct("subject"),
+      // courses
+      Course.countDocuments({ isActive: true }),
 
       // Total downloads
       Paper.aggregate([
@@ -115,7 +117,7 @@ export const getDashboardStats = async (req, res) => {
       Paper.find()
         .sort({ downloads: -1 })
         .limit(5)
-        .select("title courseCode downloads images"),
+        .select("course downloads images"),
 
       // Recent activity
       getRecentActivityFunc(),
@@ -126,8 +128,8 @@ export const getDashboardStats = async (req, res) => {
       data: {
         totalPapers,
         totalUsers,
-        totalDepartments: departments.length,
-        totalSubjects: subjects.length,
+        totalDepartments: departments,
+        totalCourses: courses,
         totalDownloads: totalDownloads[0]?.total || 0,
         pendingPapers,
         rejectedPapers,

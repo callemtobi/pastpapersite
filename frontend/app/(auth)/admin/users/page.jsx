@@ -607,6 +607,7 @@ export default function UsersPage() {
         setLoading(true);
         const response = await axios.get(
           "http://localhost:8000/api/admin/users",
+          { withCredentials: true },
         );
         if (!cancelled) {
           if (response.data.success && response.data.users) {
@@ -729,6 +730,7 @@ export default function UsersPage() {
     try {
       const response = await axios.post(
         "http://localhost:8000/api/admin/users",
+        { withCredentials: true },
         data,
       );
       dismissToast(loadingToast);
@@ -755,6 +757,7 @@ export default function UsersPage() {
     try {
       const response = await axios.patch(
         `http://localhost:8000/api/admin/users/${selectedUser._id}`,
+        { withCredentials: true },
         data,
       );
       dismissToast(loadingToast);
@@ -787,6 +790,7 @@ export default function UsersPage() {
     try {
       const response = await axios.delete(
         `http://localhost:8000/api/admin/users/${id}`,
+        { withCredentials: true },
       );
       dismissToast(loadingToast);
 

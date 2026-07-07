@@ -72,9 +72,15 @@ export default function EditPaperPage() {
         const [paperRes, deptRes, courseRes, instructorRes] = await Promise.all(
           [
             axios.get(`http://localhost:8000/api/papers/${id}`),
-            axios.get("http://localhost:8000/api/admin/departments"),
-            axios.get("http://localhost:8000/api/admin/courses"),
-            axios.get("http://localhost:8000/api/admin/instructors"),
+            axios.get("http://localhost:8000/api/admin/departments", {
+              withCredentials: true,
+            }),
+            axios.get("http://localhost:8000/api/admin/courses", {
+              withCredentials: true,
+            }),
+            axios.get("http://localhost:8000/api/admin/instructors", {
+              withCredentials: true,
+            }),
           ],
         );
 
@@ -290,6 +296,7 @@ export default function EditPaperPage() {
 
       const response = await axios.patch(
         `http://localhost:8000/api/admin/papers/${id}`,
+        { withCredentials: true },
         payload,
       );
 
