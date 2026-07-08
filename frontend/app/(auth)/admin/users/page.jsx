@@ -1,4 +1,3 @@
-// app/admin/users/page.jsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -13,7 +12,6 @@ import {
   Eye,
   CheckCircle,
   XCircle,
-  Clock,
   ChevronLeft,
   ChevronRight,
   LayoutGrid,
@@ -36,6 +34,7 @@ import {
   showLoadingToast,
   dismissToast,
 } from "@/lib/toastConfig";
+import ConfirmModal from "@/components/ConfirmModal";
 
 // ── View User Modal ──────────────────────────────────────────────
 const ViewUserModal = ({ isOpen, onClose, user, onEdit, onDelete }) => {
@@ -214,6 +213,243 @@ const ViewUserModal = ({ isOpen, onClose, user, onEdit, onDelete }) => {
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  );
+};
+
+const AdminFormModal = ({ user, isOpen, onClose, onSave, isLoading }) => {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    role: "admin",
+    isActive: true,
+  });
+  const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setFormData({
+      name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      role: "admin",
+      isActive: true,
+    });
+    setErrors({});
+  }, [isOpen, user]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const newErrors = {};
+
+    if (!formData.name.trim()) newErrors.name = "Name is required";
+    if (!formData.email.trim()) newErrors.email = "Email is required";
+    if (!formData.password) newErrors.password = "Password is required";
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    onSave({
+      name: formData.name,
+      email: formData.email,
+      password: formData.password,
+      role: formData.role,
+      isActive: formData.isActive,
+    });
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 rounded-t-2xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                <Shield className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Create Admin Account
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Add a new admin to the system
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+            </button>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Full Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              className={`w-full px-4 py-2.5 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC] ${
+                errors.name
+                  ? "border-red-500"
+                  : "border-gray-300 dark:border-gray-600"
+              }`}
+            />
+            {errors.name && (
+              <p className="mt-1 text-sm text-red-500">{errors.name}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Email <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              className={`w-full px-4 py-2.5 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC] ${
+                errors.email
+                  ? "border-red-500"
+                  : "border-gray-300 dark:border-gray-600"
+              }`}
+            />
+            {errors.email && (
+              <p className="mt-1 text-sm text-red-500">{errors.email}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Role <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC]"
+              >
+                <option value="admin">Admin</option>
+                <option value="super_admin">Super Admin</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Status
+              </label>
+              <select
+                name="isActive"
+                value={formData.isActive ? "active" : "inactive"}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    isActive: e.target.value === "active",
+                  }))
+                }
+                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC]"
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Password <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="••••••••"
+                className={`w-full px-4 py-2.5 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC] ${
+                  errors.password
+                    ? "border-red-500"
+                    : "border-gray-300 dark:border-gray-600"
+                }`}
+              />
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-500">{errors.password}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Confirm Password <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="password"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                placeholder="••••••••"
+                className={`w-full px-4 py-2.5 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC] ${
+                  errors.confirmPassword
+                    ? "border-red-500"
+                    : "border-gray-300 dark:border-gray-600"
+                }`}
+              />
+              {errors.confirmPassword && (
+                <p className="mt-1 text-sm text-red-500">
+                  {errors.confirmPassword}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full sm:w-auto px-6 py-2.5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg font-medium transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-purple-500 hover:bg-purple-600 disabled:opacity-50 text-white rounded-lg font-medium transition-colors"
+            >
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Shield className="w-4 h-4" />
+              )}
+              Create Admin
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -594,10 +830,38 @@ export default function UsersPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
+  const [showCreateAdminModal, setShowCreateAdminModal] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    confirmText: "Yes, Delete",
+    onConfirm: null,
+    isLoading: false,
+  });
+
+  // ── Fetch current user role ──────────────────────────────────────
+  useEffect(() => {
+    const checkUserRole = async () => {
+      try {
+        const response = await axios.get("http://localhost:8000/api/auth/me", {
+          withCredentials: true,
+        });
+        if (response.data.success) {
+          setIsSuperAdmin(response.data.user?.role === "super_admin");
+        }
+      } catch (error) {
+        console.error("Failed to check user role:", error);
+      }
+    };
+    checkUserRole();
+  }, []);
 
   // Fetch users
   useEffect(() => {
@@ -633,6 +897,62 @@ export default function UsersPage() {
       cancelled = true;
     };
   }, []);
+
+  // ── Create Admin Handler
+  const handleCreateAdmin = async (data) => {
+    setModalLoading(true);
+    const loadingToast = showLoadingToast("Creating admin...");
+
+    try {
+      const response = await axios.post(
+        "http://localhost:8000/api/admin/admins",
+        data,
+        { withCredentials: true },
+      );
+      dismissToast(loadingToast);
+
+      if (response.data.success) {
+        setUsers([response.data.admin, ...users]);
+        showSuccessToast("Admin created successfully!");
+        setShowCreateAdminModal(false);
+      } else {
+        showErrorToast(response.data.message || "Failed to create admin");
+      }
+    } catch (err) {
+      dismissToast(loadingToast);
+      showErrorToast(err.response?.data?.message || "Failed to create admin");
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // ── Change User Role Handler (Super Admin only) ─────────────────
+  const handleChangeRole = async (userId, newRole) => {
+    if (!confirm(`Change this user's role to ${newRole}?`)) return;
+
+    const loadingToast = showLoadingToast("Changing role...");
+
+    try {
+      const response = await axios.patch(
+        `http://localhost:8000/api/admin/admins/${userId}/role`,
+        { role: newRole },
+        { withCredentials: true },
+      );
+      dismissToast(loadingToast);
+
+      if (response.data.success) {
+        setUsers(
+          users.map((u) => (u._id === userId ? { ...u, role: newRole } : u)),
+        );
+        showSuccessToast(`Role updated to ${newRole}`);
+      } else {
+        showErrorToast(response.data.message || "Failed to change role");
+      }
+    } catch (err) {
+      dismissToast(loadingToast);
+      showErrorToast(err.response?.data?.message || "Failed to change role");
+    }
+  };
 
   // Filter users
   const getFilteredUsers = () => {
@@ -730,8 +1050,8 @@ export default function UsersPage() {
     try {
       const response = await axios.post(
         "http://localhost:8000/api/admin/users",
-        { withCredentials: true },
         data,
+        { withCredentials: true },
       );
       dismissToast(loadingToast);
 
@@ -757,8 +1077,8 @@ export default function UsersPage() {
     try {
       const response = await axios.patch(
         `http://localhost:8000/api/admin/users/${selectedUser._id}`,
-        { withCredentials: true },
         data,
+        { withCredentials: true },
       );
       dismissToast(loadingToast);
 
@@ -782,36 +1102,93 @@ export default function UsersPage() {
     }
   };
 
-  const handleDeleteUser = async (id) => {
-    if (!confirm("Are you sure you want to delete this user?")) return;
-
-    const loadingToast = showLoadingToast("Deleting user...");
-
-    try {
-      const response = await axios.delete(
-        `http://localhost:8000/api/admin/users/${id}`,
-        { withCredentials: true },
-      );
-      dismissToast(loadingToast);
-
-      if (response.data.success) {
-        setUsers(users.filter((u) => u._id !== id));
-        setSelectedUsers(selectedUsers.filter((u) => u !== id));
-        showSuccessToast("User deleted successfully!");
-      } else {
-        showErrorToast(response.data.message || "Failed to delete user");
-      }
-    } catch (err) {
-      dismissToast(loadingToast);
-      showErrorToast(err.response?.data?.message || "Failed to delete user");
-    }
+  const handleDeleteUser = (userId) => {
+    const user = users.find((u) => u._id === userId);
+    if (!user) return;
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete User?",
+      message: `Are you sure you want to delete "${user.name}"?`,
+      confirmText: "Yes, Delete",
+      variant: "danger",
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, isLoading: true }));
+        const loadingToast = showLoadingToast("Deleting user...");
+        try {
+          const response = await axios.delete(
+            `http://localhost:8000/api/admin/users/${userId}`,
+            { withCredentials: true },
+          );
+          dismissToast(loadingToast);
+          if (response.data.success) {
+            setUsers(users.filter((u) => u._id !== userId));
+            setSelectedUsers(selectedUsers.filter((id) => id !== userId));
+            showSuccessToast("User deleted successfully!");
+          } else {
+            showErrorToast(response.data.message || "Failed to delete user");
+          }
+        } catch (err) {
+          dismissToast(loadingToast);
+          showErrorToast(
+            err.response?.data?.message || "Failed to delete user",
+          );
+        } finally {
+          setConfirmModal((prev) => ({
+            ...prev,
+            isOpen: false,
+            isLoading: false,
+          }));
+        }
+      },
+    });
   };
 
   const handleBulkDelete = () => {
     if (selectedUsers.length === 0) return;
-    if (confirm(`Delete ${selectedUsers.length} selected user(s)?`)) {
-      selectedUsers.forEach((id) => handleDeleteUser(id));
-    }
+    const userNames = selectedUsers
+      .map((id) => {
+        const u = users.find((user) => user._id === id);
+        return u?.name || "Unknown";
+      })
+      .join(", ");
+    setConfirmModal({
+      isOpen: true,
+      title: `Delete ${selectedUsers.length} User(s)?`,
+      message: `Are you sure you want to delete ${selectedUsers.length} selected user(s)?\n\n${userNames}`,
+      confirmText: `Yes, Delete ${selectedUsers.length}`,
+      variant: "danger",
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, isLoading: true }));
+        const loadingToast = showLoadingToast("Deleting users...");
+        try {
+          const response = await axios.delete(
+            "http://localhost:8000/api/admin/users/bulk",
+            { data: { ids: selectedUsers }, withCredentials: true },
+          );
+          dismissToast(loadingToast);
+          if (response.data.success) {
+            setUsers(users.filter((u) => !selectedUsers.includes(u._id)));
+            setSelectedUsers([]);
+            showSuccessToast(
+              `${response.data.deletedCount} user(s) deleted successfully!`,
+            );
+          } else {
+            showErrorToast(response.data.message || "Failed to delete users");
+          }
+        } catch (err) {
+          dismissToast(loadingToast);
+          showErrorToast(
+            err.response?.data?.message || "Failed to delete users",
+          );
+        } finally {
+          setConfirmModal((prev) => ({
+            ...prev,
+            isOpen: false,
+            isLoading: false,
+          }));
+        }
+      },
+    });
   };
 
   const openViewModal = (user) => {
@@ -895,6 +1272,15 @@ export default function UsersPage() {
                 <Plus className="w-4 h-4" />
                 Add User
               </button>
+              {isSuperAdmin && (
+                <button
+                  onClick={() => setShowCreateAdminModal(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm font-medium transition-colors"
+                >
+                  <Shield className="w-4 h-4" />
+                  Create Admin
+                </button>
+              )}
             </div>
           </div>
         </header>
@@ -1155,29 +1541,31 @@ export default function UsersPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <button
-                              onClick={() => openViewModal(user)}
-                              className="p-1.5 text-gray-400 hover:text-[#4FC3FC] rounded-lg hover:bg-[#4FC3FC]/10 transition-colors"
-                              title="View"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => openEditModal(user)}
-                              className="p-1.5 text-gray-400 hover:text-blue-500 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                              title="Edit"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteUser(user._id)}
-                              className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
+                          {user.role !== "super_admin" && (
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => openViewModal(user)}
+                                className="p-1.5 text-gray-400 hover:text-[#4FC3FC] rounded-lg hover:bg-[#4FC3FC]/10 transition-colors"
+                                title="View"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => openEditModal(user)}
+                                className="p-1.5 text-gray-400 hover:text-blue-500 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                title="Edit"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteUser(user._id)}
+                                className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     );
@@ -1318,6 +1706,25 @@ export default function UsersPage() {
         onSave={handleUpdateUser}
         isLoading={modalLoading}
         isEdit={true}
+      />
+
+      <AdminFormModal
+        isOpen={showCreateAdminModal}
+        onClose={() => setShowCreateAdminModal(false)}
+        onSave={handleCreateAdmin}
+        isLoading={modalLoading}
+      />
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        cancelText="Cancel"
+        isLoading={confirmModal.isLoading}
+        variant={confirmModal.variant || "danger"}
       />
     </div>
   );

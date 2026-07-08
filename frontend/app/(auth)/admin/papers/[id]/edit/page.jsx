@@ -296,8 +296,8 @@ export default function EditPaperPage() {
 
       const response = await axios.patch(
         `http://localhost:8000/api/admin/papers/${id}`,
-        { withCredentials: true },
         payload,
+        { withCredentials: true },
       );
 
       dismissToast(loadingToast);

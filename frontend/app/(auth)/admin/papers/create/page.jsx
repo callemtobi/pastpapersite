@@ -194,21 +194,23 @@ export default function CreatePaperPage() {
     }
 
     // ── Verify selected references exist ──────────────────────────
-    const selectedCourse = courses.find((c) => c._id === formData.course);
+    const selectedCourse = courses.find(
+      (c) => c._id.toString() === formData.course.toString(),
+    );
     const selectedDept = departments.find((d) => d._id === formData.department);
     const selectedInstructor = instructors.find(
       (i) => i._id === formData.instructor,
     );
 
-    if (!selectedCourse || !selectedCourse.isActive) {
+    if (!selectedCourse || selectedCourse.isActive === false) {
       showErrorToast("Selected course is invalid or inactive");
       return;
     }
-    if (!selectedDept || !selectedDept.isActive) {
+    if (!selectedDept || selectedDept.isActive === false) {
       showErrorToast("Selected department is invalid or inactive");
       return;
     }
-    if (!selectedInstructor || !selectedInstructor.isActive) {
+    if (!selectedInstructor || selectedInstructor.isActive === false) {
       showErrorToast("Selected instructor is invalid or inactive");
       return;
     }

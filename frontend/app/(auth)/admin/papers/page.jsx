@@ -28,6 +28,7 @@ import {
   showLoadingToast,
   dismissToast,
 } from "@/lib/toastConfig";
+import ConfirmModal from "@/components/ConfirmModal";
 
 export default function Papers() {
   const [papers, setPapers] = useState([]);
@@ -41,10 +42,22 @@ export default function Papers() {
   const [activeTab, setActiveTab] = useState("all");
   const [viewMode, setViewMode] = useState("table");
   const [error, setError] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // ── Confirmation Modal State ──────────────────────────────────
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    changes: [],
+    confirmText: "Confirm",
+    onConfirm: null,
+    isLoading: false,
+  });
 
   // Fetch papers from database
   useEffect(() => {
@@ -52,10 +65,12 @@ export default function Papers() {
     const getPapers = async () => {
       try {
         setLoading(true);
-        const response = await axios.get("http://localhost:8000/api/papers");
+        const response = await axios.get(
+          "http://localhost:8000/api/admin/papers",
+          { withCredentials: true },
+        );
         if (!cancelled) {
           if (response.data.success && response.data.papers) {
-            // The API already populates course, department, instructor
             setPapers(response.data.papers);
           } else {
             setPapers([]);
@@ -190,15 +205,6 @@ export default function Papers() {
     }
   };
 
-  // Handle delete selected
-  const handleDeleteSelected = () => {
-    if (selectedPapers.length === 0) return;
-    if (confirm(`Delete ${selectedPapers.length} selected paper(s)?`)) {
-      setPapers(papers.filter((p) => !selectedPapers.includes(p._id)));
-      setSelectedPapers([]);
-    }
-  };
-
   const getStatusBadge = (status) => {
     const statusMap = {
       approved: {
@@ -226,6 +232,99 @@ export default function Papers() {
     { id: "approved", label: "Approved", count: getTabCount("approved") },
     { id: "rejected", label: "Rejected", count: getTabCount("rejected") },
   ];
+
+  // ── Delete Functions with API Calls ─────────────────────────────
+
+  // Single delete
+  const handleSingleDelete = (paper) => {
+    const paperName = paper.course?.name || paper._id;
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete Paper?",
+      message: `Are you sure you want to delete "${paperName}"?`,
+      changes: [],
+      confirmText: "Yes, Delete",
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, isLoading: true }));
+        const loadingToast = showLoadingToast("Deleting paper...");
+
+        try {
+          const response = await axios.delete(
+            `http://localhost:8000/api/admin/papers/${paper._id}`,
+            { withCredentials: true },
+          );
+          dismissToast(loadingToast);
+
+          if (response.data.success) {
+            setPapers(papers.filter((p) => p._id !== paper._id));
+            showSuccessToast("Paper deleted successfully!");
+          } else {
+            showErrorToast(response.data.message || "Failed to delete paper");
+          }
+        } catch (err) {
+          dismissToast(loadingToast);
+          showErrorToast(
+            err.response?.data?.message || "Failed to delete paper",
+          );
+        } finally {
+          setConfirmModal((prev) => ({
+            ...prev,
+            isOpen: false,
+            isLoading: false,
+          }));
+        }
+      },
+    });
+  };
+
+  // Bulk delete
+  const handleBulkDelete = () => {
+    if (selectedPapers.length === 0) return;
+
+    setConfirmModal({
+      isOpen: true,
+      title: `Delete ${selectedPapers.length} Paper(s)?`,
+      message: `Are you sure you want to delete ${selectedPapers.length} selected paper(s)?`,
+      changes: [],
+      confirmText: `Yes, Delete ${selectedPapers.length}`,
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, isLoading: true }));
+        const loadingToast = showLoadingToast("Deleting papers...");
+
+        try {
+          const response = await axios.delete(
+            "http://localhost:8000/api/admin/papers/bulk",
+            {
+              data: { ids: selectedPapers },
+              withCredentials: true,
+            },
+          );
+          dismissToast(loadingToast);
+
+          if (response.data.success) {
+            setPapers(papers.filter((p) => !selectedPapers.includes(p._id)));
+            setSelectedPapers([]);
+            showSuccessToast(
+              `${response.data.deletedCount} paper(s) deleted successfully!`,
+            );
+          } else {
+            showErrorToast(response.data.message || "Failed to delete papers");
+          }
+        } catch (err) {
+          dismissToast(loadingToast);
+          showErrorToast(
+            err.response?.data?.message || "Failed to delete papers",
+          );
+        } finally {
+          setConfirmModal((prev) => ({
+            ...prev,
+            isOpen: false,
+            isLoading: false,
+          }));
+        }
+      },
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -356,7 +455,7 @@ export default function Papers() {
                       {selectedPapers.length} selected
                     </span>
                     <button
-                      onClick={handleDeleteSelected}
+                      onClick={handleBulkDelete}
                       className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -565,19 +664,7 @@ export default function Papers() {
                                   <Edit className="w-4 h-4" />
                                 </Link>
                                 <button
-                                  onClick={() => {
-                                    if (
-                                      confirm(
-                                        `Delete "${paper.course?.name || paper._id}"?`,
-                                      )
-                                    ) {
-                                      setPapers(
-                                        papers.filter(
-                                          (p) => p._id !== paper._id,
-                                        ),
-                                      );
-                                    }
-                                  }}
+                                  onClick={() => handleSingleDelete(paper)}
                                   className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                                   title="Delete"
                                 >
@@ -695,6 +782,19 @@ export default function Papers() {
           </div>
         </main>
       </div>
+
+      {/* ── Confirmation Modal ── */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        changes={confirmModal.changes}
+        confirmText={confirmModal.confirmText}
+        cancelText="Cancel"
+        isLoading={confirmModal.isLoading}
+      />
     </div>
   );
 }

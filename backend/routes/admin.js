@@ -28,13 +28,22 @@ import {
   adminUpdatePaper,
   adminDeletePaper,
   adminBulkDeletePapers,
+  // Super Admin Controllers
+  adminGetAdmins,
+  adminCreateAdmin,
+  adminChangeUserRole,
+  adminDeleteAdmin,
 } from "../controllers/adminController.js";
 import {
   getDashboardStats,
   getRecentActivity,
   getTopDownloadedPapers,
 } from "../controllers/dashboardController.js";
-import { authenticate, requireRole } from "../middleware/auth.js";
+import {
+  authenticate,
+  requireRole,
+  requireMinRole,
+} from "../middleware/auth.js";
 import {
   getAnnouncements,
   getActiveAnnouncements,
@@ -46,7 +55,7 @@ import {
 const router = express.Router();
 // ── All routes require authentication and admin role ────────────
 // router.use(authenticate, isAdmin);
-router.use(authenticate, requireRole("admin"));
+router.use(authenticate, requireMinRole("admin"));
 
 router.get("/dashboard/stats", getDashboardStats);
 router.get("/dashboard/recent-activity", getRecentActivity);
@@ -91,6 +100,16 @@ router.get("/announcements", getAnnouncements);
 router.post("/announcements", createAnnouncement);
 router.patch("/announcements/:id", updateAnnouncement);
 router.delete("/announcements/:id", deleteAnnouncement);
+
+// ── Super Admin Only: Admin Account Management ───────────────────
+router.get("/admins", requireMinRole("super_admin"), adminGetAdmins);
+router.post("/admins", requireMinRole("super_admin"), adminCreateAdmin);
+router.patch(
+  "/admins/:id/role",
+  requireMinRole("super_admin"),
+  adminChangeUserRole,
+);
+router.delete("/admins/:id", requireMinRole("super_admin"), adminDeleteAdmin);
 
 // Authenticated routes
 // router.get("/users", authenticate, isAdmin, adminGetUsers);

@@ -310,8 +310,8 @@ export default function PaperViewerPage() {
     try {
       const response = await axios.patch(
         `http://localhost:8000/api/admin/papers/${selectedPaperForVerification._id}`,
-        { withCredentials: true },
         { status: "approved" },
+        { withCredentials: true },
       );
 
       dismissToast(loadingToast);
@@ -341,8 +341,8 @@ export default function PaperViewerPage() {
     try {
       const response = await axios.patch(
         `http://localhost:8000/api/admin/papers/${selectedPaperForVerification._id}`,
-        { withCredentials: true },
         { status: "rejected" },
+        { withCredentials: true },
       );
 
       dismissToast(loadingToast);

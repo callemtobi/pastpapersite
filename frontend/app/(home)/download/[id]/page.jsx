@@ -177,11 +177,45 @@ export default function PaperViewerPage() {
 
       for (let i = 0; i < paper.images.length; i++) {
         const image = paper.images[i];
-        const imageUrl = `http://localhost:8000${image.path}`;
+
+        // ── Debug: Log the image object ──
+        console.log(`Image ${i}:`, image);
+
+        // ── Try multiple path options ──
+        let imagePath =
+          image.path || image.filePath || image.url || image.filename;
+
+        if (!imagePath) {
+          console.error(`No path found for image ${i}:`, image);
+          showErrorToast(`Image ${i + 1} has no valid path`);
+          continue;
+        }
+
+        // ── Normalize the path ──
+        let imageUrl;
+        if (imagePath.startsWith("http")) {
+          imageUrl = imagePath;
+        } else if (imagePath.startsWith("/uploads/")) {
+          imageUrl = `http://localhost:8000${imagePath}`;
+        } else if (imagePath.startsWith("/")) {
+          imageUrl = `http://localhost:8000${imagePath}`;
+        } else {
+          imageUrl = `http://localhost:8000/uploads/${imagePath}`;
+        }
+
+        console.log(`Fetching image ${i} from:`, imageUrl);
 
         const response = await fetch(imageUrl);
-        const blob = await response.blob();
 
+        if (!response.ok) {
+          console.error(
+            `Failed to fetch image ${i}: ${response.status} ${response.statusText}`,
+          );
+          showErrorToast(`Failed to load image ${i + 1}`);
+          continue;
+        }
+
+        const blob = await response.blob();
         const base64 = await new Promise((resolve) => {
           const reader = new FileReader();
           reader.onloadend = () => resolve(reader.result);
@@ -241,7 +275,7 @@ export default function PaperViewerPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+      <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
         <div className="text-center space-y-4">
           <Loader2 className="w-12 h-12 animate-spin text-[#4FC3FC] mx-auto" />
           <p className="text-gray-600 dark:text-gray-300">
@@ -254,7 +288,7 @@ export default function PaperViewerPage() {
 
   if (error || !paper) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center space-y-4">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20">
             <AlertCircle className="w-8 h-8 text-red-500" />
@@ -276,7 +310,7 @@ export default function PaperViewerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -497,7 +531,7 @@ export default function PaperViewerPage() {
                           ))}
                         </div>
                       ) : (
-                        <div className="flex flex-col items-center justify-center p-8 text-center h-[600px]">
+                        <div className="flex flex-col items-center justify-center p-8 text-center h-[150]">
                           <FileText className="w-16 h-16 text-gray-400 dark:text-gray-600 mb-4" />
                           <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
                             Preview Ready
@@ -609,7 +643,7 @@ export default function PaperViewerPage() {
                         Usage Statistics
                       </h4>
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-4">
+                        <div className="bg-linear-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-4">
                           <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                             {paper.downloads?.toLocaleString() || 0}
                           </p>
@@ -617,7 +651,7 @@ export default function PaperViewerPage() {
                             Total Downloads
                           </p>
                         </div>
-                        <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg p-4">
+                        <div className="bg-linear-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg p-4">
                           <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                             {paper.rating || "N/A"}
                           </p>

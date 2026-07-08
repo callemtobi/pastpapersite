@@ -68,7 +68,9 @@ export default function Login() {
       showSuccessToast("Logged in successfully.");
       await refetchUser();
 
-      router.push(role === "admin" ? "/admin" : "/home");
+      router.push(
+        role === "admin" || role === "super_admin" ? "/admin" : "/home",
+      );
     } catch (error) {
       const status = error.response?.status;
       const message = error.response?.data?.message || "Something went wrong.";

@@ -1,4 +1,3 @@
-// app/admin/announcements/page.jsx
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -21,6 +20,7 @@ import {
   showLoadingToast,
   dismissToast,
 } from "@/lib/toastConfig";
+import ConfirmModal from "@/components/ConfirmModal"; // Import
 
 export default function AnnouncementsPage() {
   const [announcements, setAnnouncements] = useState([]);
@@ -35,6 +35,16 @@ export default function AnnouncementsPage() {
     title: "",
     content: "",
     isActive: true,
+  });
+
+  // ── Confirmation Modal State ──────────────────────────────────
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    confirmText: "Yes, Delete",
+    onConfirm: null,
+    isLoading: false,
   });
 
   // ── Fetch announcements ────────────────────────────────────────
@@ -138,23 +148,38 @@ export default function AnnouncementsPage() {
   };
 
   // ── Delete announcement ────────────────────────────────────────
-  const handleDelete = async (id) => {
-    if (!confirm("Delete this announcement?")) return;
-    const toast = showLoadingToast("Deleting...");
-    try {
-      await axios.delete(
-        `http://localhost:8000/api/admin/announcements/${id}`,
-        {
-          withCredentials: true,
-        },
-      );
-      dismissToast(toast);
-      showSuccessToast("Announcement deleted");
-      await fetchAnnouncements();
-    } catch (err) {
-      dismissToast(toast);
-      showErrorToast(err.response?.data?.message || "Failed to delete");
-    }
+  const handleDelete = (id) => {
+    const announcement = announcements.find((a) => a._id === id);
+    if (!announcement) return;
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete Announcement?",
+      message: `Are you sure you want to delete "${announcement.title}"?`,
+      confirmText: "Yes, Delete",
+      variant: "danger",
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, isLoading: true }));
+        const toast = showLoadingToast("Deleting...");
+        try {
+          await axios.delete(
+            `http://localhost:8000/api/admin/announcements/${id}`,
+            { withCredentials: true },
+          );
+          dismissToast(toast);
+          showSuccessToast("Announcement deleted");
+          await fetchAnnouncements();
+        } catch (err) {
+          dismissToast(toast);
+          showErrorToast(err.response?.data?.message || "Failed to delete");
+        } finally {
+          setConfirmModal((prev) => ({
+            ...prev,
+            isOpen: false,
+            isLoading: false,
+          }));
+        }
+      },
+    });
   };
 
   // ── Open edit modal ────────────────────────────────────────────
@@ -307,7 +332,7 @@ export default function AnnouncementsPage() {
                           {announcement.content}
                         </p>
                       </div>
-                      <div className="flex items-center gap-1 flex-shrink-0">
+                      <div className="flex items-center gap-1 shrink-0">
                         <button
                           onClick={() => handleToggleStatus(announcement)}
                           className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -451,6 +476,18 @@ export default function AnnouncementsPage() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        cancelText="Cancel"
+        isLoading={confirmModal.isLoading}
+        variant={confirmModal.variant || "danger"}
+      />
     </div>
   );
 }

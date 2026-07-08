@@ -401,10 +401,10 @@ export default function DownloadPage() {
                       }}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      className="gap-2 px-8 h-12 w-40 rounded-xl bg-[#DDE3EA] dark:border-gray-600 hover:bg-[#DDE3EA]/70 dark:hover:bg-gray-900 inline-flex items-center font-medium text-gray-900 dark:text-white transition-colors"
+                      className="inline-flex items-center justify-center gap-2 px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 rounded-xl bg-[#DDE3EA] dark:bg-gray-700 hover:bg-[#DDE3EA]/80 dark:hover:bg-gray-600 text-gray-900 dark:text-white font-medium transition-all duration-200 w-full sm:w-auto min-w-25 sm:min-w-30 md:min-w-35"
                     >
-                      <Eye className="w-4 h-4" />
-                      View
+                      <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <span className="text-sm sm:text-base">View</span>
                     </motion.button>
                   </div>
                 </div>

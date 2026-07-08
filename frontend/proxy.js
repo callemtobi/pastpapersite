@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+const roleHierarchy = { user: 0, admin: 1, super_admin: 2 };
 
 export async function proxy(request) {
   const { pathname } = request.nextUrl;
@@ -21,10 +22,15 @@ export async function proxy(request) {
 
   try {
     const { payload } = await jwtVerify(token, secret);
+    const userLevel = roleHierarchy[payload.role] ?? -1;
 
-    if (isAdminRoute && payload.role !== "admin") {
+    if (isAdminRoute && userLevel < roleHierarchy.admin) {
       return NextResponse.redirect(new URL("/home", request.url));
     }
+
+    // if (isAdminRoute && payload.role !== "admin") {
+    //   return NextResponse.redirect(new URL("/home", request.url));
+    // }
 
     return NextResponse.next();
   } catch {

@@ -23,6 +23,7 @@ const userSchema = new mongoose.Schema(
       type: Number,
       unique: true,
       required: true,
+      minlength: 5,
     },
     department: {
       type: mongoose.Schema.ObjectId,

@@ -495,7 +495,7 @@ export default function AboutPage() {
             <p className="text-sm text-gray-600 dark:text-gray-300 mt-2 leading-relaxed">
               Built by{" "}
               <span className="font-medium text-foreground">
-                a BS Software Engineering
+                a BS Software Engineering{" "}
               </span>
               graduate, at Iqra National University. My main aim of building
               this project was to help students get their hands on previous past

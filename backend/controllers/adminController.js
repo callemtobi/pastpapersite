@@ -102,6 +102,25 @@ export const adminCreateUser = async (req, res) => {
       isActive = true,
     } = req.body;
 
+    // ── 🔒 Only super_admin can create admin/super_admin ────────
+    if (
+      (role === "admin" || role === "super_admin") &&
+      req.user.role !== "super_admin"
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Only super admins can create admin or super admin accounts",
+      });
+    }
+
+    // ── 🔒 Super_admin can only be created by super_admin ────────
+    if (role === "super_admin" && req.user.role !== "super_admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Only super admins can create super admin accounts",
+      });
+    }
+
     // Validation
     if (!name || !email || !studentId || !department || !password) {
       return res.status(400).json({
@@ -127,7 +146,7 @@ export const adminCreateUser = async (req, res) => {
       studentId,
       department,
       password: hashedPassword,
-      role,
+      role: role || "user",
       isActive,
       isVerified: true, // Admin-created users are verified by default
       createdBy: req.user?.id || null,
@@ -169,6 +188,39 @@ export const adminUpdateUser = async (req, res) => {
         success: false,
         message: "User not found",
       });
+    }
+
+    // ── 🔒 Prevent editing super_admin ──────────────────────────
+    if (user.role === "super_admin" && req.user.role !== "super_admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Only super admins can modify super admin accounts",
+      });
+    }
+
+    // ── 🔒 Only super_admin can assign admin roles ──────────────
+    if (
+      (role === "admin" || role === "super_admin") &&
+      req.user.role !== "super_admin"
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Only super admins can assign admin roles",
+      });
+    }
+
+    // ── 🔒 Prevent demoting super_admin (even by super_admin) ────
+    if (user.role === "super_admin" && role && role !== "super_admin") {
+      const superAdminCount = await User.countDocuments({
+        role: "super_admin",
+        isActive: true,
+      });
+      if (superAdminCount <= 1) {
+        return res.status(400).json({
+          success: false,
+          message: "Cannot demote the last super admin",
+        });
+      }
     }
 
     // Check email uniqueness
@@ -249,7 +301,7 @@ export const adminDeleteUser = async (req, res) => {
       });
     }
 
-    // Prevent deleting self
+    // ── 🔒 Prevent deleting self ─────────────────────────────────
     if (user._id.toString() === req.user?.id) {
       return res.status(400).json({
         success: false,
@@ -257,7 +309,15 @@ export const adminDeleteUser = async (req, res) => {
       });
     }
 
-    // Prevent deleting the last admin
+    // ── 🔒 Prevent deleting super_admin ──────────────────────────
+    if (user.role === "super_admin" && req.user.role !== "super_admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Only super admins can delete super admin accounts",
+      });
+    }
+
+    // ── 🔒 Prevent deleting the last admin ──────────────────────
     if (user.role === "admin" || user.role === "super_admin") {
       const adminCount = await User.countDocuments({
         role: { $in: ["admin", "super_admin"] },
@@ -269,6 +329,14 @@ export const adminDeleteUser = async (req, res) => {
           message: "Cannot delete the last admin user",
         });
       }
+    }
+
+    // Prevent deleting self
+    if (user._id.toString() === req.user?.id) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot delete your own account",
+      });
     }
 
     await User.findByIdAndDelete(id);
@@ -364,6 +432,241 @@ export const adminGetUserStats = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch user statistics",
+    });
+  }
+};
+
+// ── SUPER ADMIN CONTROLLERS ──────────────────────────────────────
+
+export const adminGetAdmins = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      search = "",
+      role = "all",
+      status = "all",
+    } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const filter = {
+      role: { $in: ["admin", "super_admin"] }, // Only get admin roles
+    };
+
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
+    }
+    if (role !== "all") filter.role = role;
+    if (status === "active") filter.isActive = true;
+    if (status === "inactive") filter.isActive = false;
+
+    const [admins, total] = await Promise.all([
+      User.find(filter)
+        .populate("department", "name")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .select(
+          "-password -otp -otpExpiresAt -resetToken -resetTokenExpiresAt -__v",
+        ),
+      User.countDocuments(filter),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      admins,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error("Admin get admins error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch admins",
+    });
+  }
+};
+
+export const adminCreateAdmin = async (req, res) => {
+  try {
+    const { name, email, password, role = "admin", isActive = true } = req.body;
+
+    // Validation
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, email, and password are required",
+      });
+    }
+
+    // Check if email already exists
+    const existing = await User.findOne({ email });
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        message: "Email already exists",
+      });
+    }
+
+    // Only allow creating admin or super_admin roles
+    if (!["admin", "super_admin"].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid role. Must be 'admin' or 'super_admin'",
+      });
+    }
+
+    const hashedPassword = await argon2.hash(password);
+
+    const admin = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      role: role,
+      isActive,
+      isVerified: true,
+      createdBy: req.user?.id || null,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Admin created successfully",
+      admin: {
+        id: admin._id,
+        name: admin.name,
+        email: admin.email,
+        role: admin.role,
+        isActive: admin.isActive,
+        isVerified: admin.isVerified,
+        createdAt: admin.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error("Admin create admin error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to create admin",
+    });
+  }
+};
+
+export const adminChangeUserRole = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    if (!role || !["user", "admin", "super_admin"].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid role. Must be 'user', 'admin', or 'super_admin'",
+      });
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Prevent changing the last super_admin
+    if (user.role === "super_admin" && role !== "super_admin") {
+      const superAdminCount = await User.countDocuments({
+        role: "super_admin",
+        isActive: true,
+      });
+      if (superAdminCount <= 1) {
+        return res.status(400).json({
+          success: false,
+          message: "Cannot demote the last super admin",
+        });
+      }
+    }
+
+    user.role = role;
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `User role updated to ${role}`,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
+      },
+    });
+  } catch (error) {
+    console.error("Admin change user role error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to change user role",
+    });
+  }
+};
+
+export const adminDeleteAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Check if user is actually an admin
+    if (!["admin", "super_admin"].includes(user.role)) {
+      return res.status(400).json({
+        success: false,
+        message: "User is not an admin",
+      });
+    }
+
+    // Prevent deleting self
+    if (user._id.toString() === req.user?.id) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot delete your own account",
+      });
+    }
+
+    // Prevent deleting the last super_admin
+    if (user.role === "super_admin") {
+      const superAdminCount = await User.countDocuments({
+        role: "super_admin",
+        isActive: true,
+      });
+      if (superAdminCount <= 1) {
+        return res.status(400).json({
+          success: false,
+          message: "Cannot delete the last super admin",
+        });
+      }
+    }
+
+    await User.findByIdAndDelete(id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Admin deleted successfully",
+    });
+  } catch (error) {
+    console.error("Admin delete admin error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete admin",
     });
   }
 };

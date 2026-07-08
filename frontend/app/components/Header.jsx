@@ -20,6 +20,7 @@ import {
   UsersRound,
   User,
   ChevronDown,
+  Shield,
 } from "lucide-react";
 import {
   showErrorToast,
@@ -36,6 +37,8 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  // const roleBadge = getRoleBadge(user.role);
+  // const RoleIcon = roleBadge.icon;
 
   useEffect(() => {
     if (isDark) {
@@ -65,6 +68,27 @@ export default function Header() {
 
   const toggleTheme = () => {
     setIsDark(!isDark);
+  };
+
+  const getRoleBadge = (role) => {
+    const roleMap = {
+      admin: {
+        label: "Admin",
+        icon: Shield,
+        color: "text-purple-500 bg-purple-50 dark:bg-purple-900/20",
+      },
+      user: {
+        label: "User",
+        icon: User,
+        color: "text-blue-500 bg-blue-50 dark:bg-blue-900/20",
+      },
+      super_admin: {
+        label: "Super Admin",
+        icon: Shield,
+        color: "text-red-500 bg-red-50 dark:bg-red-900/20",
+      },
+    };
+    return roleMap[role] || roleMap.user;
   };
 
   const navItems = [
@@ -166,8 +190,20 @@ export default function Header() {
                       <p className="text-xs text-gray-500 dark:text-gray-400">
                         {user.email}
                       </p>
+                      {(() => {
+                        const roleBadge = getRoleBadge(user.role);
+                        const Icon = roleBadge.icon;
+                        return (
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${roleBadge.color}`}
+                          >
+                            <Icon className="w-3 h-3" />
+                            {roleBadge.label}
+                          </span>
+                        );
+                      })()}
                     </div>
-                    {user.role === "admin" && (
+                    {(user.role === "admin" || user.role === "super_admin") && (
                       <Link
                         href="/admin"
                         onClick={() => setShowUserDropdown(false)}
@@ -258,8 +294,20 @@ export default function Header() {
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       {user.email}
                     </p>
+                    {(() => {
+                      const roleBadge = getRoleBadge(user.role);
+                      const Icon = roleBadge.icon;
+                      return (
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${roleBadge.color}`}
+                        >
+                          <Icon className="w-3 h-3" />
+                          {roleBadge.label}
+                        </span>
+                      );
+                    })()}
                   </div>
-                  {user.role === "admin" && (
+                  {(user.role === "admin" || user.role === "super_admin") && (
                     <Link
                       href="/admin"
                       onClick={() => setShowUserDropdown(false)}
