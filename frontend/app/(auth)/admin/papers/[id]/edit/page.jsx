@@ -71,7 +71,9 @@ export default function EditPaperPage() {
         // Fetch paper details and dropdown data in parallel
         const [paperRes, deptRes, courseRes, instructorRes] = await Promise.all(
           [
-            axios.get(`http://localhost:8000/api/papers/${id}`),
+            axios.get(`http://localhost:8000/api/papers/${id}`, {
+              withCredentials: true,
+            }),
             axios.get("http://localhost:8000/api/admin/departments", {
               withCredentials: true,
             }),

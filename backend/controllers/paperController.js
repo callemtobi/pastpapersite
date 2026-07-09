@@ -5,7 +5,8 @@ import Instructor from "../models/Instructor.js";
 import mongoose from "mongoose";
 import fs from "fs/promises";
 import path from "path";
-import Tesseract from "tesseract.js";
+import { createWorker } from "tesseract.js";
+import sharp from "sharp";
 
 /**
  * Validation rules
@@ -35,9 +36,6 @@ const VALIDATION_RULES = {
 //   "iqra national university",
 // ];
 
-/**
- * Weighted pattern scoring system for exam paper detection
- */
 const patterns = [
   // Generic exam patterns
   { regex: /question\s*\d+/i, weight: 20 },
@@ -66,13 +64,32 @@ const patterns = [
     regex: /department.*iqra/i,
     weight: 20,
   },
+  { regex: /iqra\s*n[a4]tion[a4]l\s*university/i, weight: 50 },
+  { regex: /(roll\s*no\.?|reg\.?\s*no\.?)\s*[:.]?\s*\w+/i, weight: 15 },
+  { regex: /instructor\s*[:.]?/i, weight: 10 },
+  { regex: /duration\s*[:.]?\s*\d/i, weight: 15 },
+  { regex: /obtained\s+marks/i, weight: 15 },
+  { regex: /invigilator/i, weight: 10 },
 ];
 
-/**
- * Validate uploaded files
- * @param {Array} files - Array of file objects
- * @returns {Object} Validation result
- */
+const preprocessImage = async (inputPath) => {
+  const outputPath = inputPath.replace(/(\.\w+)$/, "-processed$1");
+  await sharp(inputPath)
+    .resize({ width: 2000, withoutEnlargement: false }) // upscale small phone photos
+    .grayscale()
+    .normalize() // stretch contrast
+    .sharpen()
+    .toFile(outputPath);
+  return outputPath;
+};
+
+const normalizeOcrText = (text) =>
+  text
+    .toLowerCase()
+    .replace(/[|]/g, "i") // common OCR misread
+    .replace(/\s+/g, " ") // collapse whitespace/newlines
+    .trim();
+
 const validateUploadedFiles = (files) => {
   const errors = [];
 
@@ -111,31 +128,23 @@ const validateUploadedFiles = (files) => {
   };
 };
 
-/**
- * Extract text from image using OCR and score with weighted patterns
- * @param {string} imagePath - Path to the image file
- * @returns {Promise<Object>} OCR result with text and weighted score
- */
-const extractAndScoreText = async (imagePath) => {
+const extractAndScoreText = async (imagePath, worker) => {
+  let processedPath;
   try {
     console.log(`Starting OCR on: ${imagePath}`);
 
-    const result = await Tesseract.recognize(imagePath, "eng", {
-      logger: (m) => {
-        if (m.status === "recognizing text") {
-          console.log(`OCR progress: ${Math.round(m.progress * 100)}%`);
-        }
-      },
-    });
+    processedPath = await preprocessImage(imagePath);
+    const result = await worker.recognize(processedPath);
 
     const confidence = result.data.confidence;
     console.log(`---------> OCR confidence: ${confidence}`);
-    const extractedText = result.data.text.toLowerCase();
+
+    const extractedText = normalizeOcrText(result.data.text.toLowerCase());
     console.log(
       `OCR extraction complete. Text length: ${extractedText.length}`,
     );
 
-    // Calculate weighted pattern score
+    // ── Calculate weighted pattern score ──────────────────────
     let totalScore = 0;
     let matchedPatterns = [];
 
@@ -151,9 +160,7 @@ const extractAndScoreText = async (imagePath) => {
       }
     });
 
-    // Normalize score: max possible is sum of all weights
     const maxScore = patterns.reduce((sum, p) => sum + p.weight, 0);
-    // const normalizedScore = Math.min(totalScore / maxScore, 1);
     const normalizedScore = Math.round((totalScore / maxScore) * 100);
     console.log(
       `---------> Total pattern score: ${totalScore} / ${maxScore}, Normalized: ${normalizedScore}`,
@@ -180,36 +187,52 @@ const extractAndScoreText = async (imagePath) => {
       success: false,
       error: error.message,
       score: 0,
+      rawScore: 0,
+      confidence: 0,
+      maxScore: 0,
       extractedText: "",
       matchedPatterns: [],
     };
+  } finally {
+    if (processedPath) {
+      fs.unlink(processedPath).catch((err) =>
+        console.error(`Failed to delete processed file ${processedPath}:`, err),
+      );
+    }
   }
 };
 
-/**
- * Determine approval status based on OCR confidence and raw pattern score
- * Logic:
- * - OCR Confidence < 50 → Rejected
- * - OCR Confidence ≥ 50 AND Raw Score < 100 → Pending Review
- * - OCR Confidence ≥ 50 AND Raw Score ≥ 100 → Approved
- * @param {number} confidence - OCR confidence percentage (0-100)
- * @param {number} rawScore - Raw pattern matching score
- * @returns {Object} Approval status with reason
- */
-const determineApprovalStatus = (confidence, rawScore) => {
-  if (confidence < 50) {
+//  * - OCR Confidence < 20 → Rejected
+//  * - OCR Confidence < 50 → Pending Review
+//  * - OCR Confidence > 50 → Approved
+const determineApprovalStatus = (
+  confidence,
+  rawScore,
+  extractedText,
+  maxScore,
+  // matchedPatterns,
+) => {
+  if (
+    confidence < 20 ||
+    !extractedText ||
+    extractedText.trim().length < 15
+    // matchedPatterns.length === 0
+  ) {
     return {
       status: "rejected",
-      reason: `OCR confidence too low: ${confidence}% (threshold: 50%)`,
+      reason:
+        "Image unreadable or does not contain any recognizable exam-related content",
       confidence,
       rawScore,
     };
   }
 
-  if (rawScore < 100) {
+  const normalizedScore = Math.round((rawScore / maxScore) * 100);
+
+  if (normalizedScore < 50) {
     return {
       status: "pending",
-      reason: `Raw score below approval threshold: ${rawScore} (threshold: 100)`,
+      reason: `Score ${normalizedScore}/100 below auto-approval threshold — sent for admin review`,
       confidence,
       rawScore,
     };
@@ -217,17 +240,12 @@ const determineApprovalStatus = (confidence, rawScore) => {
 
   return {
     status: "approved",
-    reason: `OCR confidence ${confidence}% and raw score ${rawScore} meet approval criteria`,
+    reason: `Score ${normalizedScore}/100 meets auto-approval threshold`,
     confidence,
     rawScore,
   };
 };
 
-/**
- * Detect exam keywords in image filename and metadata
- * @param {string} filename - The image filename
- * @returns {Object} Keyword detection result
- */
 // const detectExamKeywords = (filename) => {
 //   const lowerFilename = filename.toLowerCase();
 //   let score = 0;
@@ -249,10 +267,6 @@ const determineApprovalStatus = (confidence, rawScore) => {
 //   };
 // };
 
-/**
- * Upload paper images
- * POST /api/papers/upload
- */
 export const uploadPaper = async (req, res) => {
   try {
     const {
@@ -323,61 +337,73 @@ export const uploadPaper = async (req, res) => {
 
     // ── Process each file ──────────────────────────────────────
     const imageData = [];
+    const worker = await createWorker("eng");
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-
-      try {
-        const ocrResult = await extractAndScoreText(file.path);
-        console.log(
-          `OCR Score: ${ocrResult.score}, Confidence: ${ocrResult.confidence}, Matched Patterns:`,
-          ocrResult.matchedPatterns,
-        );
-
-        const approvalStatus = determineApprovalStatus(
-          ocrResult.confidence,
-          ocrResult.rawScore,
-        );
-        console.log(
-          `Status: ${approvalStatus.status}, Reason: ${approvalStatus.reason}`,
-        );
-
-        imageData.push({
-          filename: file.filename,
-          originalName: file.originalname,
-          mimetype: file.mimetype,
-          size: file.size,
-          path: `/uploads/${file.filename}`,
-          verificationStatus: approvalStatus.status,
-          verificationReason: approvalStatus.reason,
-          detectedKeywords: ocrResult.matchedPatterns.map((p) => p.pattern),
-          ocrExtractedText: ocrResult.extractedText,
-          ocrScore: ocrResult.score,
-          ocrConfidence: ocrResult.confidence,
-          ocrRawScore: ocrResult.rawScore,
-          ocrMaxScore: ocrResult.maxScore,
-          matchedPatterns: ocrResult.matchedPatterns,
-          uploadedAt: new Date(),
-        });
-      } catch (error) {
-        console.error(`Error processing file ${file.originalname}:`, error);
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
         try {
-          await fs.unlink(file.path);
-        } catch (unlinkError) {
-          console.error(`Failed to delete file ${file.path}:`, unlinkError);
+          const ocrResult = await extractAndScoreText(file.path, worker);
+          console.log(
+            `OCR Score: ${ocrResult.score}, Confidence: ${ocrResult.confidence}, Matched Patterns:`,
+            ocrResult.matchedPatterns,
+          );
+
+          const approvalStatus = determineApprovalStatus(
+            ocrResult.confidence,
+            ocrResult.rawScore,
+            ocrResult.extractedText,
+            ocrResult.maxScore,
+            // ocrResult.matchedPatterns,
+          );
+          console.log(
+            `------> Status: ${approvalStatus.status}, Reason: ${approvalStatus.reason}`,
+          );
+
+          imageData.push({
+            filename: file.filename,
+            originalName: file.originalname,
+            mimetype: file.mimetype,
+            size: file.size,
+            path: `/uploads/${file.filename}`,
+            verificationStatus: approvalStatus.status,
+            verificationReason: approvalStatus.reason,
+            detectedKeywords: ocrResult.matchedPatterns.map((p) => p.pattern),
+            ocrExtractedText: ocrResult.extractedText,
+            ocrScore: ocrResult.score,
+            ocrConfidence: ocrResult.confidence,
+            ocrRawScore: ocrResult.rawScore,
+            ocrMaxScore: ocrResult.maxScore,
+            matchedPatterns: ocrResult.matchedPatterns,
+            uploadedAt: new Date(),
+          });
+        } catch (error) {
+          console.error(`Error processing file ${file.originalname}:`, error);
+          try {
+            await fs.unlink(file.path);
+          } catch (unlinkError) {
+            console.error(`Failed to delete file ${file.path}:`, unlinkError);
+          }
+          throw error;
         }
-        throw error;
       }
+    } finally {
+      await worker.terminate();
     }
 
     // ── Check for rejected images ──────────────────────────────
     const rejectedImages = imageData.filter(
       (img) => img.verificationStatus === "rejected",
     );
+
     if (rejectedImages.length > 0) {
       for (const img of imageData) {
         try {
-          await fs.unlink(img.path);
+          const filePath = path.join(
+            process.cwd(),
+            img.path.replace(/^\/uploads\//, "uploads/"),
+          );
+          await fs.unlink(filePath);
         } catch (unlinkError) {
           console.error(`Failed to delete file ${img.path}:`, unlinkError);
         }
@@ -427,12 +453,11 @@ export const uploadPaper = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: `Successfully uploaded ${imageData.length} image(s)`,
-      paper: {
-        id: paper._id,
-        course: paper.course,
-        imagesCount: paper.images.length,
-      },
+      message:
+        paper.status === "approved"
+          ? "Your paper was uploaded and is now live."
+          : "Your paper has been submitted and is pending verification. You'll be notified once it's approved.",
+      paper: { id: paper._id, course: paper.course, status: paper.status },
     });
   } catch (error) {
     console.error("Upload error:", error);
@@ -486,24 +511,18 @@ export const getPapers = async (req, res) => {
       year = "",
       semester = "",
     } = req.query;
-
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // ── Build filters ───────────────────────────────────────────
-    const filters = {};
+    const filters = { status: "approved" }; // ← always enforced, not client-controlled
 
-    // Only add filters if they have values
     if (examType) filters.examType = examType;
     if (year) filters.year = year;
     if (semester) filters.semester = semester;
 
-    // Department filter (by ObjectId or name)
     if (department) {
-      // If department is a valid ObjectId, use it directly
       if (mongoose.Types.ObjectId.isValid(department)) {
         filters.department = department;
       } else {
-        // If it's a name, find the department first
         const dept = await Department.findOne({
           name: { $regex: department, $options: "i" },
         });
@@ -511,22 +530,20 @@ export const getPapers = async (req, res) => {
       }
     }
 
-    // ── Search across populated fields ──────────────────────────
     let searchFilter = {};
     if (search) {
-      // First, find matching courses, departments, instructors
-      const matchingCourses = await Course.find({
-        name: { $regex: search, $options: "i" },
-      }).select("_id");
-
-      const matchingDepartments = await Department.find({
-        name: { $regex: search, $options: "i" },
-      }).select("_id");
-
-      const matchingInstructors = await Instructor.find({
-        name: { $regex: search, $options: "i" },
-      }).select("_id");
-
+      const [matchingCourses, matchingDepartments, matchingInstructors] =
+        await Promise.all([
+          Course.find({ name: { $regex: search, $options: "i" } }).select(
+            "_id",
+          ),
+          Department.find({ name: { $regex: search, $options: "i" } }).select(
+            "_id",
+          ),
+          Instructor.find({ name: { $regex: search, $options: "i" } }).select(
+            "_id",
+          ),
+        ]);
       searchFilter = {
         $or: [
           { course: { $in: matchingCourses.map((c) => c._id) } },
@@ -536,16 +553,14 @@ export const getPapers = async (req, res) => {
       };
     }
 
-    // ── Combine filters ──────────────────────────────────────────
     const finalFilters = { ...filters, ...searchFilter };
 
-    // ── Query with populate ──────────────────────────────────────
     const [papers, total] = await Promise.all([
       Paper.find(finalFilters)
-        .populate("course", "name") // Get course name
-        .populate("department", "name") // Get department name
-        .populate("instructor", "title name") // Get instructor title & name
-        .select("-images.path") // Exclude file paths
+        .populate("course", "name")
+        .populate("department", "name")
+        .populate("instructor", "title name")
+        .select("-images.path")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit)),

@@ -6,6 +6,7 @@ import Instructor from "../models/Instructor.js";
 import User from "../models/User.js";
 import fs from "fs/promises";
 import argon2 from "argon2";
+import { sendPaperStatusEmail } from "../services/emailService.js";
 
 // ── Admin User Management Functions ─────────────────────────────
 
@@ -1380,6 +1381,8 @@ export const adminUpdatePaper = async (req, res) => {
       });
     }
 
+    const previousStatus = paper.status;
+
     // ── Validate and update status ──────────────────────────────
     if (status !== undefined) {
       const validStatuses = ["approved", "pending", "rejected"];
@@ -1390,6 +1393,15 @@ export const adminUpdatePaper = async (req, res) => {
         });
       }
       paper.status = status;
+
+      // Only stamp review metadata on an actual status change
+      if (
+        status !== previousStatus &&
+        (status === "approved" || status === "rejected")
+      ) {
+        paper.verifiedBy = req.user.id;
+        paper.verifiedAt = new Date();
+      }
     }
 
     // ── Validate and update course ──────────────────────────────
@@ -1449,7 +1461,23 @@ export const adminUpdatePaper = async (req, res) => {
     const populatedPaper = await Paper.findById(paper._id)
       .populate("course", "name")
       .populate("department", "name")
-      .populate("instructor", "title name");
+      .populate("instructor", "title name")
+      .populate("uploadedBy", "name email");
+
+    // Fire the notification only on an actual approve/reject transition
+    if (
+      status &&
+      status !== previousStatus &&
+      (status === "approved" || status === "rejected")
+    ) {
+      if (populatedPaper.uploadedBy?.email) {
+        await sendPaperStatusEmail(
+          populatedPaper.uploadedBy,
+          populatedPaper,
+          status,
+        ).catch((err) => console.error("Failed to send status email:", err));
+      }
+    }
 
     return res.status(200).json({
       success: true,
@@ -1482,10 +1510,11 @@ export const adminDeletePaper = async (req, res) => {
     if (paper.images && paper.images.length > 0) {
       for (const image of paper.images) {
         try {
-          const filePath = image.path;
-          if (filePath) {
-            await fs.unlink(filePath);
-          }
+          const filePath = path.join(
+            process.cwd(),
+            image.path.replace(/^\/uploads\//, "uploads/"),
+          );
+          await fs.unlink(filePath);
         } catch (unlinkError) {
           console.error(`Failed to delete file ${image.path}:`, unlinkError);
         }

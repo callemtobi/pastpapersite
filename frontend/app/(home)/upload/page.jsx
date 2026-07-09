@@ -12,7 +12,7 @@ import {
   X,
   Loader,
 } from "lucide-react";
-import { validateFiles, detectExamKeywords } from "@/lib/uploadValidation";
+import { validateFiles } from "@/lib/uploadValidation";
 import { motion } from "motion/react";
 import {
   showSuccessToast,
@@ -105,16 +105,17 @@ export default function UploadPage() {
 
     const newFiles = Array.from(files);
 
+    const filesWithKeywords = newFiles.map((file) => ({
+      file,
+      keywords: {
+        score: 0, // placeholder, backend will compute real score
+        detected: [], // placeholder, backend will populate
+      },
+    }));
+
+    setSelectedFiles((prev) => [...prev, ...filesWithKeywords]);
+
     try {
-      const filesWithKeywords = await Promise.all(
-        newFiles.map(async (file) => {
-          const keywords = await detectExamKeywords(file);
-          return { file, keywords };
-        }),
-      );
-
-      setSelectedFiles((prevFiles) => [...prevFiles, ...filesWithKeywords]);
-
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -183,7 +184,7 @@ export default function UploadPage() {
       }
 
       if (response.data.success) {
-        showSuccessToast("Paper uploaded successfully!");
+        showSuccessToast(response.data.message);
         setUploadSuccess(true);
         setTimeout(() => {
           setUploadSuccess(false);
@@ -291,9 +292,7 @@ export default function UploadPage() {
                               {item.file.name}
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
-                              {(item.file.size / 1024 / 1024).toFixed(2)} MB •
-                              Keyword Score:{" "}
-                              {((item.keywords?.score ?? 0) * 100).toFixed(0)}%
+                              {(item.file.size / 1024 / 1024).toFixed(2)} MB
                             </p>
                           </div>
                           <button

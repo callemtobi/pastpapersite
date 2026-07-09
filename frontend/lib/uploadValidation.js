@@ -1,8 +1,3 @@
-/**
- * Upload Validation Utilities
- * Validates image uploads with size, type, keyword detection, and hash checks
- */
-
 const VALIDATION_RULES = {
   MAX_FILE_SIZE: 2 * 1024 * 1024, // 2 MB
   MAX_FILES: 5,
@@ -29,11 +24,6 @@ const EXAM_KEYWORDS = [
   "iqra national university",
 ];
 
-/**
- * Validate file size
- * @param {File} file - The file to validate
- * @returns {Object} Validation result { valid: boolean, error?: string }
- */
 export const validateFileSize = (file) => {
   if (file.size > VALIDATION_RULES.MAX_FILE_SIZE) {
     return {
@@ -44,11 +34,6 @@ export const validateFileSize = (file) => {
   return { valid: true };
 };
 
-/**
- * Validate file type
- * @param {File} file - The file to validate
- * @returns {Object} Validation result { valid: boolean, error?: string }
- */
 export const validateFileType = (file) => {
   if (!VALIDATION_RULES.ALLOWED_TYPES.includes(file.type)) {
     return {
@@ -59,11 +44,6 @@ export const validateFileType = (file) => {
   return { valid: true };
 };
 
-/**
- * Validate number of files
- * @param {FileList} files - The file list to validate
- * @returns {Object} Validation result { valid: boolean, error?: string }
- */
 export const validateFileCount = (files) => {
   if (files.length > VALIDATION_RULES.MAX_FILES) {
     return {
@@ -74,11 +54,6 @@ export const validateFileCount = (files) => {
   return { valid: true };
 };
 
-/**
- * Validate all files
- * @param {FileList} files - The file list to validate
- * @returns {Object} Validation result { valid: boolean, errors: string[] }
- */
 export const validateFiles = (files) => {
   const errors = [];
 
@@ -110,29 +85,4 @@ export const validateFiles = (files) => {
     valid: errors.length === 0,
     errors,
   };
-};
-
-/**
- * Detect exam-related keywords in image using OCR-like text matching
- * Note: This is a basic implementation. For production, use a real OCR library like Tesseract.js
- * @param {File} file - The image file
- * @returns {Promise<Object>} Keyword detection result { score: number, keywords: string[] }
- */
-export const detectExamKeywords = async (file) => {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    // For now, return a placeholder score
-    // In production, you would use OCR to extract text and analyze it
-    reader.onload = () => {
-      // Placeholder implementation - in real app, use Tesseract.js
-      // For now, assume all exam papers have some keywords (score between 0.5-1)
-      resolve({
-        score: Math.random() * 0.5 + 0.5, // Random score between 0.5-1.0
-        keywords: [],
-        notes:
-          "OCR not implemented - score is placeholder. Use Tesseract.js in production.",
-      });
-    };
-    reader.readAsDataURL(file);
-  });
 };

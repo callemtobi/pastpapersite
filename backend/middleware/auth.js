@@ -21,7 +21,7 @@ export const authenticate = async (req, res, next) => {
     }
 
     const payload = await verifyToken(token);
-    console.log("Payload:", payload);
+    // console.log("Payload:", payload);
     req.user = payload;
     next();
   } catch (err) {

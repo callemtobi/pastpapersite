@@ -13,7 +13,7 @@ import {
   CheckCircle,
   Image as ImageIcon,
 } from "lucide-react";
-import { validateFiles, detectExamKeywords } from "@/lib/uploadValidation";
+import { validateFiles } from "@/lib/uploadValidation";
 import {
   showErrorToast,
   showSuccessToast,
@@ -113,46 +113,19 @@ export default function CreatePaperPage() {
     }
 
     const newFiles = Array.from(files);
-    try {
-      const filesWithKeywords = await Promise.all(
-        newFiles.map(async (file) => {
-          try {
-            const keywords = await detectExamKeywords(file);
-            return {
-              file,
-              keywords: {
-                score: keywords?.score ?? 0,
-                detected: keywords?.detected ?? [],
-                ...(keywords || {}),
-              },
-            };
-          } catch (keywordError) {
-            console.warn(
-              "Keyword detection failed for file:",
-              file.name,
-              keywordError,
-            );
-            return {
-              file,
-              keywords: {
-                score: 0,
-                detected: [],
-              },
-            };
-          }
-        }),
-      );
+    const filesWithKeywords = newFiles.map((file) => ({
+      file,
+      keywords: {
+        score: 0,
+        detected: [],
+      },
+    }));
 
-      setSelectedFiles((prevFiles) => [...prevFiles, ...filesWithKeywords]);
+    setSelectedFiles((prevFiles) => [...prevFiles, ...filesWithKeywords]);
 
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    } catch (error) {
-      setValidationErrors([`Error processing files: ${error.message}`]);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+    // Reset the file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
@@ -213,14 +186,6 @@ export default function CreatePaperPage() {
     if (!selectedInstructor || selectedInstructor.isActive === false) {
       showErrorToast("Selected instructor is invalid or inactive");
       return;
-    }
-
-    // ── Low keyword score warning ─────────────────────────────────
-    if (hasLowKeywordScore) {
-      const confirmUpload = confirm(
-        "Some images have low exam-related keyword scores. Do you want to continue?",
-      );
-      if (!confirmUpload) return;
     }
 
     const loadingToast = showLoadingToast("Uploading paper...");
@@ -486,16 +451,6 @@ export default function CreatePaperPage() {
                     </div>
                   )}
                 </div>
-
-                {hasLowKeywordScore && selectedFiles.length > 0 && (
-                  <div className="flex items-start gap-2 text-sm text-yellow-600 dark:text-yellow-400 mt-2">
-                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                    <span>
-                      Some images have low exam-related keyword scores. Please
-                      verify these are exam papers.
-                    </span>
-                  </div>
-                )}
 
                 {validationErrors.length > 0 && (
                   <div className="flex items-start gap-2 text-sm text-red-500 dark:text-red-400 mt-2">

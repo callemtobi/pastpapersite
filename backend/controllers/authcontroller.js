@@ -133,7 +133,7 @@ export const login = async (req, res) => {
       return res.status(401).json({
         success: false,
         message: "No account found with this email.",
-        attemptsRemaining: req.rateLimit.remaining,
+        // attemptsRemaining: req.rateLimit.remaining,
       });
     }
 
