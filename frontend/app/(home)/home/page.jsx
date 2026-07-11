@@ -1,686 +1,545 @@
-// app/(home)/download/[id]/page.jsx
 "use client";
 
-import React, { useState, useEffect } from "react";
-import {
-  Download,
-  Eye,
-  BookOpen,
-  Calendar,
-  Star,
-  FileText,
-  ArrowLeft,
-  CheckCircle,
-  Loader2,
-  User,
-  Clock,
-  AlertCircle,
-  Building,
-} from "lucide-react";
-import axios from "axios";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import Image from "next/image";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
-  showSuccessToast,
-  showLoadingToast,
-  showErrorToast,
-  dismissToast,
-} from "@/lib/toastConfig";
+  Search,
+  Download,
+  Upload,
+  FileText,
+  Clock,
+  BookOpen,
+  Sparkles,
+  ChevronRight,
+  GraduationCap,
+  Lightbulb,
+  Clock as ClockIcon,
+  Target,
+} from "lucide-react";
+import Loading from "./loading";
+import CountUp from "react-countup";
+import { motion } from "motion/react";
+import axios from "axios";
+import {
+  fadeUp,
+  activityContainer,
+  activityItem,
+  container,
+  item,
+} from "@/lib/animations";
+import Banner from "@/public/INU-Banner.png";
 
-export default function PaperViewerPage() {
-  const { id } = useParams();
+export default function Main() {
   const router = useRouter();
-  const [paper, setPaper] = useState(null);
+  const searchParams = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [downloading, setDownloading] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const [activeTab, setActiveTab] = useState("preview");
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [courseName, setCourseName] = useState("");
-  const [departmentName, setDepartmentName] = useState("");
-  const [instructorFullName, setInstructorFullName] = useState("");
+  const [time, setTime] = useState(() => Date.now());
+  const [stats, setStats] = useState({
+    totalPapers: 0,
+    totalDownloads: 0,
+    monthlyDownloads: 0,
+  });
+  const [departments, setDepartments] = useState([]);
+  const [topPapers, setTopPapers] = useState([]);
+  const marqueeRef = useRef(null);
 
-  // Paper details from backend
+  // ── Fetch dashboard data ──────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
 
-    const getPaperDetails = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(
-          `http://localhost:8000/api/papers/${id}`,
-        );
+        const [statsRes, topPapersRes, deptRes] = await Promise.all([
+          axios.get("http://localhost:8000/api/auth/dashboard/stats", {
+            withCredentials: true,
+          }),
+          axios.get("http://localhost:8000/api/auth/dashboard/top-downloads", {
+            withCredentials: true,
+          }),
+          axios.get("http://localhost:8000/api/papers/departments"),
+        ]);
 
         if (!cancelled) {
-          if (response.data.success && response.data.paper) {
-            const paperData = response.data.paper;
-            setPaper(paperData);
+          if (statsRes.data.success) {
+            setStats({
+              totalPapers: statsRes.data.data?.totalPapers || 0,
+              totalDownloads: statsRes.data.data?.totalDownloads || 0,
+              monthlyDownloads: statsRes.data.data?.monthlyDownloads || 0,
+            });
+          }
 
-            // Extract populated fields
-            setCourseName(
-              paperData.course?.name || paperData.course || "Unknown Course",
-            );
-            setDepartmentName(
-              paperData.department?.name ||
-                paperData.department ||
-                "Unknown Department",
-            );
-            setInstructorFullName(
-              paperData.instructor?.title && paperData.instructor?.name
-                ? `${paperData.instructor.title} ${paperData.instructor.name}`
-                : paperData.instructor?.name || "Unknown Instructor",
-            );
-          } else {
-            setError(response.data.message || "Paper not found");
+          if (topPapersRes.data.success) {
+            setTopPapers(topPapersRes.data.data || []);
+          }
+
+          if (deptRes.data.success) {
+            setDepartments(deptRes.data.departments || []);
           }
         }
       } catch (err) {
         const errorMessage =
           err.response?.data?.message ||
           err.message ||
-          "Error fetching paper details";
+          "Error fetching dashboard data";
         if (!cancelled) setError(errorMessage);
+        console.error("Dashboard fetch error:", err);
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
 
-    if (id) {
-      getPaperDetails();
-    }
-
+    fetchData();
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, []);
 
-  const handleDownload = async () => {
-    if (!paper || !paper.images?.length) return;
+  // ── Search functionality ──────────────────────────────────────
+  useEffect(() => {
+    const searchPapers = async () => {
+      if (!searchQuery.trim()) {
+        setSearchResults([]);
+        return;
+      }
 
-    setDownloading(true);
-    setError(null);
-
-    try {
-      for (let i = 0; i < paper.images.length; i++) {
-        const image = paper.images[i];
+      try {
         const response = await axios.get(
-          `http://localhost:8000/api/papers/${id}/download?imageIndex=${i}`,
-          {
-            responseType: "blob",
-          },
+          `http://localhost:8000/api/papers?search=${encodeURIComponent(searchQuery)}`,
         );
-
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement("a");
-        link.href = url;
-
-        const ext = image.originalName?.split(".").pop() || "png";
-        const fileName = courseName || paper.course?.name || "paper";
-        link.setAttribute(
-          "download",
-          `${fileName}_${paper.examType}_${paper.year}_img${i + 1}.${ext}`,
-        );
-
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.URL.revokeObjectURL(url);
+        if (response.data.success) {
+          setSearchResults(response.data.papers || []);
+        }
+      } catch (err) {
+        console.error("Search error:", err);
       }
+    };
 
-      await axios.put(
-        `http://localhost:8000/api/papers/${id}/increment-download`,
-      );
-      showSuccessToast("Download successful.");
-    } catch (err) {
-      console.error("Download failed:", err);
-      showErrorToast(
-        err.response?.data?.message ||
-          "Failed to download images. Please try again.",
-      );
-    } finally {
-      setDownloading(false);
-    }
+    const debounce = setTimeout(searchPapers, 300);
+    return () => clearTimeout(debounce);
+  }, [searchQuery]);
+
+  const getTimeAgo = (date) => {
+    const diff = time - new Date(date).getTime();
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 1) return "Just now";
+    if (minutes < 60) return minutes + "m ago";
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return hours + "h ago";
+    const days = Math.floor(hours / 24);
+    return days + "d ago";
   };
 
-  const handlePreview = async () => {
-    setPreviewLoading(true);
-    setError(null);
-
-    try {
-      setShowPreview(true);
-      setActiveTab("preview");
-    } catch (err) {
-      console.error("Preview failed:", err);
-      showErrorToast("Failed to load preview.");
-    } finally {
-      setPreviewLoading(false);
-    }
+  const formatNumber = (num) => {
+    if (!num) return "0";
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
+    if (num >= 1000) return (num / 1000).toFixed(1) + "K";
+    return num.toLocaleString();
   };
 
-  const generatePDF = async () => {
-    if (!paper || !paper.images?.length) return;
-
-    const loadingToast = showLoadingToast("Generating PDF...");
-
-    try {
-      const { default: jsPDF } = await import("jspdf");
-      const doc = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-      });
-
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 10;
-
-      for (let i = 0; i < paper.images.length; i++) {
-        const image = paper.images[i];
-
-        // ── Debug: Log the image object ──
-        console.log(`Image ${i}:`, image);
-
-        // ── Try multiple path options ──
-        let imagePath =
-          image.path || image.filePath || image.url || image.filename;
-
-        if (!imagePath) {
-          console.error(`No path found for image ${i}:`, image);
-          showErrorToast(`Image ${i + 1} has no valid path`);
-          continue;
-        }
-
-        // ── Normalize the path ──
-        let imageUrl;
-        if (imagePath.startsWith("http")) {
-          imageUrl = imagePath;
-        } else if (imagePath.startsWith("/uploads/")) {
-          imageUrl = `http://localhost:8000${imagePath}`;
-        } else if (imagePath.startsWith("/")) {
-          imageUrl = `http://localhost:8000${imagePath}`;
-        } else {
-          imageUrl = `http://localhost:8000/uploads/${imagePath}`;
-        }
-
-        console.log(`Fetching image ${i} from:`, imageUrl);
-
-        const response = await fetch(imageUrl);
-
-        if (!response.ok) {
-          console.error(
-            `Failed to fetch image ${i}: ${response.status} ${response.statusText}`,
-          );
-          showErrorToast(`Failed to load image ${i + 1}`);
-          continue;
-        }
-
-        const blob = await response.blob();
-        const base64 = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.readAsDataURL(blob);
-        });
-
-        const img = new window.Image();
-        await new Promise((resolve) => {
-          img.onload = resolve;
-          img.src = base64;
-        });
-
-        if (i > 0) {
-          doc.addPage();
-        }
-
-        const imgWidth = img.width;
-        const imgHeight = img.height;
-        const maxWidth = pageWidth - margin * 2;
-        const maxHeight = pageHeight - margin * 2;
-        const ratio = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
-        const pdfWidth = imgWidth * ratio;
-        const pdfHeight = imgHeight * ratio;
-        const x = (pageWidth - pdfWidth) / 2;
-        const y = (pageHeight - pdfHeight) / 2;
-
-        doc.addImage(
-          base64,
-          image.mimetype === "image/png" ? "PNG" : "JPEG",
-          x,
-          y,
-          pdfWidth,
-          pdfHeight,
-        );
-      }
-
-      const fileName = courseName || paper.course?.name || "paper";
-      doc.save(`${fileName}_${paper.examType}_${paper.year}.pdf`);
-      await axios.put(
-        `http://localhost:8000/api/papers/${id}/increment-download`,
-      );
-      dismissToast(loadingToast);
-      showSuccessToast("PDF downloaded successfully.");
-    } catch (err) {
-      dismissToast(loadingToast);
-      showErrorToast("PDF generation failed");
-      console.error("PDF generation failed:", err);
-    }
-  };
-
-  // Get images size
-  const getImageSize = () => {
-    if (!paper?.images?.length) return "0";
-    const totalSize = paper.images.reduce((sum, img) => sum + img.size, 0);
-    return (totalSize / (1024 * 1024)).toFixed(2);
-  };
-
-  if (loading) {
+  if (error) {
     return (
-      <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <Loader2 className="w-12 h-12 animate-spin text-[#4FC3FC] mx-auto" />
-          <p className="text-gray-600 dark:text-gray-300">
-            Loading paper details...
-          </p>
-        </div>
+      <div className="text-center py-12">
+        <p className="text-red-500">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 px-4 py-2 bg-[#4FC3FC] text-white rounded-lg"
+        >
+          Retry
+        </button>
       </div>
     );
   }
 
-  if (error || !paper) {
-    return (
-      <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center space-y-4">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20">
-            <AlertCircle className="w-8 h-8 text-red-500" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Error Loading Paper
-          </h2>
-          <p className="text-gray-600 dark:text-gray-300">{error}</p>
-          <button
-            onClick={() => router.push("/download")}
-            className="inline-flex items-center gap-2 px-6 py-2 bg-[#4FC3FC] hover:bg-[#29b6f6] text-white rounded-lg transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Papers
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const displayStats = [
+    { label: "Total Papers", value: stats.totalPapers },
+    { label: "Total Downloads", value: stats.totalDownloads },
+    { label: "Monthly Downloads", value: stats.monthlyDownloads },
+  ];
+
+  // ── Double the departments for seamless infinite scroll ──
+  const marqueeDepartments = [...departments, ...departments, ...departments];
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => router.push("/download")}
-              className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+    <div className="space-y-16">
+      {/* Hero Section */}
+      <div className="text-center space-y-6 sm:space-y-8 py-8 sm:py-12">
+        <div className="space-y-3 sm:space-y-4">
+          <motion.h1
+            variants={fadeUp}
+            initial="hidden"
+            animate="visible"
+            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-foreground tracking-tight"
+          >
+            Pasty Paperyyy
+          </motion.h1>
+
+          <div className="flex justify-center my-4">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{
+                opacity: 1,
+                y: [0, -8, 0],
+              }}
+              transition={{
+                opacity: { duration: 0.6 },
+                y: {
+                  duration: 6,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                },
+              }}
+              whileHover={{
+                scale: 1.03,
+                rotate: -1,
+                transition: { duration: 0.3 },
+              }}
+              className="relative w-full max-w-xl lg:max-w-3xl"
             >
-              <ArrowLeft className="w-5 h-5" />
-              <span>Back to Browse</span>
-            </button>
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                Paper ID: {paper._id}
-              </span>
-            </div>
+              <Image
+                src={Banner}
+                alt="Academic community banner"
+                className="w-full h-auto rounded-2xl shadow-lg dark:shadow-gray-800/30 transition-shadow duration-300 hover:shadow-2xl dark:hover:shadow-gray-800/50"
+                priority
+              />
+            </motion.div>
           </div>
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.8 }}
+            className="text-base sm:text-lg max-w-xl mx-auto px-4"
+          >
+            Access past examination papers from a growing database of university
+            papers.
+          </motion.p>
+        </div>
+
+        {/* Search Bar */}
+        <div className="max-w-2xl mx-auto px-4 sm:px-0">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.8, duration: 0.6 }}
+            className="relative"
+          >
+            <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
+            <input
+              type="text"
+              placeholder="Search papers or instructors..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 sm:pl-12 pr-3 sm:pr-4 h-11 sm:h-12 md:h-14 text-sm sm:text-base border border-border-light bg-background-secondary text-foreground rounded-xl sm:rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
+            />
+
+            {/* Search Results Dropdown */}
+            {searchQuery && searchResults.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-background-secondary rounded-xl shadow-lg dark:shadow-gray-800/50 border border-border-light max-h-80 overflow-y-auto z-50">
+                {searchResults.map((paper) => (
+                  <Link
+                    key={paper._id}
+                    href={`/download/${paper._id}`}
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-background transition-colors"
+                  >
+                    <FileText className="w-4 h-4 text-foreground" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {paper.course?.name || "Unknown Course"}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {paper.department?.name || "N/A"} • {paper.examType}
+                      </p>
+                    </div>
+                    <span className="text-xs text-gray-400">
+                      {paper.downloads || 0} downloads
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        </div>
+
+        {/* Quick Actions */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1, duration: 0.7 }}
+          className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center pt-2 px-4 sm:px-0"
+        >
+          <Link href="/download" className="w-full sm:w-auto">
+            <button className="w-full sm:w-auto gap-2 bg-[#4FC3F7] hover:bg-[#4FC3F7]/80 active:scale-95 text-white px-4 sm:px-6 md:px-8 h-10 sm:h-11 md:h-12 rounded-xl inline-flex items-center justify-center font-medium transition-all duration-200 shadow-sm hover:shadow-md">
+              <Download className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="text-sm sm:text-base">Browse Papers</span>
+            </button>
+          </Link>
+          <Link href="/upload" className="w-full sm:w-auto">
+            <button className="w-full sm:w-auto gap-2 px-4 sm:px-6 md:px-8 h-10 sm:h-11 md:h-12 rounded-xl bg-[#DDE3EA] dark:bg-gray-700 hover:bg-[#DDE3EA]/80 dark:hover:bg-gray-600 active:scale-95 inline-flex items-center justify-center font-medium text-gray-900 dark:text-white transition-all duration-200 shadow-sm hover:shadow-md">
+              <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="text-sm sm:text-base">Upload Paper</span>
+            </button>
+          </Link>
+        </motion.div>
+      </div>
+
+      {/* Stats */}
+      <motion.div
+        viewport={{ once: true, amount: 0.3 }}
+        className="grid grid-cols-3 gap-4 sm:gap-6"
+      >
+        {displayStats.map((stat, index) => (
+          <motion.div
+            key={index}
+            className="text-center p-6 rounded-lg bg-background-secondary border border-border-light shadow-sm hover:shadow-md transition-shadow duration-200"
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-1">
+              <CountUp
+                start={0}
+                end={stat.value}
+                duration={2}
+                separator=","
+                autoAnimate
+                autoAnimateOnce
+              />
+            </div>
+            <div className="text-xs sm:text-sm text-foreground">
+              {stat.label}
+            </div>
+          </motion.div>
+        ))}
+      </motion.div>
+
+      {/* ── Popular Papers ── */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <motion.h2
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5 }}
+            viewport={{ once: true }}
+            className="text-xl font-semibold text-foreground flex items-center gap-2"
+          >
+            <Sparkles className="w-5 h-5 text-[#4FC3FC]" />
+            Popular Papers
+          </motion.h2>
+          <Link
+            href="/download"
+            className="text-sm text-[#4FC3FC] hover:text-[#29b6f6] transition-colors"
+          >
+            View All →
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {topPapers.length > 0 ? (
+            topPapers.slice(0, 4).map((paper, index) => (
+              <motion.div
+                key={paper._id || index}
+                className="bg-background-secondary rounded-xl border border-border-light p-4 hover:shadow-md dark:hover:shadow-gray-800/30 transition-shadow"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: index * 0.1 }}
+                viewport={{ once: true }}
+              >
+                <Link href={`/download/${paper._id}`}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-foreground font-bold truncate">
+                        {paper.course?.name || "Unknown Course"}
+                      </p>
+                      <p className="text-sm text-foreground mt-0.5">
+                        {paper.course?.department?.name || "N/A"}
+                      </p>
+                    </div>
+                    <span className="text-xs font-medium text-[#4FC3FC] bg-[#4FC3FC]/10 px-2 py-0.5 rounded-full">
+                      #{index + 1}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex items-center gap-4 text-xs text-gray-400">
+                    <span className="flex items-center gap-1">
+                      <Download className="w-3 h-3" />
+                      {paper.downloads || 0}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {getTimeAgo(paper.createdAt)}
+                    </span>
+                  </div>
+                </Link>
+              </motion.div>
+            ))
+          ) : (
+            <div className="col-span-2 text-center py-8 text-gray-500 dark:text-gray-400">
+              <BookOpen className="w-12 h-12 mx-auto mb-2 opacity-30" />
+              <p>No popular papers available</p>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Left Column - Paper Details */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Paper Info Card */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-              <div className="p-6 space-y-6">
-                {/* Department Badge */}
-                <div className="flex items-start justify-between">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
-                    <Building className="w-4 h-4" />
-                    {departmentName}
-                  </div>
-                  <div className="flex items-center gap-1 text-yellow-500">
-                    <Star className="w-5 h-5 fill-current" />
-                    <span className="font-semibold text-gray-900 dark:text-white">
-                      {paper.rating || 0}
-                    </span>
-                  </div>
-                </div>
+      {/* ── Browse by Department (Infinite Scroll) ── */}
+      <div className="space-y-6">
+        <div className="text-center space-y-2">
+          <motion.h2
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5 }}
+            viewport={{ once: true }}
+            className="text-2xl font-semibold text-foreground flex items-center justify-center gap-2"
+          >
+            <GraduationCap className="w-6 h-6 text-[#4FC3FC]" />
+            Browse by Department
+          </motion.h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Quick access to specialized faculty archives
+          </p>
+        </div>
 
-                {/* Title - Course Name */}
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">
-                  {courseName}
-                </h1>
+        <div className="relative overflow-hidden py-4">
+          {/* Fade edges with dark mode support */}
+          <div className="absolute left-0 top-0 bottom-0 w-20 bg-linear-to-r  z-10 pointer-events-none"></div>
+          <div className="absolute right-0 top-0 bottom-0 w-20 bg-linear-to-l z-10 pointer-events-none"></div>
 
-                {/* Course Info */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                    <span className="text-gray-400">•</span>
-                    <span>{paper.examType}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                    <User className="w-4 h-4" />
-                    <span>{instructorFullName}</span>
-                  </div>
-                </div>
+          <motion.div
+            ref={marqueeRef}
+            className="flex gap-8 whitespace-nowrap"
+            animate={{
+              x: ["0%", "-50%"],
+            }}
+            transition={{
+              duration: 20,
+              ease: "linear",
+              repeat: Infinity,
+            }}
+          >
+            {marqueeDepartments.map((dept, index) => (
+              <Link
+                key={`${dept._id || index}-${index}`}
+                href={`/download?department=${dept._id}`}
+                className="inline-flex items-center gap-3 px-5 py-2.5 bg-foreground border border-border-light rounded-full transition-all duration-300 hover:scale-105 hover:shadow-md dark:hover:shadow-gray-800/30"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-background"></span>
+                <span className="text-sm font-medium text-background">
+                  {dept.name}
+                </span>
+              </Link>
+            ))}
+          </motion.div>
+        </div>
+      </div>
 
-                {/* Metadata Grid */}
-                <div className="grid grid-cols-2 gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <div className="space-y-1">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Semester
-                    </p>
-                    <div className="flex items-center gap-1 text-sm text-gray-900 dark:text-white">
-                      <Calendar className="w-4 h-4" />
-                      {paper.semester} {paper.year}
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Pages
-                    </p>
-                    <div className="flex items-center gap-1 text-sm text-gray-900 dark:text-white">
-                      <FileText className="w-4 h-4" />
-                      {paper.pages || 0} pages
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Downloads
-                    </p>
-                    <div className="flex items-center gap-1 text-sm text-gray-900 dark:text-white">
-                      <Download className="w-4 h-4" />
-                      {paper.downloads?.toLocaleString() || 0}
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      File Info
-                    </p>
-                    <div className="flex items-center gap-1 text-sm text-gray-900 dark:text-white">
-                      <FileText className="w-4 h-4" />
-                      {getImageSize()} MB
-                    </div>
-                  </div>
-                </div>
+      {/* ── Study Tips & Advice ── */}
+      <div className="space-y-6">
+        <div className="text-center space-y-2">
+          <motion.h2
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5 }}
+            viewport={{ once: true }}
+            className="text-2xl font-semibold text-foreground flex items-center justify-center gap-2"
+          >
+            <Lightbulb className="w-6 h-6 text-yellow-500" />
+            Study Tips & Advice
+          </motion.h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Expert strategies for exam success
+          </p>
+        </div>
 
-                {/* Download Buttons */}
-                <div className="pt-4 space-y-3">
-                  <button
-                    onClick={handleDownload}
-                    disabled={downloading}
-                    className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#4FC3FC] hover:bg-[#29b6f6] disabled:bg-gray-400 text-white rounded-xl font-medium transition-all transform hover:scale-105 active:scale-95 shadow-lg"
-                  >
-                    {downloading ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        Downloading...
-                      </>
-                    ) : (
-                      <>
-                        <Download className="w-5 h-5" />
-                        Download Images
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    onClick={generatePDF}
-                    className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-xl font-medium transition-all"
-                  >
-                    <FileText className="w-5 h-5" />
-                    Download as PDF
-                  </button>
-
-                  <p className="text-xs text-center text-gray-500 dark:text-gray-400 mt-3">
-                    By downloading, you agree to our terms of use
-                  </p>
-                </div>
-              </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Tip 1 */}
+          <motion.div
+            className="bg-background-secondary rounded-xl border border-border-light p-6 shadow-sm hover:shadow-md dark:hover:shadow-gray-800/30 transition-all duration-300 hover:-translate-y-1"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            viewport={{ once: true }}
+          >
+            <div className="w-12 h-12 rounded-full bg-foreground flex items-center justify-center mb-4">
+              <FileText className="w-6 h-6 text-background" />
             </div>
+            <h3 className="font-semibold text-foreground mb-2">
+              Start Early, Not the Night Before
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+              Waiting until the last few days limits how many papers you can
+              practice. Spreading your revision over time leads to better
+              retention and less stress.
+            </p>
+            <Link
+              href="/download"
+              className="inline-flex items-center gap-1 mt-4 text-sm text-[#4FC3FC] hover:text-[#29b6f6] transition-colors"
+            >
+              Learn More
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+          </motion.div>
 
-            {/* Description Card */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
-                Description
-              </h3>
-              <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
-                {paper.description || "No description provided."}
-              </p>
-              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                  <Clock className="w-4 h-4" />
-                  <span>
-                    Uploaded on{" "}
-                    {paper.createdAt
-                      ? new Date(paper.createdAt).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })
-                      : "N/A"}
-                  </span>
-                </div>
-              </div>
+          {/* Tip 2 */}
+          <motion.div
+            className="bg-background-secondary rounded-xl border border-border-light p-6 shadow-sm hover:shadow-md dark:hover:shadow-gray-800/30 transition-all duration-300 hover:-translate-y-1"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            viewport={{ once: true }}
+          >
+            <div className="w-12 h-12 rounded-full bg-foreground flex items-center justify-center mb-4">
+              <Target className="w-6 h-6 text-background" />
             </div>
-          </div>
+            <h3 className="font-semibold text-foreground mb-2">
+              Practice Under Real Exam Conditions
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+              Set a timer, avoid distractions, and complete the paper without
+              notes. This helps improve speed, confidence, and time management
+              before the actual exam.
+            </p>
+            <Link
+              href="/about"
+              className="inline-flex items-center gap-1 mt-4 text-sm text-[#4FC3FC] hover:text-[#29b6f6] transition-colors"
+            >
+              Learn More
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+          </motion.div>
 
-          {/* Right Column - Preview/Viewer */}
-          <div className="lg:col-span-2">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-              {/* Tabs */}
-              <div className="border-b border-gray-200 dark:border-gray-700">
-                <div className="flex">
-                  <button
-                    onClick={() => setActiveTab("preview")}
-                    className={`flex-1 px-6 py-3 text-sm font-medium transition-colors relative ${
-                      activeTab === "preview"
-                        ? "text-[#4FC3FC] dark:text-[#4FC3FC] border-b-2 border-[#4FC3FC]"
-                        : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                    }`}
-                  >
-                    Preview
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("details")}
-                    className={`flex-1 px-6 py-3 text-sm font-medium transition-colors relative ${
-                      activeTab === "details"
-                        ? "text-[#4FC3FC] dark:text-[#4FC3FC] border-b-2 border-[#4FC3FC]"
-                        : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                    }`}
-                  >
-                    Details & Metadata
-                  </button>
-                </div>
-              </div>
-
-              {/* Content */}
-              <div className="p-6">
-                {activeTab === "preview" ? (
-                  <div className="space-y-4">
-                    <div
-                      className="bg-gray-100 dark:bg-gray-900 rounded-xl overflow-hidden"
-                      style={{ minHeight: "350px" }}
-                    >
-                      {showPreview && paper.images?.length > 0 ? (
-                        <div className="h-full overflow-y-auto bg-white dark:bg-gray-800 p-4">
-                          {paper.images.map((image, index) => (
-                            <div key={index} className="mb-6 last:mb-0">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                                  Page {index + 1} of {paper.images.length}
-                                </span>
-                              </div>
-                              <div className="relative w-full">
-                                <Image
-                                  src={`http://localhost:8000/uploads/${image.filename}`}
-                                  alt={`Page ${index + 1}`}
-                                  width={800}
-                                  height={1000}
-                                  unoptimized
-                                  className="w-full h-auto rounded-lg shadow-md"
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center p-8 text-center h-[150]">
-                          <FileText className="w-16 h-16 text-gray-400 dark:text-gray-600 mb-4" />
-                          <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                            Preview Ready
-                          </h4>
-                          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                            Click below to start viewing the document
-                          </p>
-                          <button
-                            onClick={handlePreview}
-                            disabled={previewLoading}
-                            className="inline-flex items-center gap-2 px-6 py-2 bg-[#4FC3FC] hover:bg-[#29b6f6] text-white rounded-lg transition-colors"
-                          >
-                            {previewLoading ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Eye className="w-4 h-4" />
-                            )}
-                            Load Preview
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    <div>
-                      <h4 className="font-semibold text-gray-900 dark:text-white mb-3">
-                        Document Information
-                      </h4>
-                      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 space-y-2">
-                        <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
-                          <span className="text-gray-600 dark:text-gray-400">
-                            Course
-                          </span>
-                          <span className="text-gray-900 dark:text-white font-medium">
-                            {courseName}
-                          </span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
-                          <span className="text-gray-600 dark:text-gray-400">
-                            Department
-                          </span>
-                          <span className="text-gray-900 dark:text-white">
-                            {departmentName}
-                          </span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
-                          <span className="text-gray-600 dark:text-gray-400">
-                            Instructor
-                          </span>
-                          <span className="text-gray-900 dark:text-white">
-                            {instructorFullName}
-                          </span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
-                          <span className="text-gray-600 dark:text-gray-400">
-                            Semester
-                          </span>
-                          <span className="text-gray-900 dark:text-white">
-                            {paper.semester} {paper.year}
-                          </span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
-                          <span className="text-gray-600 dark:text-gray-400">
-                            Exam Type
-                          </span>
-                          <span className="text-gray-900 dark:text-white">
-                            {paper.examType}
-                          </span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
-                          <span className="text-gray-600 dark:text-gray-400">
-                            Pages
-                          </span>
-                          <span className="text-gray-900 dark:text-white">
-                            {paper.pages || 0}
-                          </span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
-                          <span className="text-gray-600 dark:text-gray-400">
-                            File Size
-                          </span>
-                          <span className="text-gray-900 dark:text-white">
-                            {getImageSize()} MB
-                          </span>
-                        </div>
-                        <div className="flex justify-between py-2">
-                          <span className="text-gray-600 dark:text-gray-400">
-                            Upload Date
-                          </span>
-                          <span className="text-gray-900 dark:text-white">
-                            {paper.createdAt
-                              ? new Date(paper.createdAt).toLocaleDateString(
-                                  "en-US",
-                                  {
-                                    month: "short",
-                                    day: "numeric",
-                                    year: "numeric",
-                                  },
-                                )
-                              : "N/A"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="font-semibold text-gray-900 dark:text-white mb-3">
-                        Usage Statistics
-                      </h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-linear-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-4">
-                          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                            {paper.downloads?.toLocaleString() || 0}
-                          </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Total Downloads
-                          </p>
-                        </div>
-                        <div className="bg-linear-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg p-4">
-                          <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                            {paper.rating || "N/A"}
-                          </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Average Rating
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-                      <div className="flex items-start gap-3">
-                        <CheckCircle className="w-5 h-5 text-blue-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm font-medium text-blue-900 dark:text-blue-300">
-                            Authentic Document
-                          </p>
-                          <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
-                            This paper has been verified and reviewed by our
-                            academic team
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+          {/* Tip 3 */}
+          <motion.div
+            className="bg-background-secondary rounded-xl border border-border-light p-6 shadow-sm hover:shadow-md dark:hover:shadow-gray-800/30 transition-all duration-300 hover:-translate-y-1"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            viewport={{ once: true }}
+          >
+            <div className="w-12 h-12 rounded-full bg-foreground flex items-center justify-center mb-4">
+              <ClockIcon className="w-6 h-6 text-background" />
             </div>
-          </div>
+            <h3 className="font-semibold text-foreground mb-2">
+              Focus on High-Weight Topics
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+              Review multiple past papers to identify topics that appear
+              frequently. Prioritize understanding these concepts before
+              spending time on less common material.
+            </p>
+            <Link
+              href="/upload"
+              className="inline-flex items-center gap-1 mt-4 text-sm text-[#4FC3FC] hover:text-[#29b6f6] transition-colors"
+            >
+              Learn More
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+          </motion.div>
         </div>
       </div>
     </div>

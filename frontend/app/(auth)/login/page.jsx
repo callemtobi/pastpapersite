@@ -119,10 +119,10 @@ export default function Login() {
   }, []);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-white dark:bg-background">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background-secondary">
       {/* ── Landscape card (desktop) ── */}
       <div
-        className="hidden md:flex w-full max-w-3xl shadow-xl rounded-xl overflow-hidden bg-white dark:bg-gray-800"
+        className="hidden md:flex w-full max-w-3xl shadow-xl rounded-xl overflow-hidden bg-background-secondary border border-border-light"
         style={{ minHeight: "min(88vh, 500px)" }}
       >
         {/* Left panel — branding */}
@@ -160,8 +160,8 @@ export default function Login() {
         </div>
 
         {/* Right panel — form */}
-        <div className="flex-1 flex flex-col justify-center px-10 py-8 dark:bg-gray-800">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+        <div className="flex-1 flex flex-col justify-center px-10 py-8">
+          <h2 className="text-2xl font-bold text-foreground mb-1">
             Welcome back
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
@@ -178,12 +178,12 @@ export default function Login() {
             <div className="space-y-1.5">
               <label
                 htmlFor="email-d"
-                className="block text-sm font-medium text-gray-900 dark:text-white"
+                className="block text-sm font-medium text-foreground"
               >
                 Email
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-button-bg" />
                 <input
                   id="email-d"
                   type="email"
@@ -192,7 +192,7 @@ export default function Login() {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC]"
+                  className="w-full pl-10 pr-4 py-2.5 border border-border-light rounded-lg bg-background text-foreground placeholder-border-border-light focus:outline-none focus:border-[#4FC3FC]"
                 />
               </div>
               {emailError && (
@@ -203,12 +203,12 @@ export default function Login() {
             <div className="space-y-1.5">
               <label
                 htmlFor="password-d"
-                className="block text-sm font-medium text-gray-900 dark:text-white"
+                className="block text-sm font-medium text-foreground"
               >
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-button-bg" />
                 <input
                   id="password-d"
                   name="password"
@@ -217,7 +217,7 @@ export default function Login() {
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC]"
+                  className="w-full pl-10 pr-4 py-2.5 border border-border-light rounded-lg bg-background text-foreground placeholder:border-border-light focus:outline-none focus:border-[#4FC3FC]"
                 />
               </div>
               {/* {passwordError && (
@@ -272,16 +272,16 @@ export default function Login() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#4FC3FC] mb-4">
             <GraduationCap className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">PaperVault</h1>
-          <p className="text-gray-600">Access past examination papers</p>
+          <h1 className="text-3xl font-bold text-foreground mb-2">
+            PaperVault
+          </h1>
+          <p className="text-gray-500">Access past examination papers</p>
         </div>
 
-        <div className="border-0 shadow-xl rounded-lg overflow-hidden bg-white dark:bg-gray-800">
-          <div className="border-b border-gray-200 dark:border-gray-700 p-6 space-y-1">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Welcome back
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400">
+        <div className="shadow-xl rounded-lg overflow-hidden bg-background-secondary border border-border-light">
+          <div className="border border-border-light bg-foreground p-6 space-y-1">
+            <h2 className="text-2xl font-bold text-background">Welcome back</h2>
+            <p className="text-background-secondary">
               Sign in to your account to continue
             </p>
           </div>
@@ -295,12 +295,12 @@ export default function Login() {
               <div className="space-y-2">
                 <label
                   htmlFor="email-m"
-                  className="block text-sm font-medium text-gray-900 dark:text-white"
+                  className="block text-sm font-medium text-foreground"
                 >
                   Email
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-button-bg" />
                   <input
                     id="email-m"
                     type="email"
@@ -309,7 +309,7 @@ export default function Login() {
                     value={formData.email}
                     onChange={handleChange}
                     required
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
+                    className="w-full pl-10 pr-4 py-2 border border-border-light rounded-lg bg-background text-foreground placeholder:border-border-light focus:outline-none focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -317,12 +317,12 @@ export default function Login() {
               <div className="space-y-2">
                 <label
                   htmlFor="password-m"
-                  className="block text-sm font-medium text-gray-900 dark:text-white"
+                  className="block text-sm font-medium text-foreground"
                 >
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-button-bg" />
                   <input
                     id="password-m"
                     name="password"
@@ -331,7 +331,7 @@ export default function Login() {
                     value={formData.password}
                     onChange={handleChange}
                     required
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
+                    className="w-full pl-10 pr-4 py-2 border border-border-light rounded-lg bg-background text-foreground placeholder:border-border-light focus:outline-none focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -346,10 +346,7 @@ export default function Login() {
                     Remember me
                   </span> */}
                 </label>
-                <a
-                  href="#"
-                  className="text-blue-600 dark:text-blue-400 hover:text-blue-700"
-                >
+                <a href="#" className="text-foreground">
                   Forgot password?
                 </a>
               </div>
@@ -357,7 +354,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                className="w-full bg-foreground disabled:bg-gray-400 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
               >
                 {isLoading && <Loader className="w-4 h-4 animate-spin" />}
                 {isLoading ? "Signing in..." : "Sign in"}
@@ -367,7 +364,7 @@ export default function Login() {
                 {"Don't have an account?"}{" "}
                 <Link
                   href="/register"
-                  className="text-blue-600 dark:text-blue-400 hover:text-blue-700 font-medium"
+                  className="text-foreground underline font-medium"
                 >
                   Register here
                 </Link>

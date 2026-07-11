@@ -317,7 +317,7 @@ export default function PaperViewerPage() {
           <div className="flex items-center justify-between">
             <button
               onClick={() => router.push("/download")}
-              className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-foreground transition-colors"
+              className="inline-flex items-center gap-2 text-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
               <span>Back to Browse</span>

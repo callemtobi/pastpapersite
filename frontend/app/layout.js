@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "PaperVault - University Past Papers Archive",
+  title: "Pasty Paperyyy - University Past Papers Archive",
   description:
     "Access and share past examination papers for academic excellence",
 };

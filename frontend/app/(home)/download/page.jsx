@@ -169,7 +169,7 @@ export default function DownloadPage() {
             className="flex flex-col sm:flex-row gap-3"
           >
             <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground" />
               <motion.input
                 type="text"
                 placeholder="Search by course, department, or instructor..."
@@ -335,15 +335,15 @@ export default function DownloadPage() {
             <motion.div
               key={paper._id}
               variants={resultCard}
-              className="border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:shadow-md transition-all"
+              className="border border-border-light rounded-lg shadow-sm hover:shadow-md transition-all"
             >
               <div className="p-6">
                 <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                   <div className="flex-1 space-y-3">
                     <div>
                       <div className="flex items-start gap-3 mb-2">
-                        <div className="p-2 rounded-lg bg-primary/10 bg-amber-200">
-                          <BookOpen className="w-5 h-5 text-primary" />
+                        <div className="p-2 rounded-lg bg-primary/10 bg-foreground">
+                          <BookOpen className="w-5 h-5 text-background-secondary" />
                         </div>
                         <div className="flex-1">
                           <h3 className="font-semibold text-lg text-foreground mb-1">
@@ -466,10 +466,10 @@ export default function DownloadPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.4 }}
-          className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200 dark:border-gray-700"
+          className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t b"
         >
           <div className="flex items-center gap-3 text-sm">
-            <span className="text-gray-600 dark:text-gray-300">
+            <span className="text-text-background">
               Showing <span className="font-medium">{startIndex}</span> to{" "}
               <span className="font-medium">{endIndex}</span> of{" "}
               <span className="font-medium">{totalPapers}</span> results
@@ -493,7 +493,7 @@ export default function DownloadPage() {
             <button
               onClick={() => goToPage(currentPage - 1)}
               disabled={currentPage === 1}
-              className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="p-2 rounded-lg text-foreground hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -532,7 +532,7 @@ export default function DownloadPage() {
             <button
               onClick={() => goToPage(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="p-2 rounded-lg text-foreground hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronRight className="w-4 h-4" />
             </button>

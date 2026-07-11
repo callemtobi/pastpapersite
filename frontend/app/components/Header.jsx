@@ -265,7 +265,7 @@ export default function Header() {
 
         {/* Mobile dropdown */}
         {mobileMenuOpen && (
-          <div className="md:hidden mt-2 bg-white dark:bg-gray-800 rounded-3xl overflow-hidden shadow-lg border border-gray-200 dark:border-gray-700">
+          <div className="md:hidden mt-2 bg-background-secondary rounded-3xl overflow-hidden shadow-lg border border-border-light">
             <nav className="px-2 py-2 space-y-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
