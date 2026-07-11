@@ -528,12 +528,14 @@ export default function UploadPage() {
             </div>
 
             {/* Guidelines */}
-            <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 rounded-lg p-4">
+            <div className="bg-background-secondary  rounded-lg p-4">
               <div className="flex gap-3">
                 <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
                 <div className="space-y-2 text-sm text-gray-900 dark:text-gray-100">
-                  <p className="font-medium">Upload Guidelines:</p>
-                  <ul className="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300">
+                  <p className="font-medium text-foreground">
+                    Upload Guidelines:
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-foreground">
                     <li>Only upload papers you have the right to share</li>
                     <li>Ensure the file is clear and readable</li>
                     <li>Remove any personal information before uploading</li>
@@ -655,7 +657,7 @@ export default function UploadPage() {
           boxShadow: "0 8px 30px rgba(59, 130, 246, 0.15)",
           transition: { duration: 0.2 },
         }}
-        className="border border-blue-200 dark:border-blue-900/30 rounded-lg shadow-sm bg-blue-50 dark:bg-blue-900/10"
+        className="border rounded-lg shadow-sm bg-foreground text-foreground"
       >
         <div className="p-6">
           <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -665,7 +667,7 @@ export default function UploadPage() {
                 rotate: 10,
                 transition: { type: "spring", stiffness: 400 },
               }}
-              className="shrink-0 p-4 rounded-full bg-white dark:bg-gray-800 shadow-sm"
+              className="shrink-0 p-4 rounded-full bg-background-secondary shadow-sm"
             >
               <motion.div
                 animate={{
@@ -677,7 +679,7 @@ export default function UploadPage() {
                   ease: "easeInOut",
                 }}
               >
-                <CheckCircle2 className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                <CheckCircle2 className="w-8 h-8 text-[blue-600 dark:text-blue-400]" />
               </motion.div>
             </motion.div>
 
@@ -687,7 +689,7 @@ export default function UploadPage() {
                 whileInView={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
                 viewport={{ once: true }}
-                className="font-semibold text-gray-900 dark:text-white mb-1"
+                className="font-semibold text-background mb-1"
               >
                 Help Your Fellow Students
               </motion.h3>
@@ -697,7 +699,7 @@ export default function UploadPage() {
                 whileInView={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5, delay: 0.3 }}
                 viewport={{ once: true }}
-                className="text-sm text-gray-700 dark:text-gray-300"
+                className="text-sm text-background"
               >
                 By uploading papers, you&apos;re contributing to a valuable
                 resource that helps thousands of students prepare for their

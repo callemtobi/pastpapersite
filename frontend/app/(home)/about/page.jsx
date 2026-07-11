@@ -383,7 +383,7 @@ export default function AboutPage() {
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
               viewport={{ once: true }}
-              className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 text-center hover:shadow-md transition-shadow"
+              className="bg-background-secondary rounded-xl  p-5 text-center hover:shadow-md transition-shadow"
             >
               <div className="w-12 h-12 rounded-full bg-[#4FC3FC]/10 flex items-center justify-center mx-auto mb-3">
                 <Icon className="w-6 h-6 text-[#4FC3FC]" />
@@ -405,7 +405,7 @@ export default function AboutPage() {
         whileInView={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
         viewport={{ once: true }}
-        className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 sm:p-8 shadow-sm"
+        className="bg-background-secondary rounded-2xl border border-border-light p-6 sm:p-8 shadow-sm"
       >
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-full bg-[#4FC3FC]/10 flex items-center justify-center">
@@ -425,7 +425,7 @@ export default function AboutPage() {
 
         <form onSubmit={handleSubmitFeedback} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            <label className="block text-sm font-medium text-foreground mb-1.5">
               Your Email <span className="text-red-500">*</span>
             </label>
             <input
@@ -433,12 +433,12 @@ export default function AboutPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="student@university.edu"
-              className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC] transition-colors"
+              className="w-full px-4 py-2.5 rounded-lg border border-border-light text-foreground placeholder:text-foreground bg-background-secondary focus:outline-none focus:border-[#4FC3FC] transition-colors"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            <label className="block text-sm font-medium text-foreground mb-1.5">
               Your Message <span className="text-red-500">*</span>
             </label>
             <textarea
@@ -446,7 +446,7 @@ export default function AboutPage() {
               onChange={(e) => setFeedback(e.target.value)}
               placeholder="Share your suggestions, feedback, or ideas..."
               rows={4}
-              className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC] resize-none transition-colors"
+              className="w-full px-4 py-2.5 border border-border-light rounded-lg bg-background-secondary text-foreground placeholder:text-foreground focus:outline-none focus:border-[#4FC3FC] resize-none transition-colors"
               required
             />
           </div>
@@ -475,7 +475,7 @@ export default function AboutPage() {
         whileInView={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
         viewport={{ once: true }}
-        className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 sm:p-8 shadow-sm"
+        className="rounded-2xl border border-border-light background-secondary p-6 sm:p-8 shadow-sm"
       >
         <div className="flex flex-col sm:flex-row items-center gap-6">
           {/* SVG Avatar */}
@@ -491,9 +491,7 @@ export default function AboutPage() {
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-300 mt-2 leading-relaxed">
               Built by{" "}
-              <span className="font-medium text-foreground">
-                a BS Software Engineering{" "}
-              </span>
+              <span className="font-medium ">a BS Software Engineering </span>
               graduate, at Iqra National University. My main aim of building
               this project was to help students get their hands on previous past
               papers to get a hint of the pattern of the paper. In addition to

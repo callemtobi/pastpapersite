@@ -126,7 +126,7 @@ export default function Header() {
             <div className="flex items-center justify-center w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/30">
               <GraduationCap className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
-            <span className="text-sm cursor-pointer font-semibold text-gray-900 dark:text-white hidden sm:block whitespace-nowrap">
+            <span className="text-sm cursor-pointer font-semibold text-foreground hidden sm:block whitespace-nowrap">
               Pasty Paperyyy
             </span>
           </div>
@@ -139,10 +139,10 @@ export default function Header() {
                 <Link
                   key={item.path}
                   href={item.path}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm transition-colors ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm transition-colors hover:bg-[#4FC3F7]/10 hover:text-[#4FC3F7] ${
                     isActive(item.path)
                       ? "bg-[#4FC3F7]/10 text-[#4FC3F7]"
-                      : "text-foreground/60 hover:bg-[#DDE3EA]"
+                      : "text-foreground/60 "
                   }`}
                 >
                   <Icon className="w-4 h-4" />

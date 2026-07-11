@@ -275,7 +275,7 @@ export default function PaperViewerPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
           <Loader2 className="w-12 h-12 animate-spin text-[#4FC3FC] mx-auto" />
           <p className="text-gray-600 dark:text-gray-300">
@@ -288,12 +288,12 @@ export default function PaperViewerPage() {
 
   if (error || !paper) {
     return (
-      <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center space-y-4">
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-background-secondary rounded-2xl shadow-xl p-8 text-center space-y-4 border border-border-light">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20">
             <AlertCircle className="w-8 h-8 text-red-500" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-2xl font-bold text-foreground">
             Error Loading Paper
           </h2>
           <p className="text-gray-600 dark:text-gray-300">{error}</p>
@@ -310,14 +310,14 @@ export default function PaperViewerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10 shadow-sm">
+      <div className="bg-background-secondary border-b border-border-light sticky top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <button
               onClick={() => router.push("/download")}
-              className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-foreground transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
               <span>Back to Browse</span>
@@ -337,7 +337,7 @@ export default function PaperViewerPage() {
           {/* Left Column - Paper Details */}
           <div className="lg:col-span-1 space-y-6">
             {/* Paper Info Card */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+            <div className="bg-background-secondary rounded-2xl shadow-lg overflow-hidden border border-border-light">
               <div className="p-6 space-y-6">
                 {/* Department Badge */}
                 <div className="flex items-start justify-between">
@@ -347,14 +347,14 @@ export default function PaperViewerPage() {
                   </div>
                   <div className="flex items-center gap-1 text-yellow-500">
                     <Star className="w-5 h-5 fill-current" />
-                    <span className="font-semibold text-gray-900 dark:text-white">
+                    <span className="font-semibold text-foreground">
                       {paper.rating || 0}
                     </span>
                   </div>
                 </div>
 
                 {/* Title - Course Name */}
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">
+                <h1 className="text-2xl font-bold text-foreground leading-tight">
                   {courseName}
                 </h1>
 
@@ -371,12 +371,12 @@ export default function PaperViewerPage() {
                 </div>
 
                 {/* Metadata Grid */}
-                <div className="grid grid-cols-2 gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="grid grid-cols-2 gap-3 pt-4 border-t border-border-light">
                   <div className="space-y-1">
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       Semester
                     </p>
-                    <div className="flex items-center gap-1 text-sm text-gray-900 dark:text-white">
+                    <div className="flex items-center gap-1 text-sm text-foreground">
                       <Calendar className="w-4 h-4" />
                       {paper.semester} {paper.year}
                     </div>
@@ -385,7 +385,7 @@ export default function PaperViewerPage() {
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       Pages
                     </p>
-                    <div className="flex items-center gap-1 text-sm text-gray-900 dark:text-white">
+                    <div className="flex items-center gap-1 text-sm text-foreground">
                       <FileText className="w-4 h-4" />
                       {paper.pages || 0} pages
                     </div>
@@ -394,7 +394,7 @@ export default function PaperViewerPage() {
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       Downloads
                     </p>
-                    <div className="flex items-center gap-1 text-sm text-gray-900 dark:text-white">
+                    <div className="flex items-center gap-1 text-sm text-foreground">
                       <Download className="w-4 h-4" />
                       {paper.downloads?.toLocaleString() || 0}
                     </div>
@@ -403,7 +403,7 @@ export default function PaperViewerPage() {
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       File Info
                     </p>
-                    <div className="flex items-center gap-1 text-sm text-gray-900 dark:text-white">
+                    <div className="flex items-center gap-1 text-sm text-foreground">
                       <FileText className="w-4 h-4" />
                       {getImageSize()} MB
                     </div>
@@ -432,7 +432,7 @@ export default function PaperViewerPage() {
 
                   <button
                     onClick={generatePDF}
-                    className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-xl font-medium transition-all"
+                    className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-foreground rounded-xl font-medium transition-all"
                   >
                     <FileText className="w-5 h-5" />
                     Download as PDF
@@ -446,14 +446,14 @@ export default function PaperViewerPage() {
             </div>
 
             {/* Description Card */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
+            <div className="bg-background-secondary rounded-2xl shadow-lg p-6 border border-border-light">
+              <h3 className="font-semibold text-foreground mb-3">
                 Description
               </h3>
               <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
                 {paper.description || "No description provided."}
               </p>
-              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="mt-4 pt-4 border-t border-border-light">
                 <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                   <Clock className="w-4 h-4" />
                   <span>
@@ -473,16 +473,16 @@ export default function PaperViewerPage() {
 
           {/* Right Column - Preview/Viewer */}
           <div className="lg:col-span-2">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+            <div className="bg-background-secondary rounded-2xl shadow-lg overflow-hidden border border-border-light">
               {/* Tabs */}
-              <div className="border-b border-gray-200 dark:border-gray-700">
+              <div className="border-b border-border-light">
                 <div className="flex">
                   <button
                     onClick={() => setActiveTab("preview")}
                     className={`flex-1 px-6 py-3 text-sm font-medium transition-colors relative ${
                       activeTab === "preview"
-                        ? "text-[#4FC3FC] dark:text-[#4FC3FC] border-b-2 border-[#4FC3FC]"
-                        : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                        ? "text-[#4FC3FC] border-b-2 border-[#4FC3FC]"
+                        : "text-gray-500 dark:text-gray-400 hover:text-foreground"
                     }`}
                   >
                     Preview
@@ -491,8 +491,8 @@ export default function PaperViewerPage() {
                     onClick={() => setActiveTab("details")}
                     className={`flex-1 px-6 py-3 text-sm font-medium transition-colors relative ${
                       activeTab === "details"
-                        ? "text-[#4FC3FC] dark:text-[#4FC3FC] border-b-2 border-[#4FC3FC]"
-                        : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                        ? "text-[#4FC3FC] border-b-2 border-[#4FC3FC]"
+                        : "text-gray-500 dark:text-gray-400 hover:text-foreground"
                     }`}
                   >
                     Details & Metadata
@@ -505,11 +505,11 @@ export default function PaperViewerPage() {
                 {activeTab === "preview" ? (
                   <div className="space-y-4">
                     <div
-                      className="bg-gray-100 dark:bg-gray-900 rounded-xl overflow-hidden"
+                      className="bg-background-secondary rounded-xl overflow-hidden"
                       style={{ minHeight: "350px" }}
                     >
                       {showPreview && paper.images?.length > 0 ? (
-                        <div className="h-full overflow-y-auto bg-white p-4">
+                        <div className="h-full overflow-y-auto bg-background-secondary p-4">
                           {paper.images.map((image, index) => (
                             <div key={index} className="mb-6 last:mb-0">
                               <div className="flex items-center justify-between mb-2">
@@ -533,7 +533,7 @@ export default function PaperViewerPage() {
                       ) : (
                         <div className="flex flex-col items-center justify-center p-8 text-center h-[150]">
                           <FileText className="w-16 h-16 text-gray-400 dark:text-gray-600 mb-4" />
-                          <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                          <h4 className="text-lg font-medium text-foreground mb-2">
                             Preview Ready
                           </h4>
                           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
@@ -558,63 +558,63 @@ export default function PaperViewerPage() {
                 ) : (
                   <div className="space-y-6">
                     <div>
-                      <h4 className="font-semibold text-gray-900 dark:text-white mb-3">
+                      <h4 className="font-semibold text-foreground mb-3">
                         Document Information
                       </h4>
-                      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 space-y-2">
-                        <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
+                      <div className="bg-background-secondary rounded-lg p-4 space-y-2 border border-border-light">
+                        <div className="flex justify-between py-2 border-b border-border-light">
                           <span className="text-gray-600 dark:text-gray-400">
                             Course
                           </span>
-                          <span className="text-gray-900 dark:text-white font-medium">
+                          <span className="text-foreground font-medium ps-2">
                             {courseName}
                           </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
+                        <div className="flex justify-between py-2 border-b border-border-light">
                           <span className="text-gray-600 dark:text-gray-400">
                             Department
                           </span>
-                          <span className="text-gray-900 dark:text-white">
+                          <span className="text-foreground ps-2">
                             {departmentName}
                           </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
+                        <div className="flex justify-between py-2 border-b border-border-light">
                           <span className="text-gray-600 dark:text-gray-400">
                             Instructor
                           </span>
-                          <span className="text-gray-900 dark:text-white">
+                          <span className="text-foreground ps-2">
                             {instructorFullName}
                           </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
+                        <div className="flex justify-between py-2 border-b border-border-light">
                           <span className="text-gray-600 dark:text-gray-400">
                             Semester
                           </span>
-                          <span className="text-gray-900 dark:text-white">
+                          <span className="text-foreground">
                             {paper.semester} {paper.year}
                           </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
+                        <div className="flex justify-between py-2 border-b border-border-light">
                           <span className="text-gray-600 dark:text-gray-400">
                             Exam Type
                           </span>
-                          <span className="text-gray-900 dark:text-white">
+                          <span className="text-foreground">
                             {paper.examType}
                           </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
+                        <div className="flex justify-between py-2 border-b border-border-light">
                           <span className="text-gray-600 dark:text-gray-400">
                             Pages
                           </span>
-                          <span className="text-gray-900 dark:text-white">
+                          <span className="text-foreground">
                             {paper.pages || 0}
                           </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
+                        <div className="flex justify-between py-2 border-b border-border-light">
                           <span className="text-gray-600 dark:text-gray-400">
                             File Size
                           </span>
-                          <span className="text-gray-900 dark:text-white">
+                          <span className="text-foreground">
                             {getImageSize()} MB
                           </span>
                         </div>
@@ -622,7 +622,7 @@ export default function PaperViewerPage() {
                           <span className="text-gray-600 dark:text-gray-400">
                             Upload Date
                           </span>
-                          <span className="text-gray-900 dark:text-white">
+                          <span className="text-foreground">
                             {paper.createdAt
                               ? new Date(paper.createdAt).toLocaleDateString(
                                   "en-US",
@@ -639,11 +639,11 @@ export default function PaperViewerPage() {
                     </div>
 
                     <div>
-                      <h4 className="font-semibold text-gray-900 dark:text-white mb-3">
+                      <h4 className="font-semibold text-foreground mb-3">
                         Usage Statistics
                       </h4>
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-linear-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-4">
+                        <div className="bg-linear-to-br bg-background-secondary border border-border-light rounded-lg p-4">
                           <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                             {paper.downloads?.toLocaleString() || 0}
                           </p>
@@ -651,7 +651,7 @@ export default function PaperViewerPage() {
                             Total Downloads
                           </p>
                         </div>
-                        <div className="bg-linear-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg p-4">
+                        <div className="bg-linear-to-br bg-background-secondary border border-border-light rounded-lg p-4">
                           <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                             {paper.rating || "N/A"}
                           </p>
@@ -662,14 +662,14 @@ export default function PaperViewerPage() {
                       </div>
                     </div>
 
-                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                    <div className=" rounded-lg p-4 bg-background-secondary border border-border-light">
                       <div className="flex items-start gap-3">
-                        <CheckCircle className="w-5 h-5 text-blue-500 mt-0.5" />
+                        <CheckCircle className="w-5 h-5 text-foreground" />
                         <div>
-                          <p className="text-sm font-medium text-blue-900 dark:text-blue-300">
+                          <p className="text-sm  text-primary font-bold">
                             Authentic Document
                           </p>
-                          <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
+                          <p className="text-xs text-foreground">
                             This paper has been verified and reviewed by our
                             academic team
                           </p>
