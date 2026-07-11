@@ -345,10 +345,6 @@ export default function UploadPage() {
                         <strong>Requirements:</strong> Up to 5 images, max 2 MB
                         each (PNG, JPG, JPEG)
                       </p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                        Images are automatically scanned for duplicates and
-                        exam-related keywords
-                      </p>
                     </div>
                     <input
                       ref={fileInputRef}

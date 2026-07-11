@@ -2,19 +2,14 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Search,
   Download,
   Upload,
-  TrendingUp,
-  ArrowUpRight,
-  ArrowDownRight,
-  User,
   FileText,
-  Users,
   Clock,
-  Activity,
   BookOpen,
   Sparkles,
   ChevronRight,
@@ -34,7 +29,7 @@ import {
   container,
   item,
 } from "@/lib/animations";
-import { showSuccessToast } from "@/lib/toastConfig";
+import Banner from "@/public/INU-Banner.png";
 
 export default function Main() {
   const router = useRouter();
@@ -183,6 +178,37 @@ export default function Main() {
           >
             Pasty Paperyyy
           </motion.h1>
+
+          <div className="flex justify-center my-4">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{
+                opacity: 1,
+                y: [0, -8, 0],
+              }}
+              transition={{
+                opacity: { duration: 0.6 },
+                y: {
+                  duration: 6,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                },
+              }}
+              whileHover={{
+                scale: 1.03,
+                rotate: -1,
+                transition: { duration: 0.3 },
+              }}
+              className="relative w-full max-w-xl lg:max-w-3xl"
+            >
+              <Image
+                src={Banner}
+                alt="Academic community banner"
+                className="w-full h-auto rounded-2xl shadow-lg transition-shadow duration-300 hover:shadow-2xl"
+                priority
+              />
+            </motion.div>
+          </div>
 
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -380,8 +406,8 @@ export default function Main() {
         </div>
 
         <div className="relative overflow-hidden py-4">
-          <div className="absolute left-0 top-0 bottom-0 w-20 bg-linear-to-r from-white dark:from-gray-950 to-transparent z-10"></div>
-          <div className="absolute right-0 top-0 bottom-0 w-20 bg-linear-to-l from-white dark:from-gray-950 to-transparent z-10"></div>
+          <div className="absolute left-0 top-0 bottom-0 w-20 bg-linear-to-r to-transparent z-10"></div>
+          <div className="absolute right-0 top-0 bottom-0 w-20 bg-linear-to-l to-transparent z-10"></div>
 
           <motion.div
             ref={marqueeRef}
@@ -390,7 +416,7 @@ export default function Main() {
               x: ["0%", "-50%"],
             }}
             transition={{
-              duration: 30,
+              duration: 20, // faster scroll (was 30)
               ease: "linear",
               repeat: Infinity,
             }}
@@ -399,12 +425,13 @@ export default function Main() {
               <Link
                 key={`${dept._id || index}-${index}`}
                 href={`/download?department=${dept._id}`}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-[#4FC3FC]/5 hover:bg-[#4FC3FC]/10 rounded-full border border-[#4FC3FC]/10 transition-all duration-300 hover:scale-105"
+                className="inline-flex items-center gap-3 px-5 py-2.5 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-300 hover:scale-105 hover:shadow-md"
               >
+                {/* Small dot as indicator */}
+                <span className="w-1.5 h-1.5 rounded-full bg-[#4FC3FC]"></span>
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   {dept.name}
                 </span>
-                <ChevronRight className="w-3 h-3 text-[#4FC3FC]" />
               </Link>
             ))}
           </motion.div>

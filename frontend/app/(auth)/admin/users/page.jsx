@@ -1321,12 +1321,12 @@ export default function UsersPage() {
           {/* Tabs Menu */}
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="flex flex-wrap items-center justify-between border-b border-gray-200 dark:border-gray-700 px-4">
-              <div className="flex flex-wrap items-center gap-1 py-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 py-2">
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => handleTabChange(tab.id)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`flex items-center justify-center gap-2 px-2 py-2 rounded-lg text-sm font-medium transition-colors ${
                       activeTab === tab.id
                         ? "bg-[#4FC3FC] text-white"
                         : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -1444,7 +1444,7 @@ export default function UsersPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-                    <th className="px-4 py-3 text-left w-10">
+                    <th className="px-4 py-3 text-left w-10 align-middle">
                       <input
                         type="checkbox"
                         checked={
@@ -1470,7 +1470,11 @@ export default function UsersPage() {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden sm:table-cell">
                       Status
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    {/* Mobile-only Status column header */}
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider sm:hidden">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden sm:table-cell">
                       Actions
                     </th>
                   </tr>
@@ -1485,62 +1489,104 @@ export default function UsersPage() {
                     return (
                       <tr
                         key={user._id || `user-${index}`}
-                        className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${
+                        onClick={(e) => {
+                          if (
+                            e.target.closest(
+                              'button, input, a, [role="button"]',
+                            )
+                          )
+                            return;
+                          openViewModal(user);
+                        }}
+                        className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer ${
                           selectedUsers.includes(user._id)
                             ? "bg-[#4FC3FC]/5 dark:bg-[#4FC3FC]/10"
                             : ""
                         }`}
                       >
-                        <td className="px-4 py-3">
+                        {/* Checkbox - vertically centered */}
+                        <td className="px-4 py-3 align-middle">
                           <input
                             type="checkbox"
                             checked={selectedUsers.includes(user._id)}
                             onChange={() => handleSelect(user._id)}
                             className="rounded border-gray-300 dark:border-gray-600"
+                            onClick={(e) => e.stopPropagation()}
                           />
                         </td>
+
+                        {/* User Column - always visible, contains extra mobile info */}
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-[#4FC3FC]/20 flex items-center justify-center text-xs font-medium text-[#4FC3FC]">
+                            <div className="w-8 h-8 rounded-full bg-[#4FC3FC]/20 flex items-center justify-center text-xs font-medium text-[#4FC3FC] shrink-0">
                               {user.name?.charAt(0).toUpperCase()}
                             </div>
-                            <div>
-                              <p className="font-medium text-gray-900 dark:text-white text-sm">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-gray-900 dark:text-white text-sm truncate">
                                 {user.name}
                               </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                                 {user.email}
                               </p>
+                              {/* Mobile-only Role badge (kept as is) */}
+                              <div className="sm:hidden mt-1">
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${roleBadge.color}`}
+                                >
+                                  <RoleIcon className="w-3 h-3" />
+                                  {roleBadge.label}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </td>
+
+                        {/* Student ID - hidden on mobile */}
                         <td className="px-4 py-3 hidden sm:table-cell">
                           <span className="text-sm text-gray-600 dark:text-gray-300">
                             {user.studentId}
                           </span>
                         </td>
+
+                        {/* Department - hidden on tablet and below */}
                         <td className="px-4 py-3 hidden md:table-cell">
                           <span className="text-sm text-gray-600 dark:text-gray-300">
-                            {user.department?.name}
+                            {user.department?.name || "N/A"}
                           </span>
                         </td>
+
+                        {/* Role - hidden on tablet and below */}
                         <td className="px-4 py-3 hidden lg:table-cell">
                           <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${roleBadge.color}`}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${roleBadge.color}`}
                           >
                             <RoleIcon className="w-3 h-3" />
                             {roleBadge.label}
                           </span>
                         </td>
+
+                        {/* Status - hidden on mobile (desktop/tablet) */}
                         <td className="px-4 py-3 hidden sm:table-cell">
                           <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${statusBadge.color}`}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${statusBadge.color}`}
                           >
                             <StatusIcon className="w-3 h-3" />
                             {statusBadge.label}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-right">
+
+                        {/* Mobile-only Status column */}
+                        <td className="px-4 py-3 sm:hidden">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${statusBadge.color}`}
+                          >
+                            <StatusIcon className="w-3 h-3" />
+                            {statusBadge.label}
+                          </span>
+                        </td>
+
+                        {/* Actions - hidden on mobile */}
+                        <td className="px-4 py-3 text-right hidden sm:table-cell">
                           {user.role !== "super_admin" && (
                             <div className="flex items-center justify-end gap-1">
                               <button

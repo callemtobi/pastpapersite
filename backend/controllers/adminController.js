@@ -5,6 +5,7 @@ import Course from "../models/Course.js";
 import Instructor from "../models/Instructor.js";
 import User from "../models/User.js";
 import fs from "fs/promises";
+import path from "path";
 import argon2 from "argon2";
 import { sendPaperStatusEmail } from "../services/emailService.js";
 
@@ -1514,7 +1515,10 @@ export const adminDeletePaper = async (req, res) => {
             process.cwd(),
             image.path.replace(/^\/uploads\//, "uploads/"),
           );
-          await fs.unlink(filePath);
+          if (filePath) {
+            await fs.unlink(filePath);
+            console.log(`Deleted file: ${filePath}`);
+          }
         } catch (unlinkError) {
           console.error(`Failed to delete file ${image.path}:`, unlinkError);
         }

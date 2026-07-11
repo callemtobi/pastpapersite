@@ -302,50 +302,47 @@ export default function AboutPage() {
 
       {/* ── Story Section (Image + Text) ── */}
       <motion.div
+        className="flex flex-col md:grid md:grid-cols-2 gap-8 lg:gap-12 items-center"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.7, delay: 0.2 }}
-        className="grid md:grid-cols-2 gap-8 lg:gap-12 items-center"
       >
-        {/* Image */}
-        <div className="relative order-2 md:order-1">
-          <div className="relative">
-            {/* <AboutIllustration /> */}
-            <Image src={INU} alt="INU" className="w-full h-full object-cover" />
-          </div>
+        {/* Heading - order 1 on mobile, placed in second column on desktop */}
+        <motion.h2
+          className="order-1 md:col-start-2 md:row-start-1 text-2xl sm:text-3xl font-semibold text-foreground"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+        >
+          Our Story
+        </motion.h2>
+
+        {/* Image - order 2 on mobile, spans both rows in first column on desktop */}
+        <div className="order-2 md:col-start-1 md:row-start-1 md:row-span-2 relative">
+          <Image src={INU} alt="INU" className="w-full h-full object-cover" />
         </div>
 
-        {/* Text */}
-        <div className="order-1 md:order-2 space-y-4">
-          <motion.h2
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="text-2xl sm:text-3xl font-semibold text-foreground"
-          >
-            Our Story
-          </motion.h2>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="space-y-4 text-gray-600 dark:text-gray-300 leading-relaxed"
-          >
-            <p>
-              <span className="font-semibold text-foreground">PaperVault</span>{" "}
-              started as a small initiative to help students access past
-              examination papers easily. It soon became obvious that we needed
-              to help students see beyond just papers, and be there with them
-              from the start of their academic journey.
-            </p>
-            <p>
-              Currently, we offer a comprehensive archive of past papers, study
-              resources, and exam preparation tools. We value our students above
-              everything else, meaning that we won&apos;t take &apos;OK&apos; as
-              an answer.
-            </p>
-          </motion.div>
-        </div>
+        {/* Paragraphs - order 3 on mobile, placed in second column second row on desktop */}
+        <motion.div
+          className="order-3 md:col-start-2 md:row-start-2 space-y-4 text-gray-600 dark:text-gray-300 leading-relaxed"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+        >
+          <p>
+            <span className="font-semibold text-foreground">PaperVault</span>{" "}
+            started as a small initiative to help students access past
+            examination papers easily. It soon became obvious that we needed to
+            help students see beyond just papers, and be there with them from
+            the start of their academic journey.
+          </p>
+          <p>
+            Currently, we offer a comprehensive archive of past papers, study
+            resources, and exam preparation tools. We value our students above
+            everything else, meaning that we won&apos;t take &apos;OK&apos; as
+            an answer.
+          </p>
+        </motion.div>
       </motion.div>
 
       {/* ── Values / What We Offer ── */}

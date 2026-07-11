@@ -37,50 +37,70 @@ const VALIDATION_RULES = {
 // ];
 
 const patterns = [
-  // Generic exam patterns
-  { regex: /question\s*\d+/i, weight: 20 },
-  { regex: /q\.?\s*\d+/i, weight: 20 },
-  { regex: /answer\s+all\s+questions/i, weight: 25 },
-  { regex: /time\s+allowed/i, weight: 20 },
-  { regex: /total\s+marks/i, weight: 20 },
-  // IQRA National University patterns
-  {
-    regex: /iqra\s+national\s+university/i,
-    weight: 50,
-  },
-  {
-    regex: /iqra\s+national\s+university\s*,?\s*peshawar/i,
-    weight: 75,
-  },
-  {
-    regex: /peshawar/i,
-    weight: 10,
-  },
-  {
-    regex: /(midterm|final\s*term|final\s*exam)/i,
-    weight: 20,
-  },
-  {
-    regex: /department.*iqra/i,
-    weight: 20,
-  },
-  { regex: /iqra\s*n[a4]tion[a4]l\s*university/i, weight: 50 },
-  { regex: /(roll\s*no\.?|reg\.?\s*no\.?)\s*[:.]?\s*\w+/i, weight: 15 },
-  { regex: /instructor\s*[:.]?/i, weight: 10 },
-  { regex: /duration\s*[:.]?\s*\d/i, weight: 15 },
-  { regex: /obtained\s+marks/i, weight: 15 },
-  { regex: /invigilator/i, weight: 10 },
+  // ── Institution name (high weight — strongest single signal) ──
+  // [qg] handles the q→g OCR misread you already hit
+  { regex: /i[qg]ra\s+national\s+university/i, weight: 50 },
+  { regex: /i[qg]ra\s+national\s+university\s*,?\s*peshawar/i, weight: 75 },
+  { regex: /national\s+university/i, weight: 15 }, // fallback if "iqra" is badly mangled
+  { regex: /peshawar/i, weight: 10 },
+
+  // ── Header table fields (Image 1 style: Course Name / Max Marks / Max Time / Date / Instructor) ──
+  { regex: /course\s*name/i, weight: 20 },
+  { regex: /max\s*marks/i, weight: 20 },
+  { regex: /max\s*time/i, weight: 15 },
+  { regex: /instructor/i, weight: 10 },
+
+  // ── Header block (Image 2 style: Faculty / Department / Marks: N) ──
+  { regex: /faculty\s*[:.]?/i, weight: 15 },
+  { regex: /department\s+of\s+\w+/i, weight: 20 },
+  { regex: /marks\s*[:.]?\s*\d+/i, weight: 15 },
+
+  // ── Exam type / term (covers both "Mid-Term Examination Fall-2024" and "Mid Semester Spring-26") ──
+  { regex: /mid[\s-]*term\s*examination/i, weight: 25 },
+  { regex: /mid[\s-]*semester/i, weight: 25 },
+  { regex: /final[\s-]*term/i, weight: 25 },
+  { regex: /(fall|spring|summer)[\s-]*\d{2,4}/i, weight: 15 }, // term/year label, e.g. "Fall-2024", "Spring-26"
+
+  // ── Instructions ──
+  { regex: /attempt\s+all\s+questions/i, weight: 20 },
+  { regex: /answer\s+all\s+questions/i, weight: 20 },
+  { regex: /answer\s+the\s+following\s+questions/i, weight: 15 },
+  { regex: /read\s+the\s+questions\s+carefully/i, weight: 15 },
+  { regex: /all\s+questions\s+are\s+compulsory/i, weight: 15 },
+
+  // ── Question numbering styles seen in both papers ──
+  { regex: /q\s*#?\s*\d+/i, weight: 15 }, // "Q#1", "Q#2"
+  { regex: /question\s*\d+/i, weight: 15 },
+  { regex: /fill\s+in\s+the\s+blanks/i, weight: 20 },
+  { regex: /select\s+the\s+best\s+suited\s+response/i, weight: 15 },
+
+  // ── Generic academic terms (lower weight, supporting signal only) ──
+  { regex: /department.*i[qg]ra/i, weight: 20 },
+  { regex: /(roll\s*no\.?|reg\.?\s*no\.?)\s*[:.]?\s*\w+/i, weight: 10 },
+  { regex: /duration\s*[:.]?\s*\d/i, weight: 10 },
+  { regex: /time\s+allowed/i, weight: 15 },
+  { regex: /total\s+marks/i, weight: 15 },
 ];
 
 const preprocessImage = async (inputPath) => {
-  const outputPath = inputPath.replace(/(\.\w+)$/, "-processed$1");
-  await sharp(inputPath)
-    .resize({ width: 2000, withoutEnlargement: false }) // upscale small phone photos
-    .grayscale()
-    .normalize() // stretch contrast
-    .sharpen()
-    .toFile(outputPath);
-  return outputPath;
+  const metadata = await sharp(inputPath).metadata();
+  const pipeline = sharp(inputPath).grayscale().normalize().sharpen();
+
+  if (metadata.width < 1200) {
+    pipeline.resize({ width: 2000 }); // only upscale genuinely small images
+  }
+
+  return pipeline.toBuffer();
+
+  // const outputPath = inputPath.replace(/(\.\w+)$/, "-processed$1");
+  // await sharp(inputPath)
+  //   .resize({ width: 2000, withoutEnlargement: false }) // upscale small phone photos
+  //   .grayscale()
+  //   .normalize() // stretch contrast
+  //   .sharpen()
+  //   .toBuffer();
+  //   // .toFile(outputPath); // processed file is stored in buffer rather than on disk
+  // return outputPath;
 };
 
 const normalizeOcrText = (text) =>
@@ -129,12 +149,11 @@ const validateUploadedFiles = (files) => {
 };
 
 const extractAndScoreText = async (imagePath, worker) => {
-  let processedPath;
   try {
     console.log(`Starting OCR on: ${imagePath}`);
 
-    processedPath = await preprocessImage(imagePath);
-    const result = await worker.recognize(processedPath);
+    const processedBuffer = await preprocessImage(imagePath);
+    const result = await worker.recognize(processedBuffer);
 
     const confidence = result.data.confidence;
     console.log(`---------> OCR confidence: ${confidence}`);
@@ -144,7 +163,6 @@ const extractAndScoreText = async (imagePath, worker) => {
       `OCR extraction complete. Text length: ${extractedText.length}`,
     );
 
-    // ── Calculate weighted pattern score ──────────────────────
     let totalScore = 0;
     let matchedPatterns = [];
 
@@ -193,13 +211,8 @@ const extractAndScoreText = async (imagePath, worker) => {
       extractedText: "",
       matchedPatterns: [],
     };
-  } finally {
-    if (processedPath) {
-      fs.unlink(processedPath).catch((err) =>
-        console.error(`Failed to delete processed file ${processedPath}:`, err),
-      );
-    }
   }
+  // no finally/cleanup needed — nothing was written to disk
 };
 
 //  * - OCR Confidence < 20 → Rejected
@@ -210,7 +223,7 @@ const determineApprovalStatus = (
   rawScore,
   extractedText,
   maxScore,
-  // matchedPatterns,
+  matchedPatterns,
 ) => {
   if (
     confidence < 20 ||
@@ -337,7 +350,8 @@ export const uploadPaper = async (req, res) => {
 
     // ── Process each file ──────────────────────────────────────
     const imageData = [];
-    const worker = await createWorker("eng");
+    const worker = await createWorker("eng", 1, { langPath: "./" });
+    await worker.setParameters({ tessedit_pageseg_mode: "6" });
 
     try {
       for (let i = 0; i < files.length; i++) {
@@ -420,7 +434,7 @@ export const uploadPaper = async (req, res) => {
       return res.status(400).json({
         success: false,
         message:
-          "Upload rejected! One or more images have insufficient OCR confidence",
+          "Your upload was rejected because one or more images were not clear enough for accurate text recognition. Please upload clearer, high-quality images and try again.",
         rejectedImages: rejectedImages.map((img) => ({
           originalName: img.originalName,
           reason: img.verificationReason,
@@ -455,8 +469,8 @@ export const uploadPaper = async (req, res) => {
       success: true,
       message:
         paper.status === "approved"
-          ? "Your paper was uploaded and is now live."
-          : "Your paper has been submitted and is pending verification. You'll be notified once it's approved.",
+          ? "Your paper has been approved and is now live. It is available for all users to view and download."
+          : "Your paper has been submitted and is awaiting admin verification. You'll be notified once a decision has been made.",
       paper: { id: paper._id, course: paper.course, status: paper.status },
     });
   } catch (error) {

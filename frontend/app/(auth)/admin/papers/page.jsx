@@ -398,12 +398,12 @@ export default function Papers() {
           {/* Tabs Menu */}
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="flex flex-wrap items-center justify-between border-b border-gray-200 dark:border-gray-700 px-4">
-              <div className="flex flex-wrap items-center gap-1 py-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 py-2">
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => handleTabChange(tab.id)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`flex items-center justify-center gap-2 px-2 py-2 rounded-lg text-sm font-medium transition-colors ${
                       activeTab === tab.id
                         ? "bg-[#4FC3FC] text-white"
                         : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -559,12 +559,15 @@ export default function Papers() {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Paper
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    {/* Course/Exam column - hidden on mobile */}
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden sm:table-cell">
                       Course / Exam
                     </th>
+                    {/* Department column - hidden on tablet and below */}
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">
                       Department
                     </th>
+                    {/* Status column - hidden on mobile */}
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden sm:table-cell">
                       Status
                     </th>
@@ -588,29 +591,54 @@ export default function Papers() {
                             : ""
                         }`}
                       >
-                        <td className="px-4 py-3">
+                        {/* Checkbox */}
+                        <td className="px-4 py-3 align-top pt-4">
                           <input
                             type="checkbox"
                             checked={selectedPapers.includes(paper._id)}
                             onChange={() => handleSelect(paper._id)}
-                            className="rounded border-gray-300 dark:border-gray-600"
+                            className="rounded border-gray-300 dark:border-gray-600 mt-0.5"
                           />
                         </td>
+
+                        {/* Paper Column - always visible, contains extra mobile info */}
                         <td className="px-4 py-3">
-                          <div>
+                          <div className="space-y-1">
+                            {/* Course Name */}
                             <Link
-                              href={`/papers/${paper._id}`}
+                              href={`/admin/papers/${paper._id}`}
                               className="font-medium text-gray-900 dark:text-white text-sm hover:text-[#4FC3FC] transition-colors"
                             >
                               {paper.course?.name || "Unknown Course"}
                             </Link>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+
+                            {/* Instructor - always visible */}
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
                               {paper.instructor?.title}{" "}
                               {paper.instructor?.name || "Unknown Instructor"}
                             </p>
+
+                            {/* ── Mobile-only details ── */}
+                            <div className="sm:hidden space-y-0.5 mt-1">
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {paper.examType} • {paper.semester} {paper.year}
+                              </p>
+                              <p className="text-xs text-gray-400 dark:text-gray-500">
+                                {paper.department?.name || "Unknown Department"}
+                              </p>
+                              {/* Mobile status badge */}
+                              <span
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${statusBadge.color}`}
+                              >
+                                <StatusIcon className="w-3 h-3" />
+                                {statusBadge.label}
+                              </span>
+                            </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3">
+
+                        {/* Course / Exam - hidden on mobile */}
+                        <td className="px-4 py-3 hidden sm:table-cell">
                           <div>
                             <p className="text-sm text-gray-900 dark:text-white">
                               {paper.examType}
@@ -620,28 +648,35 @@ export default function Papers() {
                             </p>
                           </div>
                         </td>
+
+                        {/* Department - hidden on tablet and below */}
                         <td className="px-4 py-3 hidden md:table-cell">
                           <span className="text-sm text-gray-600 dark:text-gray-300">
                             {paper.department?.name || "Unknown"}
                           </span>
                         </td>
+
+                        {/* Status - hidden on mobile */}
                         <td className="px-4 py-3 hidden sm:table-cell">
                           <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${statusBadge.color}`}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${statusBadge.color}`}
                           >
                             <StatusIcon className="w-3 h-3" />
                             {statusBadge.label}
                           </span>
                         </td>
+
+                        {/* Actions */}
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
                             {isPending ? (
                               <Link
                                 href={`/admin/papers/${paper._id}`}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-medium transition-colors"
+                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
                               >
                                 <Shield className="w-4 h-4" />
-                                Verify
+                                <span className="hidden xs:inline">Verify</span>
+                                <span className="xs:hidden">Review</span>
                               </Link>
                             ) : (
                               <>
@@ -654,7 +689,7 @@ export default function Papers() {
                                   }`}
                                 >
                                   <Eye className="w-4 h-4" />
-                                  View
+                                  <span className="hidden xs:inline">View</span>
                                 </Link>
                                 <Link
                                   href={`/admin/papers/${paper._id}/edit`}

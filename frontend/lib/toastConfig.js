@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
  */
 export const showSuccessToast = (message) => {
   toast.success(message, {
-    duration: 4000,
+    duration: 6000,
     position: "top-right",
   });
 };

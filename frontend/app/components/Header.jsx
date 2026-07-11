@@ -127,7 +127,7 @@ export default function Header() {
               <GraduationCap className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
             <span className="text-sm cursor-pointer font-semibold text-gray-900 dark:text-white hidden sm:block whitespace-nowrap">
-              PaperVault
+              Pasty Paperyyy
             </span>
           </div>
 
