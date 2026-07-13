@@ -1508,30 +1508,36 @@ export const adminDeletePaper = async (req, res) => {
     }
 
     // ── Delete image files ──────────────────────────────────────
-    if (paper.images && paper.images.length > 0) {
-      for (const image of paper.images) {
-        try {
-          const filePath = path.join(
-            process.cwd(),
-            image.path.replace(/^\/uploads\//, "uploads/"),
-          );
-          if (filePath) {
-            await fs.unlink(filePath);
-            console.log(`Deleted file: ${filePath}`);
-          }
-        } catch (unlinkError) {
-          console.error(`Failed to delete file ${image.path}:`, unlinkError);
-        }
-      }
-    }
+    await Promise.all(
+      paper.images.map((img) => deleteFromCloudinary(img.cloudinaryPublicId)),
+    );
+    await paper.deleteOne();
 
-    // ── Delete from database ─────────────────────────────────────
-    await Paper.findByIdAndDelete(id);
+    res.json({ success: true, message: "Paper deleted" });
+    // if (paper.images && paper.images.length > 0) {
+    //   for (const image of paper.images) {
+    //     try {
+    //       const filePath = path.join(
+    //         process.cwd(),
+    //         image.path.replace(/^\/uploads\//, "uploads/"),
+    //       );
+    //       if (filePath) {
+    //         await fs.unlink(filePath);
+    //         console.log(`Deleted file: ${filePath}`);
+    //       }
+    //     } catch (unlinkError) {
+    //       console.error(`Failed to delete file ${image.path}:`, unlinkError);
+    //     }
+    //   }
+    // }
 
-    return res.status(200).json({
-      success: true,
-      message: "Paper deleted successfully",
-    });
+    // // ── Delete from database ─────────────────────────────────────
+    // await Paper.findByIdAndDelete(id);
+
+    // return res.status(200).json({
+    //   success: true,
+    //   message: "Paper deleted successfully",
+    // });
   } catch (error) {
     console.error("Admin delete paper error:", error);
     return res.status(500).json({

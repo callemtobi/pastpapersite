@@ -14,6 +14,11 @@ import {
   Shield,
 } from "lucide-react";
 import axios from "axios";
+import {
+  validatePassword,
+  checkPasswordStrength,
+  validatePasswordMatch,
+} from "@/lib/passwordValidation";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -37,14 +42,9 @@ export default function ResetPasswordPage() {
   const [checkingToken, setCheckingToken] = useState(false);
 
   // Password strength criteria
-  const [passwordStrength, setPasswordStrength] = useState({
-    //   hasMinLength: false,
-    //   hasUpperCase: false,
-    hasLowerCase: false,
-    hasNumber: false,
-    //   hasSpecialChar: false,
-  });
-
+  const [passwordStrength, setPasswordStrength] = useState(
+    checkPasswordStrength(""),
+  );
   // Optional: Verify token with backend
   useEffect(() => {
     const verifyToken = async () => {
@@ -78,31 +78,21 @@ export default function ResetPasswordPage() {
       if (password.length < 8) {
         errors.push("Password must be at least 8 characters");
       }
-      // if (!/[A-Z]/.test(password)) {
-      //   errors.push("Password must contain at least one uppercase letter");
-      // }
-      // if (!/[a-z]/.test(password)) {
-      //   errors.push("Password must contain at least one lowercase letter");
-      // }
+      if (password.length > 128) {
+        errors.push("Password must not exceed 128 characters");
+      }
+      if (!/[a-z]/.test(password)) {
+        errors.push("Password must contain at least one lowercase letter");
+      }
       if (!/[0-9]/.test(password)) {
         errors.push("Password must contain at least one number");
       }
-      // if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-      //   errors.push("Password must contain at least one special character");
-      // }
+      if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+        errors.push("Password must contain at least one special character");
+      }
     }
 
     return errors;
-  };
-
-  const checkPasswordStrength = (password) => {
-    setPasswordStrength({
-      // hasMinLength: password.length >= 8,
-      // hasUpperCase: /[A-Z]/.test(password),
-      hasLowerCase: /[a-z]/.test(password),
-      hasNumber: /[0-9]/.test(password),
-      // hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(password),
-    });
   };
 
   const handleChange = (e) => {
@@ -140,17 +130,18 @@ export default function ResetPasswordPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
 
     // Validate password
-    const passwordErrors = validatePassword(formData.password);
-    if (passwordErrors.length > 0) {
-      setPasswordError(passwordErrors[0]);
-      return;
-    }
+    const errors = validatePassword(formData.password);
+    const matchError = validatePasswordMatch(
+      formData.password,
+      formData.confirmPassword,
+    );
+    if (matchError) errors.push(matchError);
 
-    // Check if passwords match
-    if (formData.password !== formData.confirmPassword) {
-      setConfirmPasswordError("Passwords do not match");
+    if (errors.length > 0) {
+      setError(errors);
       return;
     }
 

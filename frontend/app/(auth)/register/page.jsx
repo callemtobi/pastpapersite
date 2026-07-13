@@ -11,6 +11,8 @@ import {
   ShieldCheck,
   RotateCcw,
   ArrowLeft,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import axios from "axios";
 import {
@@ -18,11 +20,15 @@ import {
   showLoadingToast,
   showSuccessToast,
 } from "@/lib/toastConfig";
+import {
+  validatePassword,
+  checkPasswordStrength,
+  validatePasswordMatch,
+} from "@/lib/passwordValidation";
 
 const RESEND_COOLDOWN = 60; // seconds
 
-// Place this ABOVE the `export default function Register()` line
-
+// ── OTP Panel (unchanged) ──────────────────────────────────────
 const OtpPanel = ({
   compact = false,
   otp,
@@ -42,7 +48,6 @@ const OtpPanel = ({
   setOtpSuccess,
 }) => (
   <div className={compact ? "space-y-4" : "space-y-5"}>
-    {/* Icon + heading */}
     <div className="flex flex-col items-center text-center gap-2">
       <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[#4FC3FC]/15 mb-1">
         <ShieldCheck className="w-7 h-7 text-[#4FC3FC]" />
@@ -62,7 +67,6 @@ const OtpPanel = ({
     </div>
 
     <form onSubmit={handleVerifyOtp} className="space-y-4">
-      {/* 6-digit boxes */}
       <div className="flex justify-center gap-2" onPaste={handleOtpPaste}>
         {otp.map((digit, i) => (
           <input
@@ -72,6 +76,7 @@ const OtpPanel = ({
             inputMode="numeric"
             maxLength={1}
             value={digit}
+            onFocus={(e) => e.target.select()}
             onChange={(e) => handleOtpChange(i, e.target.value)}
             onKeyDown={(e) => handleOtpKeyDown(i, e)}
             className={`w-11 h-12 text-center text-lg font-bold border rounded-lg
@@ -88,7 +93,6 @@ const OtpPanel = ({
         ))}
       </div>
 
-      {/* Feedback */}
       {otpError && (
         <p className="text-center text-sm text-red-500">{otpError}</p>
       )}
@@ -96,7 +100,6 @@ const OtpPanel = ({
         <p className="text-center text-sm text-green-500">{otpSuccess}</p>
       )}
 
-      {/* Verify button */}
       <button
         type="submit"
         disabled={otpLoading || otp.join("").length < 6}
@@ -106,7 +109,6 @@ const OtpPanel = ({
       </button>
     </form>
 
-    {/* Resend + Back row */}
     <div className="flex items-center justify-between text-sm">
       <button
         type="button"
@@ -152,6 +154,16 @@ export default function Register() {
     confirmPassword: "",
   });
   const [departments, setDepartments] = useState([]);
+
+  // ── Password validation states (NEW) ──────────────────────────
+  const [passwordError, setPasswordError] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
+  const [passwordStrength, setPasswordStrength] = useState(
+    checkPasswordStrength(""),
+  );
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   // ── OTP state ────────────────────────────────────────────────
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [otpLoading, setOtpLoading] = useState(false);
@@ -163,7 +175,6 @@ export default function Register() {
 
   // ── Helpers ──────────────────────────────────────────────────
 
-  // Start the resend cooldown timer
   const startCooldown = () => {
     setResendCooldown(RESEND_COOLDOWN);
     clearInterval(cooldownRef.current);
@@ -198,13 +209,89 @@ export default function Register() {
     fetchData();
   }, []);
 
+  // ── Password validation helper (copied from reset-password) ──
+  const validatePasswordField = (password) => {
+    const errors = [];
+
+    if (!password) {
+      errors.push("Password is required");
+    } else {
+      if (password.length < 8) {
+        errors.push("Password must be at least 8 characters");
+      }
+      if (password.length > 128) {
+        errors.push("Password must not exceed 128 characters");
+      }
+      if (!/[a-z]/.test(password)) {
+        errors.push("Password must contain at least one lowercase letter");
+      }
+      if (!/[0-9]/.test(password)) {
+        errors.push("Password must contain at least one number");
+      }
+      if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+        errors.push("Password must contain at least one special character");
+      }
+    }
+
+    return errors;
+  };
+
+  // ── Update field with password validation ──────────────────────
+  const updateField = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+
+    if (field === "password") {
+      // Update strength
+      const strength = checkPasswordStrength(value);
+      setPasswordStrength(strength);
+
+      // Validate password
+      const errors = validatePasswordField(value);
+      if (errors.length > 0) {
+        setPasswordError(errors[0]);
+      } else {
+        setPasswordError("");
+      }
+
+      // Check confirm password match
+      if (formData.confirmPassword && value !== formData.confirmPassword) {
+        setConfirmPasswordError("Passwords do not match");
+      } else if (
+        formData.confirmPassword &&
+        value === formData.confirmPassword
+      ) {
+        setConfirmPasswordError("");
+      }
+    }
+
+    if (field === "confirmPassword") {
+      if (value !== formData.password) {
+        setConfirmPasswordError("Passwords do not match");
+      } else {
+        setConfirmPasswordError("");
+      }
+    }
+  };
+
   // ── Step 1 — Registration submit ─────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match.");
+    // Validate password using the same function
+    const errors = validatePasswordField(formData.password);
+    const matchError = validatePasswordMatch(
+      formData.password,
+      formData.confirmPassword,
+    );
+    if (matchError) errors.push(matchError);
+
+    if (formData.studentId && !/^\d{5}$/.test(formData.studentId)) {
+      errors.push("Student ID must be 5 characters long.");
+    }
+
+    if (errors.length > 0) {
+      setError(errors[0]); // show first error in the general error area
       return;
     }
 
@@ -230,9 +317,8 @@ export default function Register() {
     }
   };
 
-  // ── Step 2 — OTP digit input ──────────────────────────────────
+  // ── Step 2 — OTP handlers (unchanged) ────────────────────────
   const handleOtpChange = (index, value) => {
-    // Extract only the last digit typed (handles cases where input already has a value)
     const digit = value.replace(/\D/g, "").slice(-1);
 
     const next = [...otp];
@@ -240,7 +326,6 @@ export default function Register() {
     setOtp(next);
     setOtpError("");
 
-    // Auto-advance if a digit was entered and not on last input
     if (digit && index < 5) {
       otpRefs.current[index + 1]?.focus();
     }
@@ -263,7 +348,6 @@ export default function Register() {
     }
   };
 
-  // ── Step 2 — OTP verify submit ───────────────────────────────
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     const otpValue = otp.join("");
@@ -281,10 +365,7 @@ export default function Register() {
         "http://localhost:8000/api/auth/verify-otp",
         { email: pendingEmail, otp: otpValue },
       );
-      // Backend should return a JWT on successful verification
       const token = response.data?.token;
-      console.log(`Token::: ${token}`);
-
       if (token) {
         localStorage.setItem("token", token);
       }
@@ -304,7 +385,6 @@ export default function Register() {
     }
   };
 
-  // ── Step 2 — Resend OTP ──────────────────────────────────────
   const handleResend = async () => {
     if (resendCooldown > 0) return;
     setOtpError("");
@@ -323,10 +403,6 @@ export default function Register() {
           "Failed to resend code. Please try again.",
       );
     }
-  };
-
-  const updateField = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -350,7 +426,6 @@ export default function Register() {
             </p>
           </div>
 
-          {/* Step indicator */}
           <div className="mb-2">
             <div className="flex items-center gap-2 mb-4">
               {["register", "verify"].map((s, i) => (
@@ -512,8 +587,9 @@ export default function Register() {
                   </div>
                 </div>
 
-                {/* Password + Confirm */}
+                {/* Password + Confirm with new design */}
                 <div className="grid grid-cols-2 gap-3">
+                  {/* Password field */}
                   <div className="space-y-1.5">
                     <label
                       htmlFor="pass-d"
@@ -525,17 +601,93 @@ export default function Register() {
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input
                         id="pass-d"
-                        type="password"
+                        type={showPassword ? "text" : "password"}
                         placeholder="••••••••"
                         value={formData.password}
                         onChange={(e) =>
                           updateField("password", e.target.value)
                         }
                         required
-                        className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC]"
+                        className="w-full pl-10 pr-12 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC]"
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </button>
                     </div>
+                    {passwordError && (
+                      <p className="mt-1 text-sm text-red-500">
+                        {passwordError}
+                      </p>
+                    )}
+
+                    {/* Password strength indicator */}
+                    {formData.password && (
+                      <div className="mt-2 space-y-1">
+                        <div className="flex gap-1">
+                          {Object.values(passwordStrength).map(
+                            (valid, index) => (
+                              <div
+                                key={index}
+                                className={`h-1 flex-1 rounded-full transition-all ${
+                                  valid
+                                    ? "bg-green-500"
+                                    : "bg-gray-300 dark:bg-gray-600"
+                                }`}
+                              />
+                            ),
+                          )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                          <p
+                            className={
+                              passwordStrength.hasMinLength
+                                ? "text-green-600 dark:text-green-400"
+                                : "text-gray-500"
+                            }
+                          >
+                            ✓ 8+ characters
+                          </p>
+                          <p
+                            className={
+                              passwordStrength.hasLowerCase
+                                ? "text-green-600 dark:text-green-400"
+                                : "text-gray-500"
+                            }
+                          >
+                            ✓ Lowercase letter
+                          </p>
+                          <p
+                            className={
+                              passwordStrength.hasNumber
+                                ? "text-green-600 dark:text-green-400"
+                                : "text-gray-500"
+                            }
+                          >
+                            ✓ Number
+                          </p>
+                          <p
+                            className={
+                              passwordStrength.hasSpecialChar
+                                ? "text-green-600 dark:text-green-400"
+                                : "text-gray-500"
+                            }
+                          >
+                            ✓ Special character
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
+
+                  {/* Confirm Password field */}
                   <div className="space-y-1.5">
                     <label
                       htmlFor="confirm-d"
@@ -547,16 +699,41 @@ export default function Register() {
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input
                         id="confirm-d"
-                        type="password"
+                        type={showConfirmPassword ? "text" : "password"}
                         placeholder="••••••••"
                         value={formData.confirmPassword}
                         onChange={(e) =>
                           updateField("confirmPassword", e.target.value)
                         }
                         required
-                        className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC]"
+                        className="w-full pl-10 pr-12 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#4FC3FC]"
                       />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </button>
                     </div>
+                    {confirmPasswordError && (
+                      <p className="mt-1 text-sm text-red-500">
+                        {confirmPasswordError}
+                      </p>
+                    )}
+                    {formData.confirmPassword &&
+                      !confirmPasswordError &&
+                      formData.password === formData.confirmPassword && (
+                        <p className="mt-1 text-sm text-green-600 dark:text-green-400">
+                          ✓ Passwords match
+                        </p>
+                      )}
                   </div>
                 </div>
 
@@ -566,7 +743,9 @@ export default function Register() {
 
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={
+                    loading || !!passwordError || !!confirmPasswordError
+                  }
                   className="w-full bg-[#4FC3FC] hover:bg-[#29b6f6] disabled:opacity-50 disabled:cursor-not-allowed text-white py-2.5 rounded-lg font-medium transition-colors mt-1"
                 >
                   {loading ? "Creating account…" : "Create account"}
@@ -605,7 +784,7 @@ export default function Register() {
         </div>
       </div>
 
-      {/* ── Portrait card (mobile) ── */}
+      {/* ── Mobile view (with same password improvements) ── */}
       <div className="md:hidden w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#4FC3FC] mb-4">
@@ -627,7 +806,6 @@ export default function Register() {
 
         <div className="border-0 shadow-xl rounded-lg overflow-hidden bg-white dark:bg-gray-800">
           <div className="border-b border-gray-200 dark:border-gray-700 p-6 space-y-1">
-            {/* Step indicator (mobile) */}
             <div className="flex items-center gap-2 mb-3">
               {["register", "verify"].map((s, i) => (
                 <div key={s} className="flex items-center gap-2">
@@ -753,6 +931,7 @@ export default function Register() {
                   </select>
                 </div>
 
+                {/* Password fields (mobile) */}
                 <div className="space-y-2">
                   <label
                     htmlFor="pass-m"
@@ -764,14 +943,83 @@ export default function Register() {
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       id="pass-m"
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       placeholder="••••••••"
                       value={formData.password}
                       onChange={(e) => updateField("password", e.target.value)}
                       required
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
+                      className="w-full pl-10 pr-12 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
                   </div>
+                  {passwordError && (
+                    <p className="text-sm text-red-500">{passwordError}</p>
+                  )}
+                  {formData.password && (
+                    <div className="mt-2 space-y-1">
+                      <div className="flex gap-1">
+                        {Object.values(passwordStrength).map((valid, index) => (
+                          <div
+                            key={index}
+                            className={`h-1 flex-1 rounded-full transition-all ${
+                              valid
+                                ? "bg-green-500"
+                                : "bg-gray-300 dark:bg-gray-600"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                        <p
+                          className={
+                            passwordStrength.hasMinLength
+                              ? "text-green-600 dark:text-green-400"
+                              : "text-gray-500"
+                          }
+                        >
+                          ✓ 8+ characters
+                        </p>
+
+                        <p
+                          className={
+                            passwordStrength.hasLowerCase
+                              ? "text-green-600 dark:text-green-400"
+                              : "text-gray-500"
+                          }
+                        >
+                          ✓ Lowercase letter
+                        </p>
+                        <p
+                          className={
+                            passwordStrength.hasNumber
+                              ? "text-green-600 dark:text-green-400"
+                              : "text-gray-500"
+                          }
+                        >
+                          ✓ Number
+                        </p>
+                        <p
+                          className={
+                            passwordStrength.hasSpecialChar
+                              ? "text-green-600 dark:text-green-400"
+                              : "text-gray-500"
+                          }
+                        >
+                          ✓ Special character
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -785,16 +1033,41 @@ export default function Register() {
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       id="confirm-m"
-                      type="password"
+                      type={showConfirmPassword ? "text" : "password"}
                       placeholder="••••••••"
                       value={formData.confirmPassword}
                       onChange={(e) =>
                         updateField("confirmPassword", e.target.value)
                       }
                       required
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
+                      className="w-full pl-10 pr-12 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
                     />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
                   </div>
+                  {confirmPasswordError && (
+                    <p className="text-sm text-red-500">
+                      {confirmPasswordError}
+                    </p>
+                  )}
+                  {formData.confirmPassword &&
+                    !confirmPasswordError &&
+                    formData.password === formData.confirmPassword && (
+                      <p className="text-sm text-green-600 dark:text-green-400">
+                        ✓ Passwords match
+                      </p>
+                    )}
                 </div>
 
                 {error && (
@@ -803,7 +1076,9 @@ export default function Register() {
 
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={
+                    loading || !!passwordError || !!confirmPasswordError
+                  }
                   className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-2 rounded-lg font-medium transition-colors"
                 >
                   {loading ? "Creating account…" : "Create account"}

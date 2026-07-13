@@ -10,7 +10,7 @@ mongoose.connect(process.env.MONGODB_URI);
 const hashedPassword = await argon2.hash("321");
 
 await User.create({
-  name: "Tobi Admin",
+  name: "Obito",
   email: "tobi659@gmail.com",
   studentId: 65965, // adjust to satisfy your schema's unique/required constraint
   department: "6a436208a9e235636b63aa86",

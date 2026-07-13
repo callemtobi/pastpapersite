@@ -7,6 +7,7 @@ import {
   createPasswordResetToken,
   verifyPasswordResetToken,
 } from "../utils/jwt.js";
+import { validatePassword } from "../utils/passwordValidation.js";
 
 const resend = new Resend(process.env.RESEND_KEY);
 
@@ -207,6 +208,20 @@ export const register = async (req, res) => {
       return res
         .status(400)
         .json({ success: false, message: "All fields are required." });
+    }
+
+    const passwordErrors = validatePassword(password);
+    if (passwordErrors.length > 0) {
+      return res.status(400).json({ success: false, errors: passwordErrors });
+    }
+
+    if (studentId.length !== 5) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Student ID must be 5 characters long.",
+        });
     }
 
     if (password !== confirmPassword) {

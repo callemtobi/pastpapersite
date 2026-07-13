@@ -5,7 +5,9 @@ const imageSchema = new mongoose.Schema({
   originalName: String,
   mimetype: String,
   size: Number,
-  path: String,
+  url: String, // Cloudinary secure_url — was `path`
+  cloudinaryPublicId: String, // new — needed for deletion
+  // path: String,
   verificationStatus: {
     type: String,
     enum: ["approved", "pending", "rejected"],

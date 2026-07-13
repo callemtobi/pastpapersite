@@ -288,7 +288,7 @@ export default function AboutPage() {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="text-4xl sm:text-5xl font-bold text-foreground tracking-tight"
         >
-          About <span className="text-[#4FC3FC]">PaperVault</span>
+          About <span className="text-[#4FC3FC]">Pasty Paperyyy</span>
         </motion.h1>
         <motion.p
           initial={{ opacity: 0, y: 20 }}
@@ -330,7 +330,9 @@ export default function AboutPage() {
           transition={{ duration: 0.6, delay: 0.4 }}
         >
           <p>
-            <span className="font-semibold text-foreground">PaperVault</span>{" "}
+            <span className="font-semibold text-foreground">
+              Pasty Paperyyy
+            </span>{" "}
             started as a small initiative to help students access past
             examination papers easily. It soon became obvious that we needed to
             help students see beyond just papers, and be there with them from

@@ -82,9 +82,9 @@ const patterns = [
   { regex: /total\s+marks/i, weight: 15 },
 ];
 
-const preprocessImage = async (inputPath) => {
-  const metadata = await sharp(inputPath).metadata();
-  const pipeline = sharp(inputPath).grayscale().normalize().sharpen();
+const preprocessImage = async (inputBuffer) => {
+  const metadata = await sharp(inputBuffer).metadata();
+  const pipeline = sharp(inputBuffer).grayscale().normalize().sharpen();
 
   if (metadata.width < 1200) {
     pipeline.resize({ width: 2000 }); // only upscale genuinely small images
@@ -148,11 +148,11 @@ const validateUploadedFiles = (files) => {
   };
 };
 
-const extractAndScoreText = async (imagePath, worker) => {
+const extractAndScoreText = async (fileBuffer, worker, label) => {
   try {
-    console.log(`Starting OCR on: ${imagePath}`);
+    console.log(`Starting OCR on: ${label}`);
 
-    const processedBuffer = await preprocessImage(imagePath);
+    const processedBuffer = await preprocessImage(fileBuffer);
     const result = await worker.recognize(processedBuffer);
 
     const confidence = result.data.confidence;
@@ -200,7 +200,7 @@ const extractAndScoreText = async (imagePath, worker) => {
       matchedPatterns,
     };
   } catch (error) {
-    console.error(`OCR extraction failed for ${imagePath}:`, error);
+    console.error(`OCR extraction failed for ${label}:`, error);
     return {
       success: false,
       error: error.message,
@@ -339,7 +339,7 @@ export const uploadPaper = async (req, res) => {
     }
 
     // ── Validate files ──────────────────────────────────────────
-    const validation = validateUploadedFiles(files);
+    const validation = validateUploadedFiles(req.files);
     if (!validation.valid) {
       return res.status(400).json({
         success: false,
@@ -354,91 +354,83 @@ export const uploadPaper = async (req, res) => {
     await worker.setParameters({ tessedit_pageseg_mode: "6" });
 
     try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        try {
-          const ocrResult = await extractAndScoreText(file.path, worker);
-          console.log(
-            `OCR Score: ${ocrResult.score}, Confidence: ${ocrResult.confidence}, Matched Patterns:`,
-            ocrResult.matchedPatterns,
-          );
+      for (const file of req.files) {
+        // const ocrResult = await extractAndScoreText(file.path, worker);
+        const ocrResult = await extractAndScoreText(
+          file.buffer,
+          worker,
+          file.originalname,
+        );
 
-          const approvalStatus = determineApprovalStatus(
-            ocrResult.confidence,
-            ocrResult.rawScore,
-            ocrResult.extractedText,
-            ocrResult.maxScore,
-            // ocrResult.matchedPatterns,
-          );
-          console.log(
-            `------> Status: ${approvalStatus.status}, Reason: ${approvalStatus.reason}`,
-          );
+        console.log(
+          `OCR Score: ${ocrResult.score}, Confidence: ${ocrResult.confidence}, Matched Patterns:`,
+          ocrResult.matchedPatterns,
+        );
 
-          imageData.push({
-            filename: file.filename,
-            originalName: file.originalname,
-            mimetype: file.mimetype,
-            size: file.size,
-            path: `/uploads/${file.filename}`,
-            verificationStatus: approvalStatus.status,
-            verificationReason: approvalStatus.reason,
-            detectedKeywords: ocrResult.matchedPatterns.map((p) => p.pattern),
-            ocrExtractedText: ocrResult.extractedText,
-            ocrScore: ocrResult.score,
-            ocrConfidence: ocrResult.confidence,
-            ocrRawScore: ocrResult.rawScore,
-            ocrMaxScore: ocrResult.maxScore,
-            matchedPatterns: ocrResult.matchedPatterns,
-            uploadedAt: new Date(),
-          });
-        } catch (error) {
-          console.error(`Error processing file ${file.originalname}:`, error);
-          try {
-            await fs.unlink(file.path);
-          } catch (unlinkError) {
-            console.error(`Failed to delete file ${file.path}:`, unlinkError);
-          }
-          throw error;
+        const approvalStatus = determineApprovalStatus(
+          ocrResult.confidence,
+          ocrResult.rawScore,
+          ocrResult.extractedText,
+          ocrResult.maxScore,
+          // ocrResult.matchedPatterns,
+        );
+
+        if (approvalStatus.status === "rejected") {
+          // Don't bother uploading a rejected image to Cloudinary at all
+          continue; // handled by rejectedImages check below via a parallel tracking array
         }
+
+        const { url, publicId } = await uploadBufferToCloudinary(
+          file.buffer,
+          "papers",
+        );
+        console.log(
+          `------> Status: ${approvalStatus.status}, Reason: ${approvalStatus.reason}`,
+        );
+
+        imageData.push({
+          filename: publicId,
+          originalName: file.originalname,
+          mimetype: file.mimetype,
+          size: file.size,
+          url, // Cloudinary secure URL — this is what the frontend renders
+          cloudinaryPublicId: publicId, // needed for later deletion
+          verificationStatus: approvalStatus.status,
+          verificationReason: approvalStatus.reason,
+          detectedKeywords: ocrResult.matchedPatterns.map((p) => p.pattern),
+          ocrExtractedText: ocrResult.extractedText,
+          ocrScore: ocrResult.score,
+          ocrConfidence: ocrResult.confidence,
+          ocrRawScore: ocrResult.rawScore,
+          ocrMaxScore: ocrResult.maxScore,
+          matchedPatterns: ocrResult.matchedPatterns,
+          uploadedAt: new Date(),
+        });
+        // } catch (error) {
+        //   console.error(`Error processing file ${file.originalname}:`, error);
+        //   try {
+        //     await fs.unlink(file.path);
+        //   } catch (unlinkError) {
+        //     console.error(`Failed to delete file ${file.path}:`, unlinkError);
+        //   }
+        //   throw error;
+        // }
       }
     } finally {
       await worker.terminate();
     }
 
-    // ── Check for rejected images ──────────────────────────────
-    const rejectedImages = imageData.filter(
-      (img) => img.verificationStatus === "rejected",
-    );
-
-    if (rejectedImages.length > 0) {
-      for (const img of imageData) {
-        try {
-          const filePath = path.join(
-            process.cwd(),
-            img.path.replace(/^\/uploads\//, "uploads/"),
-          );
-          await fs.unlink(filePath);
-        } catch (unlinkError) {
-          console.error(`Failed to delete file ${img.path}:`, unlinkError);
-        }
-      }
-
-      const rejectionReasons = rejectedImages
-        .map((img) => `${img.originalName}: ${img.verificationReason}`)
-        .join("; ");
-
-      console.warn(
-        `Upload rejected due to low OCR confidence: ${rejectionReasons}`,
+    // If ANY file was outright rejected, fail the whole upload — mirrors your original behavior,
+    // but now there's nothing to fs.unlink since rejected files were never uploaded to Cloudinary
+    if (imageData.length < req.files.length) {
+      // clean up whatever DID get uploaded before the rejection, so nothing orphaned remains
+      await Promise.all(
+        imageData.map((img) => deleteFromCloudinary(img.cloudinaryPublicId)),
       );
-
       return res.status(400).json({
         success: false,
         message:
-          "Your upload was rejected because one or more images were not clear enough for accurate text recognition. Please upload clearer, high-quality images and try again.",
-        rejectedImages: rejectedImages.map((img) => ({
-          originalName: img.originalName,
-          reason: img.verificationReason,
-        })),
+          "Upload rejected! One or more images did not meet quality requirements.",
       });
     }
 
@@ -446,12 +438,10 @@ export const uploadPaper = async (req, res) => {
       (img) => img.verificationStatus === "pending",
     );
 
-    // ── Create paper record ─────────────────────────────────────
-    // Changed: removed instructor.title/name, using ObjectId reference
-    const paperData = {
-      course, // Now storing ObjectId reference
-      department, // Now storing ObjectId reference
-      instructor, // Now storing ObjectId reference
+    const paper = await Paper.create({
+      course,
+      department,
+      instructor,
       year,
       semester,
       examType,
@@ -461,9 +451,63 @@ export const uploadPaper = async (req, res) => {
       status: hasPendingReview ? "pending" : "approved",
       uploadedBy: req.user?.id || null,
       createdAt: new Date(),
-    };
+    });
 
-    const paper = await Paper.create(paperData);
+    // // ── Check for rejected images ──────────────────────────────
+    // const rejectedImages = imageData.filter(
+    //   (img) => img.verificationStatus === "rejected",
+    // );
+
+    // if (rejectedImages.length > 0) {
+    //   for (const img of imageData) {
+    //     try {
+    //       const filePath = path.join(
+    //         process.cwd(),
+    //         img.path.replace(/^\/uploads\//, "uploads/"),
+    //       );
+    //       await fs.unlink(filePath);
+    //     } catch (unlinkError) {
+    //       console.error(`Failed to delete file ${img.path}:`, unlinkError);
+    //     }
+    //   }
+
+    //   const rejectionReasons = rejectedImages
+    //     .map((img) => `${img.originalName}: ${img.verificationReason}`)
+    //     .join("; ");
+
+    //   console.warn(
+    //     `Upload rejected due to low OCR confidence: ${rejectionReasons}`,
+    //   );
+
+    //   return res.status(400).json({
+    //     success: false,
+    //     message:
+    //       "Your upload was rejected because one or more images were not clear enough for accurate text recognition. Please upload clearer, high-quality images and try again.",
+    //     rejectedImages: rejectedImages.map((img) => ({
+    //       originalName: img.originalName,
+    //       reason: img.verificationReason,
+    //     })),
+    //   });
+    // }
+
+    // ── Create paper record ─────────────────────────────────────
+    // Changed: removed instructor.title/name, using ObjectId reference
+    // const paperData = {
+    //   course, // Now storing ObjectId reference
+    //   department, // Now storing ObjectId reference
+    //   instructor, // Now storing ObjectId reference
+    //   year,
+    //   semester,
+    //   examType,
+    //   description: description || "",
+    //   pages: imageData.length,
+    //   images: imageData,
+    //   status: hasPendingReview ? "pending" : "approved",
+    //   uploadedBy: req.user?.id || null,
+    //   createdAt: new Date(),
+    // };
+
+    // const paper = await Paper.create(paperData);
 
     return res.status(201).json({
       success: true,
