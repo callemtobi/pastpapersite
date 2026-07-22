@@ -2,6 +2,10 @@ import Paper from "../models/Paper.js";
 import Department from "../models/Department.js";
 import Course from "../models/Course.js";
 import Instructor from "../models/Instructor.js";
+import {
+  uploadBufferToCloudinary,
+  deleteFromCloudinary,
+} from "../services/cloudinary.js";
 import mongoose from "mongoose";
 import fs from "fs/promises";
 import path from "path";
@@ -185,9 +189,7 @@ const extractAndScoreText = async (fileBuffer, worker, label) => {
     );
 
     if (normalizedScore < 50) {
-      console.warn(
-        `Low OCR score detected for ${imagePath}: ${normalizedScore}`,
-      );
+      console.warn(`Low OCR score detected for ${label}: ${normalizedScore}`);
     }
 
     return {
@@ -535,19 +537,17 @@ export const getPaperById = async (req, res) => {
       .populate("course", "name")
       .populate("department", "name")
       .populate("instructor", "title name")
-      .select("-images.path");
+      .select(
+        "-images.cloudinaryPublicId -images.ocrExtractedText -images.matchedPatterns -images.detectedKeywords -images.ocrScore -images.ocrConfidence -images.ocrRawScore -images.ocrMaxScore -images.verificationReason",
+      );
 
     if (!paper) {
-      return res.status(404).json({
-        success: false,
-        message: "Paper not found",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "Paper not found" });
     }
 
-    return res.status(200).json({
-      success: true,
-      paper,
-    });
+    return res.status(200).json({ success: true, paper });
   } catch (error) {
     console.error("Get paper error:", error);
     return res.status(500).json({
@@ -618,7 +618,9 @@ export const getPapers = async (req, res) => {
         .populate("course", "name")
         .populate("department", "name")
         .populate("instructor", "title name")
-        .select("-images.path")
+        .select(
+          "-images.cloudinaryPublicId -images.ocrExtractedText -images.matchedPatterns -images.detectedKeywords -images.ocrScore -images.ocrConfidence -images.ocrRawScore -images.ocrMaxScore -images.verificationReason",
+        )
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit)),
@@ -645,49 +647,29 @@ export const getPapers = async (req, res) => {
   }
 };
 
-// download paper
 export const downloadPaper = async (req, res) => {
   try {
     const { id } = req.params;
-    const imageIndex = parseInt(req.query.imageIndex) || 0; // read index
+    const imageIndex = parseInt(req.query.imageIndex) || 0;
 
     const paper = await Paper.findById(id);
     if (!paper) {
-      return res.status(404).json({
-        success: false,
-        message: "Paper not found",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "Paper not found" });
     }
 
-    const image = paper.images[imageIndex]; // use the correct image
-    if (!image) {
+    const image = paper.images[imageIndex];
+    if (!image || !image.url) {
       return res
         .status(404)
         .json({ success: false, message: "Image not found" });
     }
 
-    // Assuming the paper has a file path stored
-    const uploadPath = image.path;
-    const filePath = path.join(
-      process.cwd(),
-      uploadPath.replace(/^\/uploads\//, "uploads/"),
-    );
+    paper.downloads = (paper.downloads || 0) + 1;
+    await paper.save();
 
-    // Check if file path exists
-    // if (!fs.existsSync(filePath)) {
-    //   return res
-    //     .status(404)
-    //     .json({ success: false, message: "File not found on disk" });
-    // }
-
-    if (!filePath) {
-      return res.status(404).json({
-        success: false,
-        message: "Paper file not found",
-      });
-    }
-
-    return res.status(200).sendFile(filePath);
+    return res.redirect(image.url);
   } catch (error) {
     console.error("Download paper error:", error);
     return res.status(500).json({
@@ -698,7 +680,6 @@ export const downloadPaper = async (req, res) => {
   }
 };
 
-// preview paper
 export const previewPaper = async (req, res) => {
   try {
     const { id } = req.params;

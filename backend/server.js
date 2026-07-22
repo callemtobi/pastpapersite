@@ -11,10 +11,16 @@ import papersRoute from "./routes/papers.js";
 import adminRoute from "./routes/admin.js";
 
 // ------------------------------------MONGODB
-mongoose.connect(process.env.MONGODB_URI).then(() => {
-  console.log("✅ MongoDB connected");
-  startCleanupCron(); // 👈 start after DB is ready
-});
+mongoose
+  .connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log("✅ MongoDB connected");
+    startCleanupCron(); // 👈 start after DB is ready
+  })
+  .catch((err) => {
+    console.error("❌ Initial MongoDB connection failed:", err);
+    process.exit(1); // or retry logic
+  });
 mongoose.connection.on(
   "error",
   console.error.bind(console, "----------> Connection error...."),

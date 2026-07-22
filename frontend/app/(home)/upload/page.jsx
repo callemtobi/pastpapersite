@@ -200,7 +200,7 @@ export default function UploadPage() {
           setSelectedFiles([]);
           setValidationErrors([]);
           router.push("/download");
-        }, 2000);
+        }, 10000);
       } else {
         showErrorToast(response.data.message || "Upload failed");
       }

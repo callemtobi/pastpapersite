@@ -5,6 +5,8 @@ import Department from "../models/Department.js";
 import Course from "../models/Course.js";
 import fs from "fs";
 import path from "path";
+import cloudinary from "../services/cloudinary.js"; // your existing configured instance
+import mongoose from "mongoose";
 
 // ── Helper: Calculate total storage size ─────────────────────
 async function calculateTotalStorageSize() {
@@ -66,39 +68,23 @@ export const getDashboardStats = async (req, res) => {
       rejectedPapers,
       monthlyUploads,
       monthlyDownloads,
-      storageSize,
+      cloudinaryStorage, // replaces storageSize
+      mongoStorage, // new
       topPapers,
       recentActivity,
     ] = await Promise.all([
-      // Total papers
       Paper.countDocuments(),
-
-      // Total users
       User.countDocuments(),
-
-      // departments
       Department.countDocuments({ isActive: true }),
-
-      // courses
       Course.countDocuments({ isActive: true }),
-
-      // Total downloads
       Paper.aggregate([
         { $group: { _id: null, total: { $sum: "$downloads" } } },
       ]),
-
-      // Pending papers
       Paper.countDocuments({ status: "pending" }),
-
-      // Rejected papers
       Paper.countDocuments({ status: "rejected" }),
-
-      // Monthly uploads (last 30 days)
       Paper.countDocuments({
         createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
       }),
-
-      // Monthly downloads
       Paper.aggregate([
         {
           $match: {
@@ -109,17 +95,12 @@ export const getDashboardStats = async (req, res) => {
         },
         { $group: { _id: null, total: { $sum: "$downloads" } } },
       ]),
-
-      // Total storage size
-      calculateTotalStorageSize(),
-
-      // Top downloaded papers (top 5)
+      getCloudinaryStorageUsage(),
+      getMongoStorageUsage(),
       Paper.find()
         .sort({ downloads: -1 })
         .limit(5)
         .select("course downloads images"),
-
-      // Recent activity
       getRecentActivityFunc(),
     ]);
 
@@ -135,7 +116,10 @@ export const getDashboardStats = async (req, res) => {
         rejectedPapers,
         monthlyUploads,
         monthlyDownloads: monthlyDownloads[0]?.total || 0,
-        totalStorage: storageSize,
+        storage: {
+          cloudinary: cloudinaryStorage,
+          mongodb: mongoStorage,
+        },
         topPapers,
         recentActivity,
       },
@@ -148,6 +132,35 @@ export const getDashboardStats = async (req, res) => {
     });
   }
 };
+
+async function getCloudinaryStorageUsage() {
+  try {
+    const usage = await cloudinary.api.usage();
+    return {
+      bytesUsed: usage.storage.usage, // total bytes stored
+      bytesLimit: usage.storage.limit ?? null, // plan limit, if applicable
+      credits: usage.credits?.usage ?? null,
+    };
+  } catch (err) {
+    console.error("Cloudinary usage fetch error:", err);
+    return { bytesUsed: 0, bytesLimit: null, credits: null };
+  }
+}
+
+async function getMongoStorageUsage() {
+  try {
+    const stats = await mongoose.connection.db.stats();
+    return {
+      dataSize: stats.dataSize, // actual document data, bytes
+      storageSize: stats.storageSize, // allocated disk storage, bytes (includes overhead)
+      indexSize: stats.indexSize, // bytes used by indexes
+      totalSize: stats.dataSize + stats.indexSize,
+    };
+  } catch (err) {
+    console.error("MongoDB stats fetch error:", err);
+    return { dataSize: 0, storageSize: 0, indexSize: 0, totalSize: 0 };
+  }
+}
 
 export const getTopDownloadedPapers = async (req, res) => {
   try {
@@ -176,81 +189,6 @@ export const getTopDownloadedPapers = async (req, res) => {
     });
   }
 };
-
-// export const getRecentActivity = async (req, res) => {
-//   try {
-//     const limit = parseInt(req.query.limit) || 15;
-//     const activities = [];
-
-//     // Get recent uploads
-//     const recentUploads = await Paper.find()
-//       .populate({ path: "course", select: "name" })
-//       .sort({ createdAt: -1 })
-//       .limit(Math.ceil(limit / 3))
-//       .select("course createdAt uploadedBy");
-
-//     recentUploads.forEach((paper) => {
-//       activities.push({
-//         type: "upload",
-//         user: paper.uploadedBy || "System",
-//         paper: `- ${paper.course.name}`,
-//         time: paper.createdAt,
-//         id: paper._id,
-//       });
-//     });
-
-//     // Get recent status changes (approvals/rejections)
-//     const recentStatusChanges = await Paper.find()
-//       .populate({ path: "course" })
-//       .sort({ updatedAt: -1 })
-//       .limit(Math.ceil(limit / 3))
-//       .select("title course status updatedAt");
-
-//     recentStatusChanges.forEach((paper) => {
-//       activities.push({
-//         type: paper.status === "approved" ? "approval" : "rejection",
-//         user: "Admin",
-//         paper: `- ${paper.course.name}`,
-//         time: paper.updatedAt,
-//         id: paper._id,
-//       });
-//     });
-
-//     // Get recent downloads (from log or inferred)
-//     // You may need a separate Download model for this
-//     const recentDownloads = await Paper.find()
-//       .populate({ path: "course" })
-//       .sort({ updatedAt: -1 })
-//       .limit(Math.ceil(limit / 3))
-//       .select("title course downloads updatedAt");
-
-//     recentDownloads.forEach((paper) => {
-//       activities.push({
-//         type: "download",
-//         user: "User",
-//         paper: `- ${paper.course.name}`,
-//         time: paper.updatedAt,
-//         id: paper._id,
-//       });
-//     });
-
-//     // Sort by time and limit
-//     activities.sort((a, b) => new Date(b.time) - new Date(a.time));
-
-//     return res.status(200).json({
-//       success: true,
-//       data: activities.slice(0, limit),
-//     });
-//   } catch (error) {
-//     console.error("Recent activity error:", error);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Failed to fetch recent activity",
-//     });
-//   }
-// };
-
-// controllers/dashboardController.js
 
 export const getRecentActivity = async (req, res) => {
   try {

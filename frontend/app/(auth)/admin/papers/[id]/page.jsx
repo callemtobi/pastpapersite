@@ -194,11 +194,46 @@ export default function PaperViewerPage() {
 
       for (let i = 0; i < paper.images.length; i++) {
         const image = paper.images[i];
-        const imageUrl = `http://localhost:8000${image.path}`;
+
+        // ── Debug: Log the image object ──
+        console.log(`Image ${i}:`, image);
+
+        // ── Try multiple path options ──
+        let imagePath =
+          image.path || image.filePath || image.url || image.filename;
+
+        if (!imagePath) {
+          console.error(`No path found for image ${i}:`, image);
+          showErrorToast(`Image ${i + 1} has no valid path`);
+          continue;
+        }
+
+        // ── Normalize the path ──
+        let imageUrl;
+        if (imagePath.startsWith("http")) {
+          // Already a full URL (Cloudinary)
+          imageUrl = imagePath;
+        } else if (imagePath.startsWith("/uploads/")) {
+          imageUrl = `http://localhost:8000${imagePath}`;
+        } else if (imagePath.startsWith("/")) {
+          imageUrl = `http://localhost:8000${imagePath}`;
+        } else {
+          imageUrl = `http://localhost:8000/uploads/${imagePath}`;
+        }
+
+        console.log(`Fetching image ${i} from:`, imageUrl);
 
         const response = await fetch(imageUrl);
-        const blob = await response.blob();
 
+        if (!response.ok) {
+          console.error(
+            `Failed to fetch image ${i}: ${response.status} ${response.statusText}`,
+          );
+          showErrorToast(`Failed to load image ${i + 1}`);
+          continue;
+        }
+
+        const blob = await response.blob();
         const base64 = await new Promise((resolve) => {
           const reader = new FileReader();
           reader.onloadend = () => resolve(reader.result);
@@ -685,7 +720,8 @@ export default function PaperViewerPage() {
                                 </div>
                                 <div className="relative w-full">
                                   <Image
-                                    src={`http://localhost:8000/uploads/${image.filename}`}
+                                    // src={`http://localhost:8000/uploads/${image.filename}`}
+                                    src={`${paper.images[0].url}`}
                                     alt={`Page ${index + 1}`}
                                     width={800}
                                     height={1000}
