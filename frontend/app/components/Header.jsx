@@ -172,19 +172,19 @@ export default function Header() {
                   onClick={() => setShowUserDropdown(!showUserDropdown)}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-black/5 transition-colors"
                 >
-                  <div className="w-7 h-7 rounded-full bg-[#4FC3FC] flex items-center justify-center text-white font-medium text-xs">
+                  <div className="w-7 h-7 rounded-full bg-[#4FC3FC] flex items-center justify-center text-background font-medium text-xs">
                     {user.name?.charAt(0).toUpperCase() || "U"}
                   </div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300 hidden lg:block">
+                  <span className="text-sm font-medium text-foreground hidden lg:block">
                     {user.name?.split(" ")[0] || "User"}
                   </span>
-                  <ChevronDown className="w-3 h-3 text-gray-400" />
+                  <ChevronDown className="w-3 h-3 text-foreground" />
                 </button>
 
                 {showUserDropdown && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
-                    <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  <div className="absolute right-0 mt-2 w-48 bg-background rounded-lg shadow-lg border border-border-light py-1 z-50">
+                    <div className="px-4 py-2 border-b border-border-light">
+                      <p className="text-sm font-medium text-foreground">
                         {user.name}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -195,9 +195,9 @@ export default function Header() {
                         const Icon = roleBadge.icon;
                         return (
                           <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${roleBadge.color}`}
+                            className={` inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${roleBadge.color}`}
                           >
-                            <Icon className="w-3 h-3" />
+                            <Icon className="w-3 h-3 " />
                             {roleBadge.label}
                           </span>
                         );
@@ -207,7 +207,7 @@ export default function Header() {
                       <Link
                         href="/admin"
                         onClick={() => setShowUserDropdown(false)}
-                        className="flex items-center gap-3 px-4 py-2 w-full text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        className="flex items-center gap-3 px-4 py-2 w-full text-sm text-background bg-foreground transition-colors"
                       >
                         <User className="w-4 h-4" />
                         Admin Dashboard

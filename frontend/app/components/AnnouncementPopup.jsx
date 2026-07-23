@@ -56,6 +56,8 @@ export default function AnnouncementPopup() {
   const handlePrev = () => {
     if (currentIndex > 0) {
       setCurrentIndex(currentIndex - 1);
+    } else {
+      setIsVisible(false);
     }
   };
 
@@ -65,40 +67,40 @@ export default function AnnouncementPopup() {
 
   return (
     <div className="fixed bottom-4 right-4 z-50 max-w-sm w-full">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden animate-in slide-in-from-bottom-5 duration-300">
+      <div className="bg-background rounded-xl shadow-2xl border border-border-light  overflow-hidden animate-in slide-in-from-bottom-5 duration-300">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between px-4 py-3 bg-primary-button-bg border-b border-border-light">
           <div className="flex items-center gap-2">
-            <Megaphone className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            <span className="text-sm font-medium text-gray-900 dark:text-white">
+            <Megaphone className="w-4 h-4 text-background-secondary" />
+            <span className="text-sm font-medium text-background-secondary">
               Announcement
             </span>
             {announcements.length > 1 && (
-              <span className="text-xs text-gray-500 dark:text-gray-400">
+              <span className="text-xs text-background">
                 {currentIndex + 1}/{announcements.length}
               </span>
             )}
           </div>
           <button
             onClick={handleClose}
-            className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="p-1 rounded-lg hover:bg-background transition-colors"
           >
-            <X className="w-4 h-4 text-gray-500" />
+            <X className="w-4 h-4 text-background hover:text-foreground transition-colors" />
           </button>
         </div>
 
         {/* Content */}
         <div className="p-4">
-          <h4 className="font-semibold text-gray-900 dark:text-white mb-1">
+          <h4 className="font-semibold text-foreground mb-1">
             {currentAnnouncement.title}
           </h4>
-          <p className="text-sm text-gray-600 dark:text-gray-300">
+          <p className="text-sm text-foreground">
             {currentAnnouncement.content}
           </p>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-2 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between px-4 py-2 border-t border-border-light">
           <span className="text-xs text-gray-400">
             {new Date(currentAnnouncement.createdAt).toLocaleDateString()}
           </span>
@@ -114,7 +116,8 @@ export default function AnnouncementPopup() {
                 </button>
                 <button
                   onClick={handleNext}
-                  className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  disabled={currentIndex >= announcements.length - 1}
+                  className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
                 >
                   <ChevronRight className="w-4 h-4 text-gray-500" />
                 </button>

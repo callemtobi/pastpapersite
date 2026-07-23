@@ -333,7 +333,7 @@ export default function AdminDashboard() {
           {/* ── Stats Grid with SVG Backgrounds ───────────────────── */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Total Papers */}
-            <div className="relative bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 rounded-xl border border-blue-200 dark:border-blue-800 shadow-sm p-5 overflow-hidden">
+            <div className="relative bg-linear-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 rounded-xl border border-blue-200 dark:border-blue-800 shadow-sm p-5 overflow-hidden">
               <ChartSvg1 />
               <div className="relative flex items-center justify-between">
                 <div>
@@ -355,7 +355,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Total Users */}
-            <div className="relative bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/20 rounded-xl border border-purple-200 dark:border-purple-800 shadow-sm p-5 overflow-hidden">
+            <div className="relative bg-linear-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/20 rounded-xl border border-purple-200 dark:border-purple-800 shadow-sm p-5 overflow-hidden">
               <ChartSvg2 />
               <div className="relative flex items-center justify-between">
                 <div>
@@ -377,7 +377,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Pending Papers */}
-            <div className="relative bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/30 dark:to-yellow-800/20 rounded-xl border border-yellow-200 dark:border-yellow-800 shadow-sm p-5 overflow-hidden">
+            <div className="relative bg-linear-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/30 dark:to-yellow-800/20 rounded-xl border border-yellow-200 dark:border-yellow-800 shadow-sm p-5 overflow-hidden">
               <ChartSvg3 />
               <div className="relative flex items-center justify-between">
                 <div>
@@ -399,7 +399,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Total Downloads */}
-            <div className="relative bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/20 rounded-xl border border-green-200 dark:border-green-800 shadow-sm p-5 overflow-hidden">
+            <div className="relative bg-linear-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/20 rounded-xl border border-green-200 dark:border-green-800 shadow-sm p-5 overflow-hidden">
               <ChartSvg4 />
               <div className="relative flex items-center justify-between">
                 <div>
@@ -423,7 +423,7 @@ export default function AdminDashboard() {
 
           {/* ── Second Row: 5 Stats ───────────────────────────────── */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            <div className="relative bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/30 dark:to-indigo-800/20 rounded-xl border border-indigo-200 dark:border-indigo-800 shadow-sm p-4 overflow-hidden">
+            <div className="relative bg-linear-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/30 dark:to-indigo-800/20 rounded-xl border border-indigo-200 dark:border-indigo-800 shadow-sm p-4 overflow-hidden">
               <ChartSvg5 />
               <div className="relative flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-white/50 dark:bg-white/10 flex items-center justify-center">
@@ -440,7 +440,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="relative bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/30 dark:to-emerald-800/20 rounded-xl border border-emerald-200 dark:border-emerald-800 shadow-sm p-4 overflow-hidden">
+            <div className="relative bg-linear-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/30 dark:to-emerald-800/20 rounded-xl border border-emerald-200 dark:border-emerald-800 shadow-sm p-4 overflow-hidden">
               <ChartSvg1 />
               <div className="relative flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-white/50 dark:bg-white/10 flex items-center justify-center">
@@ -457,7 +457,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="relative bg-gradient-to-br from-rose-50 to-rose-100 dark:from-rose-900/30 dark:to-rose-800/20 rounded-xl border border-rose-200 dark:border-rose-800 shadow-sm p-4 overflow-hidden">
+            <div className="relative bg-linear-to-br from-rose-50 to-rose-100 dark:from-rose-900/30 dark:to-rose-800/20 rounded-xl border border-rose-200 dark:border-rose-800 shadow-sm p-4 overflow-hidden">
               <ChartSvg2 />
               <div className="relative flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-white/50 dark:bg-white/10 flex items-center justify-center">
@@ -474,7 +474,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="relative bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-900/30 dark:to-cyan-800/20 rounded-xl border border-cyan-200 dark:border-cyan-800 shadow-sm p-4 overflow-hidden">
+            <div className="relative bg-linear-to-br from-cyan-50 to-cyan-100 dark:from-cyan-900/30 dark:to-cyan-800/20 rounded-xl border border-cyan-200 dark:border-cyan-800 shadow-sm p-4 overflow-hidden">
               <ChartSvg3 />
               <div className="relative flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-white/50 dark:bg-white/10 flex items-center justify-center">
@@ -492,7 +492,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* ── Cloudinary Storage ───────────────────────────────── */}
-            <div className="relative bg-gradient-to-br from-sky-50 to-sky-100 dark:from-sky-900/30 dark:to-sky-800/20 rounded-xl border border-sky-200 dark:border-sky-800 shadow-sm p-4 overflow-hidden">
+            <div className="relative bg-linear-to-br from-sky-50 to-sky-100 dark:from-sky-900/30 dark:to-sky-800/20 rounded-xl border border-sky-200 dark:border-sky-800 shadow-sm p-4 overflow-hidden">
               <ChartSvg5 />
               <div className="relative flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-white/50 dark:bg-white/10 flex items-center justify-center">
@@ -518,7 +518,7 @@ export default function AdminDashboard() {
 
           {/* ── MongoDB Storage (Separate Row) ────────────────────── */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="relative bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/30 dark:to-teal-800/20 rounded-xl border border-teal-200 dark:border-teal-800 shadow-sm p-4 overflow-hidden">
+            <div className="relative bg-linear-to-br from-teal-50 to-teal-100 dark:from-teal-900/30 dark:to-teal-800/20 rounded-xl border border-teal-200 dark:border-teal-800 shadow-sm p-4 overflow-hidden">
               <ChartSvg1 />
               <div className="relative flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-white/50 dark:bg-white/10 flex items-center justify-center">
@@ -535,7 +535,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="relative bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/30 dark:to-teal-800/20 rounded-xl border border-teal-200 dark:border-teal-800 shadow-sm p-4 overflow-hidden">
+            <div className="relative bg-linear-to-br from-teal-50 to-teal-100 dark:from-teal-900/30 dark:to-teal-800/20 rounded-xl border border-teal-200 dark:border-teal-800 shadow-sm p-4 overflow-hidden">
               <ChartSvg2 />
               <div className="relative flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-white/50 dark:bg-white/10 flex items-center justify-center">
@@ -552,7 +552,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="relative bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/30 dark:to-teal-800/20 rounded-xl border border-teal-200 dark:border-teal-800 shadow-sm p-4 overflow-hidden">
+            <div className="relative bg-linear-to-br from-teal-50 to-teal-100 dark:from-teal-900/30 dark:to-teal-800/20 rounded-xl border border-teal-200 dark:border-teal-800 shadow-sm p-4 overflow-hidden">
               <ChartSvg3 />
               <div className="relative flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-white/50 dark:bg-white/10 flex items-center justify-center">
@@ -569,7 +569,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="relative bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/30 dark:to-teal-800/20 rounded-xl border border-teal-200 dark:border-teal-800 shadow-sm p-4 overflow-hidden">
+            <div className="relative bg-linear-to-br from-teal-50 to-teal-100 dark:from-teal-900/30 dark:to-teal-800/20 rounded-xl border border-teal-200 dark:border-teal-800 shadow-sm p-4 overflow-hidden">
               <ChartSvg4 />
               <div className="relative flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-white/50 dark:bg-white/10 flex items-center justify-center">
@@ -656,7 +656,7 @@ export default function AdminDashboard() {
                 </span>
               </div>
 
-              <div className="divide-y divide-gray-200 dark:divide-gray-700 max-h-[400px] overflow-y-auto">
+              <div className="divide-y divide-gray-200 dark:divide-gray-700 max-h-100 overflow-y-auto">
                 {stats.recentActivity && stats.recentActivity.length > 0 ? (
                   stats.recentActivity.map((activity, index) => (
                     <div

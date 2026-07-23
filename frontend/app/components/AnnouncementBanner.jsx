@@ -31,7 +31,7 @@ export default function AnnouncementBanner() {
   if (loading || !isVisible || announcements.length === 0) return null;
 
   return (
-    <div className="bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800">
+    <div className="bg-background border-b border-border-light">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
         {announcements.map((announcement, index) => (
           <div
@@ -39,7 +39,7 @@ export default function AnnouncementBanner() {
             className="flex items-center justify-between gap-4"
           >
             <div className="flex items-center gap-3 flex-1">
-              <Megaphone className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+              <Megaphone className="w-5 h-5 text-foreground shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 dark:text-white">
                   {announcement.title}
@@ -51,7 +51,7 @@ export default function AnnouncementBanner() {
             </div>
             <button
               onClick={() => setIsVisible(false)}
-              className="p-1 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors flex-shrink-0"
+              className="p-1 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors shrink-0"
             >
               <X className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             </button>

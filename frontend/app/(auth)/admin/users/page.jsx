@@ -1105,6 +1105,7 @@ export default function UsersPage() {
   const handleDeleteUser = (userId) => {
     const user = users.find((u) => u._id === userId);
     if (!user) return;
+
     setConfirmModal({
       isOpen: true,
       title: "Delete User?",
@@ -1114,20 +1115,28 @@ export default function UsersPage() {
       onConfirm: async () => {
         setConfirmModal((prev) => ({ ...prev, isLoading: true }));
         const loadingToast = showLoadingToast("Deleting user...");
+
         try {
           const response = await axios.delete(
             `http://localhost:8000/api/admin/users/${userId}`,
             { withCredentials: true },
           );
+
+          // Dismiss loading toast
           dismissToast(loadingToast);
+
           if (response.data.success) {
-            setUsers(users.filter((u) => u._id !== userId));
-            setSelectedUsers(selectedUsers.filter((id) => id !== userId));
+            // IMPORTANT: Use functional update to avoid stale state
+            setUsers((prevUsers) => prevUsers.filter((u) => u._id !== userId));
+            setSelectedUsers((prevSelected) =>
+              prevSelected.filter((id) => id !== userId),
+            );
             showSuccessToast("User deleted successfully!");
           } else {
             showErrorToast(response.data.message || "Failed to delete user");
           }
         } catch (err) {
+          // Dismiss loading toast
           dismissToast(loadingToast);
           showErrorToast(
             err.response?.data?.message || "Failed to delete user",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -15,11 +15,14 @@ import {
   Home,
   Sparkles,
   Settings,
+  Sun,
+  Moon,
   Users,
 } from "lucide-react";
 import axios from "axios";
 import { showSuccessToast, showErrorToast } from "@/lib/toastConfig";
 import { useAuth } from "../context/AuthContext";
+import "@/css/globals.css";
 
 // ── SVG Decorative Image ─────────────────────────────────────────
 const DecorativeSvg = () => (
@@ -73,6 +76,40 @@ export default function Sidebar({ isOpen, setIsOpen }) {
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
+  const [isDark, setIsDark] = useState(false);
+
+  // ── Check initial theme preference ────────────────────────────
+  useEffect(() => {
+    // Check if dark mode was previously enabled
+    const savedTheme = localStorage.getItem("theme");
+    const prefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)",
+    ).matches;
+
+    const isDarkMode = savedTheme === "dark" || (!savedTheme && prefersDark);
+    setIsDark(isDarkMode);
+
+    if (isDarkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, []);
+
+  // ── Apply theme when it changes ────────────────────────────────
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  }, [isDark]);
+
+  const toggleTheme = () => {
+    setIsDark(!isDark);
+  };
 
   const menuItems = [
     {
@@ -162,11 +199,38 @@ export default function Sidebar({ isOpen, setIsOpen }) {
             <BookOpen className="w-5 h-5 text-white" />
           </div>
           <span className="text-xl font-bold text-gray-900 dark:text-white">
-            PaperVault
+            Pasty Paperyyy
           </span>
-          <span className="text-xs bg-[#4FC3FC]/10 text-[#4FC3FC] px-2 py-0.5 rounded-full ml-auto border border-[#4FC3FC]/20">
-            Admin
-          </span>
+        </div>
+
+        {/* ── Theme Toggle Button (New Location) ── */}
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <button
+            onClick={toggleTheme}
+            className="flex items-center justify-between w-full px-4 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 group"
+          >
+            <div className="flex items-center gap-3">
+              {isDark ? (
+                <Sun className="w-5 h-5 text-yellow-500 group-hover:rotate-90 transition-transform duration-300" />
+              ) : (
+                <Moon className="w-5 h-5 text-blue-600 dark:text-blue-400 group-hover:rotate-12 transition-transform duration-300" />
+              )}
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {isDark ? "Light Mode" : "Dark Mode"}
+              </span>
+            </div>
+            <div
+              className={`w-10 h-6 rounded-full transition-colors duration-300 ${
+                isDark ? "bg-[#4FC3FC]" : "bg-gray-300 dark:bg-gray-600"
+              }`}
+            >
+              <div
+                className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform duration-300 mt-0.5 ${
+                  isDark ? "translate-x-4" : "translate-x-0.5"
+                }`}
+              />
+            </div>
+          </button>
         </div>
 
         {/* ── Navigation ── */}
