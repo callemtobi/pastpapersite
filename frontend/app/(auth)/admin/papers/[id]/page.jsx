@@ -721,7 +721,7 @@ export default function PaperViewerPage() {
                                 <div className="relative w-full">
                                   <Image
                                     // src={`http://localhost:8000/uploads/${image.filename}`}
-                                    src={`${paper.images[0].url}`}
+                                    src={`${image.url}`}
                                     alt={`Page ${index + 1}`}
                                     width={800}
                                     height={1000}

@@ -12,6 +12,12 @@ import {
   getDepartments,
   getCourses,
   getInstructors,
+  searchCourses,
+  searchDepartments,
+  searchInstructors,
+  getInitialData,
+  getCoursesByDepartment,
+  getInstructorsByDepartment,
 } from "../controllers/paperController.js";
 import { authenticate } from "../middleware/auth.js";
 import {
@@ -23,22 +29,6 @@ import { getActiveAnnouncements } from "../controllers/announcementController.js
 
 const router = express.Router();
 
-// const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// Configure multer for file uploads
-// const storage = multer.diskStorage({
-//   destination: (req, file, cb) => {
-//     const uploadDir = path.join(__dirname, "../uploads");
-//     cb(null, uploadDir);
-//   },
-//   filename: (req, file, cb) => {
-//     // Create unique filename: timestamp_random_originalname
-//     const timestamp = Date.now();
-//     const random = Math.random().toString(36).substring(7);
-//     const ext = path.extname(file.originalname);
-//     const name = path.basename(file.originalname, ext);
-//     cb(null, `${timestamp}_${random}_${name}${ext}`);
-//   },
-// });
 // File filter to allow only images
 const fileFilter = (req, file, cb) => {
   const allowedMimes = ["image/png", "image/jpeg", "image/jpg"];
@@ -48,38 +38,44 @@ const fileFilter = (req, file, cb) => {
     cb(new Error(`Invalid file type: ${file.mimetype}`), false);
   }
 };
-// const upload = multer({
-//   storage,
-//   fileFilter,
-//   limits: {
-//     fileSize: 2 * 1024 * 1024, // 1 MB
-//     files: 5,
-//   },
-// });
+
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 2 * 1024 * 1024, // 1 MB
+    fileSize: 2 * 1024 * 1024, // 2 MB
     files: 5,
   },
 });
+
+// ==================== IMPORTANT: SPECIFIC ROUTES FIRST ====================
+// These must come BEFORE any /:id routes
+
+// ── Search routes (specific paths) ──────────────────────────────
+router.get("/courses/search", searchCourses);
+router.get("/departments/search", searchDepartments);
+router.get("/instructors/search", searchInstructors);
+router.get("/initial-data", getInitialData);
+router.get("/departments/:departmentId/courses", getCoursesByDepartment);
 
 // ── Dropdown data routes (public) ──────────────────────────────
 router.get("/departments", getDepartments);
 router.get("/courses", getCourses);
 router.get("/instructors", getInstructors);
 
-// ── Public routes ────────────────────────────────────────────────
-router.get("/", getPapers);
+// ── Announcements ──────────────────────────────────────────────
+router.get("/announcements/active", getActiveAnnouncements);
+
+// ── Paper routes with params (MUST come after specific routes) ──
+// These are the generic routes that should come LAST
+router.get("/", getPapers); // This is fine - exact match
 router.get("/:id", getPaperById);
 router.get("/:id/download", downloadPaper);
 router.get("/:id/preview", previewPaper);
 router.put("/:id/increment-download", incrementDownload);
 
+// ── Upload route ──────────────────────────────────────────────
 router.post("/upload", authenticate, upload.array("images", 5), uploadPaper);
-
-router.get("/announcements/active", getActiveAnnouncements);
 
 export default router;

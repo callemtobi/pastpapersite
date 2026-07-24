@@ -1,9 +1,8 @@
-// components/Header.jsx
 "use client";
 
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { motion } from "motion/react";
 import "@/css/globals.css";
@@ -33,6 +32,7 @@ import { useAuth } from "@/app/context/AuthContext";
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
+  const dropdownRef = useRef(null);
   const { user, loading, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
@@ -47,6 +47,20 @@ export default function Header() {
       document.documentElement.classList.remove("dark");
     }
   }, [isDark]);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowUserDropdown(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const handleLogout = async () => {
     setShowUserDropdown(false);
@@ -167,7 +181,7 @@ export default function Header() {
 
             {/* ── User Section ────────────────────────────────────── */}
             {user ? (
-              <div className="relative">
+              <div ref={dropdownRef} className="relative">
                 <button
                   onClick={() => setShowUserDropdown(!showUserDropdown)}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-black/5 transition-colors"
@@ -207,7 +221,7 @@ export default function Header() {
                       <Link
                         href="/admin"
                         onClick={() => setShowUserDropdown(false)}
-                        className="flex items-center gap-3 px-4 py-2 w-full text-sm text-background bg-foreground transition-colors"
+                        className="flex items-center gap-3 px-4 py-2 w-full text-sm bg-background text-foreground transition-colors"
                       >
                         <User className="w-4 h-4" />
                         Admin Dashboard

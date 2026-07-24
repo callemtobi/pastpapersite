@@ -21,96 +21,143 @@ const VALIDATION_RULES = {
   ALLOWED_TYPES: ["image/png", "image/jpeg", "image/jpg"],
 };
 
-// const EXAM_KEYWORDS = [
-//   "question",
-//   "marks",
-//   "total marks",
-//   "time allowed",
-//   "semester",
-//   "midterm",
-//   "peshawar",
-//   "final term",
-//   "university",
-//   "course",
-//   "date",
-//   "department",
-//   "iqra",
-//   "national",
-//   "university",
-//   "iqra national university",
-// ];
-
+/**
+ * Each pattern can optionally belong to a `group`.
+ * Patterns WITHOUT a group are treated as independent signals — they all
+ * count toward the achievable max, because a real paper could plausibly
+ * contain all of them at once (e.g. "iqra national university" + "peshawar").
+ *
+ * Patterns WITH a group are mutually exclusive alternatives for the same
+ * piece of information (e.g. two different header table styles, or three
+ * different exam-type labels). Only ONE of them will ever be true for a
+ * given paper, so only the single best-weighted pattern in that group is
+ * counted toward the achievable max — not the sum of all of them.
+ *
+ * This is the actual root cause of the "clear image still scores low"
+ * problem: the old code summed the weights of every pattern (including
+ * mutually exclusive alternatives) into maxScore, making 100% mathematically
+ * unreachable for any real paper (max achievable was ~460/575 ≈ 80%),
+ * which meant the 50-point pass threshold was effectively much stricter
+ * than it looked.
+ */
 const patterns = [
   // ── Institution name (high weight — strongest single signal) ──
   // [qg] handles the q→g OCR misread you already hit
-  { regex: /i[qg]ra\s+national\s+university/i, weight: 50 },
-  { regex: /i[qg]ra\s+national\s+university\s*,?\s*peshawar/i, weight: 75 },
-  { regex: /national\s+university/i, weight: 15 }, // fallback if "iqra" is badly mangled
-  { regex: /peshawar/i, weight: 10 },
+  { regex: /i[qg]ra\s+national\s+university/i, weight: 50, strongSignal: true },
+  {
+    regex: /i[qg]ra\s+national\s+university\s*,?\s*peshawar/i,
+    weight: 75,
+    strongSignal: true,
+  },
+  { regex: /national\s+university/i, weight: 20 }, // fallback if "iqra" is badly mangled
+  { regex: /peshawar/i, weight: 20 },
 
   // ── Header table fields (Image 1 style: Course Name / Max Marks / Max Time / Date / Instructor) ──
-  { regex: /course\s*name/i, weight: 20 },
-  { regex: /max\s*marks/i, weight: 20 },
-  { regex: /max\s*time/i, weight: 15 },
-  { regex: /instructor/i, weight: 10 },
+  { regex: /course\s*name/i, weight: 20, group: "header_style" },
+  { regex: /max\s*marks/i, weight: 20, group: "header_style" },
+  { regex: /max\s*time/i, weight: 15, group: "header_style" },
+  { regex: /instructor/i, weight: 10, group: "header_style" },
 
   // ── Header block (Image 2 style: Faculty / Department / Marks: N) ──
-  { regex: /faculty\s*[:.]?/i, weight: 15 },
-  { regex: /department\s+of\s+\w+/i, weight: 20 },
-  { regex: /marks\s*[:.]?\s*\d+/i, weight: 15 },
+  { regex: /faculty\s*[:.]?/i, weight: 15, group: "header_style" },
+  { regex: /department\s+of\s+\w+/i, weight: 20, group: "header_style" },
+  { regex: /marks\s*[:.]?\s*\d+/i, weight: 15, group: "header_style" },
 
   // ── Exam type / term (covers both "Mid-Term Examination Fall-2024" and "Mid Semester Spring-26") ──
-  { regex: /mid[\s-]*term\s*examination/i, weight: 25 },
-  { regex: /mid[\s-]*semester/i, weight: 25 },
-  { regex: /final[\s-]*term/i, weight: 25 },
+  { regex: /mid[\s-]*term\s*examination/i, weight: 25, group: "exam_type" },
+  { regex: /mid[\s-]*semester/i, weight: 25, group: "exam_type" },
+  { regex: /final[\s-]*term/i, weight: 25, group: "exam_type" },
   { regex: /(fall|spring|summer)[\s-]*\d{2,4}/i, weight: 15 }, // term/year label, e.g. "Fall-2024", "Spring-26"
 
   // ── Instructions ──
-  { regex: /attempt\s+all\s+questions/i, weight: 20 },
-  { regex: /answer\s+all\s+questions/i, weight: 20 },
-  { regex: /answer\s+the\s+following\s+questions/i, weight: 15 },
+  { regex: /attempt\s+all\s+questions/i, weight: 20, group: "instructions" },
+  { regex: /answer\s+all\s+questions/i, weight: 20, group: "instructions" },
+  {
+    regex: /answer\s+the\s+following\s+questions/i,
+    weight: 15,
+    group: "instructions",
+  },
   { regex: /read\s+the\s+questions\s+carefully/i, weight: 15 },
   { regex: /all\s+questions\s+are\s+compulsory/i, weight: 15 },
 
   // ── Question numbering styles seen in both papers ──
-  { regex: /q\s*#?\s*\d+/i, weight: 15 }, // "Q#1", "Q#2"
-  { regex: /question\s*\d+/i, weight: 15 },
+  { regex: /q\s*#?\s*\d+/i, weight: 15, group: "question_numbering" }, // "Q#1", "Q#2"
+  { regex: /question\s*\d+/i, weight: 15, group: "question_numbering" },
   { regex: /fill\s+in\s+the\s+blanks/i, weight: 20 },
   { regex: /select\s+the\s+best\s+suited\s+response/i, weight: 15 },
 
   // ── Generic academic terms (lower weight, supporting signal only) ──
   { regex: /department.*i[qg]ra/i, weight: 20 },
   { regex: /(roll\s*no\.?|reg\.?\s*no\.?)\s*[:.]?\s*\w+/i, weight: 10 },
-  { regex: /duration\s*[:.]?\s*\d/i, weight: 10 },
-  { regex: /time\s+allowed/i, weight: 15 },
+  { regex: /duration\s*[:.]?\s*\d/i, weight: 10, group: "time_limit" },
+  { regex: /time\s+allowed/i, weight: 15, group: "time_limit" },
   { regex: /total\s+marks/i, weight: 15 },
 ];
 
+// Sum of weights, but for grouped patterns only the single highest-weight
+// pattern per group counts — that's the realistically achievable ceiling
+// for one paper, instead of the sum of every mutually exclusive alternative.
+const ACHIEVABLE_MAX_SCORE = (() => {
+  const ungrouped = patterns.filter((p) => !p.group);
+  const grouped = patterns.filter((p) => p.group);
+
+  const ungroupedTotal = ungrouped.reduce((sum, p) => sum + p.weight, 0);
+
+  const bestPerGroup = {};
+  grouped.forEach((p) => {
+    bestPerGroup[p.group] = Math.max(bestPerGroup[p.group] || 0, p.weight);
+  });
+  const groupedTotal = Object.values(bestPerGroup).reduce(
+    (sum, w) => sum + w,
+    0,
+  );
+
+  return ungroupedTotal + groupedTotal;
+})();
+
+// If the "Iqra National University" letterhead is confidently detected,
+// that alone is strong proof this is a genuine paper from the institution —
+// grade it high (floor of 90) even if other, more generic patterns (header
+// table fields, instructions, question numbering, etc.) didn't happen to
+// match well, e.g. due to a tight crop or a partially obscured page.
+const computeNormalizedScore = (
+  rawScore,
+  maxScore,
+  hasStrongInstitutionMatch,
+) => {
+  const base = Math.min(100, Math.round((rawScore / maxScore) * 100));
+  return hasStrongInstitutionMatch ? Math.max(base, 90) : base;
+};
+
 const preprocessImage = async (inputBuffer) => {
   const metadata = await sharp(inputBuffer).metadata();
-  const pipeline = sharp(inputBuffer).grayscale().normalize().sharpen();
+  const pipeline = sharp(inputBuffer)
+    .grayscale()
+    .normalize() // stretch contrast across the full range
+    .sharpen({ sigma: 1 }); // gentler sharpen — aggressive default sharpening
+  // can introduce ringing artifacts around text edges that hurt OCR on
+  // already-crisp phone photos.
 
   if (metadata.width < 1200) {
     pipeline.resize({ width: 2000 }); // only upscale genuinely small images
   }
 
   return pipeline.toBuffer();
-
-  // const outputPath = inputPath.replace(/(\.\w+)$/, "-processed$1");
-  // await sharp(inputPath)
-  //   .resize({ width: 2000, withoutEnlargement: false }) // upscale small phone photos
-  //   .grayscale()
-  //   .normalize() // stretch contrast
-  //   .sharpen()
-  //   .toBuffer();
-  //   // .toFile(outputPath); // processed file is stored in buffer rather than on disk
-  // return outputPath;
 };
 
+// Cleans up the OCR output before pattern matching. Previously this only
+// fixed `|` → `i` and collapsed whitespace, so common Tesseract artifacts
+// (curly quotes, en/em dashes, non-breaking spaces, stray control chars)
+// were silently breaking pattern matches like "mid-term" or "fall-2024".
 const normalizeOcrText = (text) =>
   text
     .toLowerCase()
     .replace(/[|]/g, "i") // common OCR misread
+    .replace(/[\u2010-\u2015\u2212]/g, "-") // all dash variants → plain hyphen
+    .replace(/[\u2018\u2019]/g, "'") // curly single quotes
+    .replace(/[\u201c\u201d]/g, '"') // curly double quotes
+    .replace(/[\u00a0\u2000-\u200b]/g, " ") // non-breaking / exotic spaces
+    .replace(/[^\x20-\x7e\n]/g, "") // strip remaining non-printable junk
     .replace(/\s+/g, " ") // collapse whitespace/newlines
     .trim();
 
@@ -162,7 +209,7 @@ const extractAndScoreText = async (fileBuffer, worker, label) => {
     const confidence = result.data.confidence;
     console.log(`---------> OCR confidence: ${confidence}`);
 
-    const extractedText = normalizeOcrText(result.data.text.toLowerCase());
+    const extractedText = normalizeOcrText(result.data.text);
     console.log(
       `OCR extraction complete. Text length: ${extractedText.length}`,
     );
@@ -178,14 +225,23 @@ const extractAndScoreText = async (fileBuffer, worker, label) => {
           pattern: pattern.regex.source,
           matches: matches.length,
           weight: pattern.weight,
+          group: pattern.group || null,
+          strongSignal: pattern.strongSignal || false,
         });
       }
     });
 
-    const maxScore = patterns.reduce((sum, p) => sum + p.weight, 0);
-    const normalizedScore = Math.round((totalScore / maxScore) * 100);
+    const maxScore = ACHIEVABLE_MAX_SCORE;
+    const hasStrongInstitutionMatch = matchedPatterns.some(
+      (p) => p.strongSignal,
+    );
+    const normalizedScore = computeNormalizedScore(
+      totalScore,
+      maxScore,
+      hasStrongInstitutionMatch,
+    );
     console.log(
-      `---------> Total pattern score: ${totalScore} / ${maxScore}, Normalized: ${normalizedScore}`,
+      `---------> Total pattern score: ${totalScore} / ${maxScore}, Normalized: ${normalizedScore}${hasStrongInstitutionMatch ? " (boosted — university letterhead detected)" : ""}`,
     );
 
     if (normalizedScore < 50) {
@@ -200,6 +256,7 @@ const extractAndScoreText = async (fileBuffer, worker, label) => {
       confidence,
       maxScore,
       matchedPatterns,
+      hasStrongInstitutionMatch,
     };
   } catch (error) {
     console.error(`OCR extraction failed for ${label}:`, error);
@@ -217,16 +274,18 @@ const extractAndScoreText = async (fileBuffer, worker, label) => {
   // no finally/cleanup needed — nothing was written to disk
 };
 
-//  * - OCR Confidence < 20 → Rejected
-//  * - OCR Confidence < 50 → Pending Review
-//  * - OCR Confidence > 50 → Approved
 const determineApprovalStatus = (
   confidence,
   rawScore,
   extractedText,
   maxScore,
-  matchedPatterns,
+  matchedPatterns = [],
+  { skipScoreThreshold = false } = {},
 ) => {
+  // This readability gate ALWAYS applies — even to a page that's inheriting
+  // approval from an earlier page in the same upload, or one that matched
+  // the university letterhead — so genuinely blank/corrupt images still
+  // get caught.
   if (
     confidence < 20 ||
     !extractedText ||
@@ -242,9 +301,43 @@ const determineApprovalStatus = (
     };
   }
 
-  const normalizedScore = Math.round((rawScore / maxScore) * 100);
+  const hasStrongInstitutionMatch = matchedPatterns.some((p) => p.strongSignal);
+  const normalizedScore = computeNormalizedScore(
+    rawScore,
+    maxScore,
+    hasStrongInstitutionMatch,
+  );
 
-  if (normalizedScore < 50) {
+  if (hasStrongInstitutionMatch) {
+    return {
+      status: "approved",
+      reason: `Iqra National University letterhead detected — graded high (${normalizedScore}/100)`,
+      confidence,
+      rawScore,
+    };
+  }
+
+  // Later pages of a multi-page paper (question pages, answer sheets, etc.)
+  // usually won't repeat the university name or instructor field that the
+  // first page had — that's expected, not a sign of a bad scan. Once the
+  // paper has already been verified via an earlier page, don't re-apply the
+  // full pattern-score threshold to the rest; just confirm each page is
+  // actually readable (handled by the gate above) and let it through.
+  if (skipScoreThreshold) {
+    return {
+      status: "approved",
+      reason:
+        "Subsequent page of an already-verified paper — inherited approval",
+      confidence,
+      rawScore,
+    };
+  }
+
+  // Threshold eased from 50 → 40. With the achievable-max fix above, scores
+  // are no longer artificially deflated by unreachable mutually-exclusive
+  // patterns, so 40 is a fairer bar for genuine exam papers while still
+  // filtering out blank/irrelevant images.
+  if (normalizedScore < 40) {
     return {
       status: "pending",
       reason: `Score ${normalizedScore}/100 below auto-approval threshold — sent for admin review`,
@@ -260,27 +353,6 @@ const determineApprovalStatus = (
     rawScore,
   };
 };
-
-// const detectExamKeywords = (filename) => {
-//   const lowerFilename = filename.toLowerCase();
-//   let score = 0;
-//   const detectedKeywords = [];
-
-//   EXAM_KEYWORDS.forEach((keyword) => {
-//     if (lowerFilename.includes(keyword)) {
-//       score += 1;
-//       detectedKeywords.push(keyword);
-//     }
-//   });
-
-//   // Normalize score to 0-1 range
-//   const normalizedScore = Math.min(score / EXAM_KEYWORDS.length, 1);
-
-//   return {
-//     score: normalizedScore,
-//     keywords: detectedKeywords,
-//   };
-// };
 
 export const uploadPaper = async (req, res) => {
   try {
@@ -355,9 +427,15 @@ export const uploadPaper = async (req, res) => {
     const worker = await createWorker("eng", 1, { langPath: "./" });
     await worker.setParameters({ tessedit_pageseg_mode: "6" });
 
+    // Once any page of this upload has been fully verified (via a genuine
+    // pattern-score pass or a strong institution match), the rest of the
+    // pages inherit that approval instead of being judged on their own
+    // pattern score — a question page or answer sheet won't repeat the
+    // university name / instructor field the first page had.
+    let paperVerified = false;
+
     try {
       for (const file of req.files) {
-        // const ocrResult = await extractAndScoreText(file.path, worker);
         const ocrResult = await extractAndScoreText(
           file.buffer,
           worker,
@@ -374,8 +452,13 @@ export const uploadPaper = async (req, res) => {
           ocrResult.rawScore,
           ocrResult.extractedText,
           ocrResult.maxScore,
-          // ocrResult.matchedPatterns,
+          ocrResult.matchedPatterns,
+          { skipScoreThreshold: paperVerified },
         );
+
+        if (approvalStatus.status === "approved") {
+          paperVerified = true;
+        }
 
         if (approvalStatus.status === "rejected") {
           // Don't bother uploading a rejected image to Cloudinary at all
@@ -408,15 +491,6 @@ export const uploadPaper = async (req, res) => {
           matchedPatterns: ocrResult.matchedPatterns,
           uploadedAt: new Date(),
         });
-        // } catch (error) {
-        //   console.error(`Error processing file ${file.originalname}:`, error);
-        //   try {
-        //     await fs.unlink(file.path);
-        //   } catch (unlinkError) {
-        //     console.error(`Failed to delete file ${file.path}:`, unlinkError);
-        //   }
-        //   throw error;
-        // }
       }
     } finally {
       await worker.terminate();
@@ -454,62 +528,6 @@ export const uploadPaper = async (req, res) => {
       uploadedBy: req.user?.id || null,
       createdAt: new Date(),
     });
-
-    // // ── Check for rejected images ──────────────────────────────
-    // const rejectedImages = imageData.filter(
-    //   (img) => img.verificationStatus === "rejected",
-    // );
-
-    // if (rejectedImages.length > 0) {
-    //   for (const img of imageData) {
-    //     try {
-    //       const filePath = path.join(
-    //         process.cwd(),
-    //         img.path.replace(/^\/uploads\//, "uploads/"),
-    //       );
-    //       await fs.unlink(filePath);
-    //     } catch (unlinkError) {
-    //       console.error(`Failed to delete file ${img.path}:`, unlinkError);
-    //     }
-    //   }
-
-    //   const rejectionReasons = rejectedImages
-    //     .map((img) => `${img.originalName}: ${img.verificationReason}`)
-    //     .join("; ");
-
-    //   console.warn(
-    //     `Upload rejected due to low OCR confidence: ${rejectionReasons}`,
-    //   );
-
-    //   return res.status(400).json({
-    //     success: false,
-    //     message:
-    //       "Your upload was rejected because one or more images were not clear enough for accurate text recognition. Please upload clearer, high-quality images and try again.",
-    //     rejectedImages: rejectedImages.map((img) => ({
-    //       originalName: img.originalName,
-    //       reason: img.verificationReason,
-    //     })),
-    //   });
-    // }
-
-    // ── Create paper record ─────────────────────────────────────
-    // Changed: removed instructor.title/name, using ObjectId reference
-    // const paperData = {
-    //   course, // Now storing ObjectId reference
-    //   department, // Now storing ObjectId reference
-    //   instructor, // Now storing ObjectId reference
-    //   year,
-    //   semester,
-    //   examType,
-    //   description: description || "",
-    //   pages: imageData.length,
-    //   images: imageData,
-    //   status: hasPendingReview ? "pending" : "approved",
-    //   uploadedBy: req.user?.id || null,
-    //   createdAt: new Date(),
-    // };
-
-    // const paper = await Paper.create(paperData);
 
     return res.status(201).json({
       success: true,
@@ -793,6 +811,260 @@ export const getInstructors = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch instructors",
+    });
+  }
+};
+
+export const getInitialData = async (req, res) => {
+  try {
+    console.log("Fetching initial data...");
+
+    // Fetch all active courses with department populated
+    const courses = await Course.find({ isActive: true })
+      .populate("department", "name") // Populate department name
+      .select("_id name department isActive")
+      .limit(100)
+      .sort({ name: 1 })
+      .lean();
+
+    // Fetch all active departments
+    const departments = await Department.find({ isActive: true })
+      .select("_id name isActive")
+      .limit(100)
+      .sort({ name: 1 })
+      .lean();
+
+    // Fetch all active instructors (no department field)
+    const instructors = await Instructor.find({ isActive: true })
+      .select("_id title name isActive")
+      .limit(100)
+      .sort({ name: 1 })
+      .lean();
+
+    console.log(
+      `Found: ${courses.length} courses, ${departments.length} departments, ${instructors.length} instructors`,
+    );
+
+    return res.status(200).json({
+      success: true,
+      courses,
+      departments,
+      instructors,
+    });
+  } catch (error) {
+    console.error("Get initial data error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch initial data",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};
+
+// ==================== SEARCH COURSES ====================
+export const searchCourses = async (req, res) => {
+  try {
+    const { q } = req.query;
+
+    if (!q || q.trim().length === 0) {
+      return res.status(200).json({
+        success: true,
+        courses: [],
+      });
+    }
+
+    const searchTerm = q.trim();
+    const courses = await Course.find({
+      name: { $regex: searchTerm, $options: "i" },
+      isActive: true,
+    })
+      .populate("department", "name")
+      .select("_id name department isActive")
+      .limit(20)
+      .sort({ name: 1 })
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      courses,
+    });
+  } catch (error) {
+    console.error("Course search error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to search courses",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};
+
+// ==================== SEARCH DEPARTMENTS ====================
+export const searchDepartments = async (req, res) => {
+  try {
+    const { q } = req.query;
+
+    if (!q || q.trim().length === 0) {
+      return res.status(200).json({
+        success: true,
+        departments: [],
+      });
+    }
+
+    const searchTerm = q.trim();
+    const departments = await Department.find({
+      name: { $regex: searchTerm, $options: "i" },
+      isActive: true,
+    })
+      .select("_id name isActive")
+      .limit(20)
+      .sort({ name: 1 })
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      departments,
+    });
+  } catch (error) {
+    console.error("Department search error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to search departments",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};
+
+// ==================== SEARCH INSTRUCTORS ====================
+export const searchInstructors = async (req, res) => {
+  try {
+    const { q } = req.query;
+
+    if (!q || q.trim().length === 0) {
+      return res.status(200).json({
+        success: true,
+        instructors: [],
+      });
+    }
+
+    const searchTerm = q.trim();
+
+    // Search by name or title
+    const instructors = await Instructor.find({
+      $or: [
+        { name: { $regex: searchTerm, $options: "i" } },
+        { title: { $regex: searchTerm, $options: "i" } },
+      ],
+      isActive: true,
+    })
+      .select("_id title name isActive")
+      .limit(20)
+      .sort({ name: 1 })
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      instructors,
+    });
+  } catch (error) {
+    console.error("Instructor search error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to search instructors",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};
+
+// ==================== GET COURSES BY DEPARTMENT ====================
+export const getCoursesByDepartment = async (req, res) => {
+  try {
+    const { departmentId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(departmentId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid department ID",
+      });
+    }
+
+    const courses = await Course.find({
+      department: departmentId,
+      isActive: true,
+    })
+      .populate("department", "name")
+      .select("_id name department isActive")
+      .sort({ name: 1 })
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      courses,
+    });
+  } catch (error) {
+    console.error("Get courses by department error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch courses",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};
+
+// ==================== GET INSTRUCTORS (No department filter) ====================
+export const getInstructorsByDepartment = async (req, res) => {
+  try {
+    // Since instructors don't have a department field, just return all active instructors
+    const instructors = await Instructor.find({ isActive: true })
+      .select("_id title name isActive")
+      .sort({ name: 1 })
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      instructors,
+    });
+  } catch (error) {
+    console.error("Get instructors error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch instructors",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};
+
+// ==================== GET INSTRUCTORS WITH NAME SEARCH ====================
+export const searchInstructorsByName = async (req, res) => {
+  try {
+    const { q } = req.query;
+
+    if (!q || q.trim().length === 0) {
+      return res.status(200).json({
+        success: true,
+        instructors: [],
+      });
+    }
+
+    const searchTerm = q.trim();
+    const instructors = await Instructor.find({
+      name: { $regex: searchTerm, $options: "i" },
+      isActive: true,
+    })
+      .select("_id title name isActive")
+      .limit(20)
+      .sort({ name: 1 })
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      instructors,
+    });
+  } catch (error) {
+    console.error("Search instructors by name error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to search instructors",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };

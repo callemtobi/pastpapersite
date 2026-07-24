@@ -131,7 +131,7 @@ export const login = async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(401).json({
+      return res.status(404).json({
         success: false,
         message: "No account found with this email.",
         // attemptsRemaining: req.rateLimit.remaining,
@@ -216,12 +216,10 @@ export const register = async (req, res) => {
     }
 
     if (studentId.length !== 5) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Student ID must be 5 characters long.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Student ID must be 5 characters long.",
+      });
     }
 
     if (password !== confirmPassword) {

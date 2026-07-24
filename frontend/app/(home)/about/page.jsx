@@ -339,10 +339,8 @@ export default function AboutPage() {
             the start of their academic journey.
           </p>
           <p>
-            Currently, we offer a comprehensive archive of past papers, study
-            resources, and exam preparation tools. We value our students above
-            everything else, meaning that we won&apos;t take &apos;OK&apos; as
-            an answer.
+            Currently, we offer a comprehensive archive of past papers, but plan
+            on expanding to provide study resources, and exam preparation tools.
           </p>
         </motion.div>
       </motion.div>
@@ -498,13 +496,18 @@ export default function AboutPage() {
               this project was to help students get their hands on previous past
               papers to get a hint of the pattern of the paper. In addition to
               that, I wanted to test myself of building actual websites that
-              tackle a problem domain.
+              tackles an actual problem domain.{" "}
+              <b>
+                &quot;We are forged by those who adore us and those who defy us
+                — equally grateful for each.&quot;
+              </b>
+              .
             </p>
 
             {/* Tags */}
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-3">
               <span className="text-xs bg-[#4FC3FC]/10 text-[#4FC3FC] px-3 py-1 rounded-full">
-                💻 Full-Stack Developer
+                💻 MERN Stack Developer
               </span>
               <span className="text-xs bg-[#4FC3FC]/10 text-[#4FC3FC] px-3 py-1 rounded-full">
                 🎓 Student

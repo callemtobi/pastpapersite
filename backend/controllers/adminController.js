@@ -8,6 +8,10 @@ import fs from "fs/promises";
 import path from "path";
 import argon2 from "argon2";
 import { sendPaperStatusEmail } from "../services/emailService.js";
+import {
+  uploadBufferToCloudinary,
+  deleteFromCloudinary,
+} from "../services/cloudinary.js";
 
 // ── Admin User Management Functions ─────────────────────────────
 
