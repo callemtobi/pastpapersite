@@ -86,6 +86,8 @@ export default function Login() {
         showErrorToast(`You have ${attemptsRemaining} attempts remaining.`);
       } else if (status === 404) {
         setEmailError("No account found with this email.");
+      } else if (status === 403) {
+        setEmailError("Please verify your email before logging in.");
       } else if (status === 429) {
         const retryAfter = error.response?.data?.retryAfter;
 

@@ -34,6 +34,11 @@ import {
   showLoadingToast,
   dismissToast,
 } from "@/lib/toastConfig";
+import {
+  checkPasswordStrength,
+  validatePassword,
+  validatePasswordMatch,
+} from "@/lib/passwordValidation";
 import ConfirmModal from "@/components/ConfirmModal";
 
 // ── View User Modal ──────────────────────────────────────────────
@@ -476,6 +481,10 @@ const UserFormModal = ({
     isActive: true,
   });
   const [errors, setErrors] = useState({});
+  const [serverErrors, setServerErrors] = useState([]);
+  const [passwordStrength, setPasswordStrength] = useState(
+    checkPasswordStrength(""),
+  );
 
   useEffect(() => {
     const fetchData = async () => {
@@ -496,33 +505,32 @@ const UserFormModal = ({
   }, []);
 
   useEffect(() => {
-    const setFormDataFunc = async () => {
-      if (user && isEdit) {
-        setFormData({
-          name: user.name || "",
-          email: user.email || "",
-          studentId: user.studentId || "",
-          department: user.department || "",
-          password: "",
-          confirmPassword: "",
-          role: user.role || "user",
-          isActive: user.isActive !== undefined ? user.isActive : true,
-        });
-      } else {
-        setFormData({
-          name: "",
-          email: "",
-          studentId: "",
-          department: "",
-          password: "",
-          confirmPassword: "",
-          role: "user",
-          isActive: true,
-        });
-      }
-      setErrors({});
-    };
-    setFormDataFunc();
+    if (user && isEdit) {
+      setFormData({
+        name: user.name || "",
+        email: user.email || "",
+        studentId: user.studentId || "",
+        department: user.department?._id || user.department || "",
+        password: "",
+        confirmPassword: "",
+        role: user.role || "user",
+        isActive: user.isActive !== undefined ? user.isActive : true,
+      });
+    } else {
+      setFormData({
+        name: "",
+        email: "",
+        studentId: "",
+        department: "",
+        password: "",
+        confirmPassword: "",
+        role: "user",
+        isActive: true,
+      });
+    }
+    setErrors({});
+    setServerErrors([]);
+    setPasswordStrength(checkPasswordStrength(""));
   }, [user, isEdit, isOpen]);
 
   if (!isOpen) return null;
@@ -530,37 +538,121 @@ const UserFormModal = ({
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // Clear specific field error
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+
+    // Clear server errors when user types
+    if (serverErrors.length > 0) {
+      setServerErrors([]);
+    }
+
+    // Password validation
+    if (name === "password") {
+      const strength = checkPasswordStrength(value);
+      setPasswordStrength(strength);
+
+      // Validate password using your library
+      const passwordErrors = validatePassword(value);
+      if (passwordErrors.length > 0) {
+        setErrors((prev) => ({ ...prev, password: passwordErrors[0] }));
+      } else {
+        setErrors((prev) => ({ ...prev, password: "" }));
+      }
+
+      // Check confirm password match
+      const matchError = validatePasswordMatch(value, formData.confirmPassword);
+      if (matchError) {
+        setErrors((prev) => ({ ...prev, confirmPassword: matchError }));
+      } else if (
+        formData.confirmPassword &&
+        value === formData.confirmPassword
+      ) {
+        setErrors((prev) => ({ ...prev, confirmPassword: "" }));
+      }
+    }
+
+    if (name === "confirmPassword") {
+      const matchError = validatePasswordMatch(formData.password, value);
+      if (matchError) {
+        setErrors((prev) => ({ ...prev, confirmPassword: matchError }));
+      } else {
+        setErrors((prev) => ({ ...prev, confirmPassword: "" }));
+      }
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const newErrors = {};
+    const newServerErrors = [];
 
-    if (!formData.name.trim()) newErrors.name = "Name is required";
-    if (!formData.email.trim()) newErrors.email = "Email is required";
-    if (!formData.studentId) newErrors.studentId = "Student ID is required";
-    if (!formData.department) newErrors.department = "Department is required";
+    // ── Frontend Validation ──────────────────────────────────────
 
-    if (!isEdit) {
-      if (!formData.password) newErrors.password = "Password is required";
-      if (formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = "Passwords do not match";
-      }
-    } else if (
-      formData.password &&
-      formData.password !== formData.confirmPassword
-    ) {
-      newErrors.confirmPassword = "Passwords do not match";
+    // Name validation
+    if (!formData.name.trim()) {
+      newErrors.name = "Name is required";
     }
 
+    // Email validation
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Please enter a valid email address";
+    }
+
+    // Student ID validation
+    if (!formData.studentId) {
+      newErrors.studentId = "Student ID is required";
+    } else if (!/^\d{5}$/.test(formData.studentId.toString())) {
+      newErrors.studentId = "Student ID must be 5 digits";
+    }
+
+    // Department validation
+    if (!formData.department) {
+      newErrors.department = "Department is required";
+    }
+
+    // Password validation using your library
+    if (!isEdit) {
+      // For new users, password is required
+      const passwordErrors = validatePassword(formData.password);
+      if (passwordErrors.length > 0) {
+        newErrors.password = passwordErrors[0];
+      }
+
+      const matchError = validatePasswordMatch(
+        formData.password,
+        formData.confirmPassword,
+      );
+      if (matchError) {
+        newErrors.confirmPassword = matchError;
+      }
+    } else if (formData.password) {
+      // In edit mode, only validate if password is provided
+      const passwordErrors = validatePassword(formData.password);
+      if (passwordErrors.length > 0) {
+        newErrors.password = passwordErrors[0];
+      }
+
+      const matchError = validatePasswordMatch(
+        formData.password,
+        formData.confirmPassword,
+      );
+      if (matchError) {
+        newErrors.confirmPassword = matchError;
+      }
+    }
+
+    // Check if there are any frontend errors
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
 
+    // ── Prepare data for submission ──────────────────────────────
     const submitData = {
       name: formData.name,
       email: formData.email,
@@ -570,10 +662,12 @@ const UserFormModal = ({
       isActive: formData.isActive,
     };
 
+    // Only include password if it's provided
     if (formData.password) {
       submitData.password = formData.password;
     }
 
+    // ── Call the onSave function ──────────────────────────────────
     onSave(submitData);
   };
 
@@ -607,6 +701,25 @@ const UserFormModal = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Server Errors Display */}
+          {serverErrors.length > 0 && (
+            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-sm font-medium text-red-700 dark:text-red-400 mb-1">
+                Please fix the following errors:
+              </p>
+              <ul className="list-disc list-inside space-y-0.5">
+                {serverErrors.map((error, index) => (
+                  <li
+                    key={index}
+                    className="text-sm text-red-600 dark:text-red-300"
+                  >
+                    {error}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
               Name <span className="text-red-500">*</span>
@@ -735,6 +848,7 @@ const UserFormModal = ({
             </div>
           </div>
 
+          {/* Password Fields with Strength Indicator */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
@@ -756,6 +870,80 @@ const UserFormModal = ({
               />
               {errors.password && (
                 <p className="mt-1 text-sm text-red-500">{errors.password}</p>
+              )}
+
+              {/* Password Strength Indicator */}
+              {formData.password && (
+                <div className="mt-2 space-y-1">
+                  <div className="flex gap-1">
+                    <div
+                      className={`h-1 flex-1 rounded-full transition-all ${
+                        passwordStrength.hasMinLength
+                          ? "bg-green-500"
+                          : "bg-gray-300 dark:bg-gray-600"
+                      }`}
+                    />
+                    <div
+                      className={`h-1 flex-1 rounded-full transition-all ${
+                        passwordStrength.hasLowerCase
+                          ? "bg-green-500"
+                          : "bg-gray-300 dark:bg-gray-600"
+                      }`}
+                    />
+                    <div
+                      className={`h-1 flex-1 rounded-full transition-all ${
+                        passwordStrength.hasNumber
+                          ? "bg-green-500"
+                          : "bg-gray-300 dark:bg-gray-600"
+                      }`}
+                    />
+                    <div
+                      className={`h-1 flex-1 rounded-full transition-all ${
+                        passwordStrength.hasSpecialChar
+                          ? "bg-green-500"
+                          : "bg-gray-300 dark:bg-gray-600"
+                      }`}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                    <p
+                      className={
+                        passwordStrength.hasMinLength
+                          ? "text-green-600 dark:text-green-400"
+                          : "text-gray-500"
+                      }
+                    >
+                      ✓ 8+ characters
+                    </p>
+                    <p
+                      className={
+                        passwordStrength.hasLowerCase
+                          ? "text-green-600 dark:text-green-400"
+                          : "text-gray-500"
+                      }
+                    >
+                      ✓ Lowercase letter
+                    </p>
+                    <p
+                      className={
+                        passwordStrength.hasNumber
+                          ? "text-green-600 dark:text-green-400"
+                          : "text-gray-500"
+                      }
+                    >
+                      ✓ Number
+                    </p>
+                    <p
+                      className={
+                        passwordStrength.hasSpecialChar
+                          ? "text-green-600 dark:text-green-400"
+                          : "text-gray-500"
+                      }
+                    >
+                      ✓ Special character
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
 
@@ -780,6 +968,13 @@ const UserFormModal = ({
                   {errors.confirmPassword}
                 </p>
               )}
+              {formData.confirmPassword &&
+                !errors.confirmPassword &&
+                formData.password === formData.confirmPassword && (
+                  <p className="mt-1 text-sm text-green-600 dark:text-green-400">
+                    ✓ Passwords match
+                  </p>
+                )}
             </div>
           </div>
 
@@ -1043,6 +1238,8 @@ export default function UsersPage() {
 
   // ── CRUD Functions ─────────────────────────────────────────────
 
+  // ── CRUD Functions ─────────────────────────────────────────────
+
   const handleCreateUser = async (data) => {
     setModalLoading(true);
     const loadingToast = showLoadingToast("Creating user...");
@@ -1064,7 +1261,20 @@ export default function UsersPage() {
       }
     } catch (err) {
       dismissToast(loadingToast);
-      showErrorToast(err.response?.data?.message || "Failed to create user");
+
+      // ── Handle validation errors from backend ──────────────────
+      if (err.response?.data?.errors) {
+        // If backend returns array of errors
+        const errorMessages = err.response.data.errors;
+        showErrorToast(errorMessages.join(" "));
+
+        // You can also set these errors in the form if you have access
+        // to the form's setErrors function (you'd need to pass it via props)
+      } else if (err.response?.data?.message) {
+        showErrorToast(err.response.data.message);
+      } else {
+        showErrorToast("Failed to create user");
+      }
     } finally {
       setModalLoading(false);
     }
@@ -1096,7 +1306,16 @@ export default function UsersPage() {
       }
     } catch (err) {
       dismissToast(loadingToast);
-      showErrorToast(err.response?.data?.message || "Failed to update user");
+
+      // ── Handle validation errors from backend ──────────────────
+      if (err.response?.data?.errors) {
+        const errorMessages = err.response.data.errors;
+        showErrorToast(errorMessages.join(" "));
+      } else if (err.response?.data?.message) {
+        showErrorToast(err.response.data.message);
+      } else {
+        showErrorToast("Failed to update user");
+      }
     } finally {
       setModalLoading(false);
     }

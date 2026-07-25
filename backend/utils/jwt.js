@@ -32,8 +32,27 @@ export async function createPasswordResetToken(userId, currentPasswordHash) {
   })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("1h")
+    .setExpirationTime("5m")
     .sign(secret);
+}
+
+export async function verifyPasswordResetToken(token, currentPasswordHash) {
+  const payload = await verifyToken(token);
+
+  if (payload.purpose !== "password-reset") {
+    throw new Error("Wrong token purpose");
+  }
+
+  const fingerprintValid = await argon2.verify(
+    payload.fingerprint,
+    currentPasswordHash,
+  );
+
+  if (!fingerprintValid) {
+    throw new Error("Token already used — password was changed");
+  }
+
+  return { userId: payload.sub };
 }
 
 // Verify the token AND check that the password hasn't changed since issuance.
@@ -62,22 +81,3 @@ export async function createPasswordResetToken(userId, currentPasswordHash) {
 
 //   return { userId: payload.sub };
 // }
-
-export async function verifyPasswordResetToken(token, currentPasswordHash) {
-  const payload = await verifyToken(token);
-
-  if (payload.purpose !== "password-reset") {
-    throw new Error("Wrong token purpose");
-  }
-
-  const fingerprintValid = await argon2.verify(
-    payload.fingerprint,
-    currentPasswordHash,
-  );
-
-  if (!fingerprintValid) {
-    throw new Error("Token already used — password was changed");
-  }
-
-  return { userId: payload.sub };
-}

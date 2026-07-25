@@ -12,6 +12,7 @@ import {
   uploadBufferToCloudinary,
   deleteFromCloudinary,
 } from "../services/cloudinary.js";
+import { validatePassword } from "../utils/passwordValidation.js";
 
 // ── Admin User Management Functions ─────────────────────────────
 
@@ -249,6 +250,11 @@ export const adminUpdateUser = async (req, res) => {
           message: "Student ID already exists",
         });
       }
+    }
+
+    const passwordErrors = validatePassword(password);
+    if (passwordErrors.length > 0) {
+      return res.status(400).json({ success: false, errors: passwordErrors });
     }
 
     // Update fields

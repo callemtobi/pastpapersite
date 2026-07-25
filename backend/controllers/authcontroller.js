@@ -1,5 +1,4 @@
 import User from "../models/User.js";
-import { Resend } from "resend";
 // import { SignJWT } from "jose";
 import argon2 from "argon2";
 import {
@@ -8,8 +7,7 @@ import {
   verifyPasswordResetToken,
 } from "../utils/jwt.js";
 import { validatePassword } from "../utils/passwordValidation.js";
-
-const resend = new Resend(process.env.RESEND_KEY);
+import { sendEmail } from "../services/emailService.js";
 
 // const signToken = async (userId) => {
 //   const secret = new TextEncoder().encode(process.env.JWT_SECRET);
@@ -37,8 +35,7 @@ const sendOTPEmail = async (email, otp, expiresAt) => {
     minute: "2-digit",
   });
 
-  await resend.emails.send({
-    from: process.env.RESEND_FROM || "onboarding@resend.dev",
+  await sendEmail({
     to: email,
     subject: "Your Pasty Paperyyy verification code",
     html: `
@@ -450,16 +447,15 @@ export const forgotPassword = async (req, res) => {
     // ── Send email with reset link ─────────────────────────────
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
 
-    await resend.emails.send({
-      from: process.env.EMAIL_FROM || "onboarding@resend.dev",
+    await sendEmail({
       to: user.email,
       subject: "Reset your password",
       html: `
-        <p>You requested a password reset.</p>
-        <p><a href="${resetUrl}">Click here to reset your password</a></p>
-        <p>This link expires in <strong>1 hour</strong>.</p>
-        <p>If you didn't request this, you can safely ignore this email.</p>
-      `,
+    <p>You requested a password reset.</p>
+    <p><a href="${resetUrl}">Click here to reset your password</a></p>
+    <p>This link expires in <strong>1 hour</strong>.</p>
+    <p>If you didn't request this, you can safely ignore this email.</p>
+  `,
     });
 
     return res.status(200).json({
@@ -552,6 +548,8 @@ export const resetPassword = async (req, res) => {
       {
         password: hashedPassword,
         resetTokenIssuedAt: null, // invalidate — can't reuse same token
+        resetToken: undefined,
+        resetTokenExpiresAt: undefined,
         // failedLoginAttempts: 0, // clear any lockout while we're here
         // lockoutUntil: null,
       },
