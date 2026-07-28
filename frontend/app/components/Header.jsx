@@ -31,20 +31,22 @@ import { useAuth } from "@/app/context/AuthContext";
 
 export default function Header() {
   const pathname = usePathname();
-  const router = useRouter();
   const dropdownRef = useRef(null);
   const { user, loading, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isDark, setIsDark] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
-  // const roleBadge = getRoleBadge(user.role);
-  // const RoleIcon = roleBadge.icon;
+  const [isDark, setIsDark] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("theme") === "dark";
+  });
 
   useEffect(() => {
     if (isDark) {
       document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
     } else {
       document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
     }
   }, [isDark]);
 
@@ -65,19 +67,6 @@ export default function Header() {
   const handleLogout = async () => {
     setShowUserDropdown(false);
     logout();
-    // try {
-    //   await axios.post(
-    //     "http://localhost:8000/api/auth/logout",
-    //     {},
-    //     { withCredentials: true },
-    //   );
-    //   showSuccessToast("You have been logged out.");
-    //   router.push("/home");
-    // } catch (err) {
-    //   console.error("Logout error:", err);
-    //   showErrorToast("Logout error");
-    //   router.push("/login");
-    // }
   };
 
   const toggleTheme = () => {

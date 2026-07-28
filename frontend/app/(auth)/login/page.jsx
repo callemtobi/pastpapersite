@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { GraduationCap, Mail, Lock, Loader } from "lucide-react";
+import { GraduationCap, Mail, Lock, Loader, Eye, EyeOff } from "lucide-react";
 import axios from "axios";
 import { showErrorToast, showSuccessToast } from "@/lib/toastConfig";
 import { useAuth } from "@/app/context/AuthContext";
@@ -22,6 +22,7 @@ export default function Login() {
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     const from = searchParams.get("from");
@@ -214,13 +215,24 @@ export default function Login() {
                 <input
                   id="password-d"
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={formData.password}
                   onChange={handleChange}
                   required
                   className="w-full pl-10 pr-4 py-2.5 border border-border-light rounded-lg bg-background text-foreground placeholder:border-border-light focus:outline-none focus:border-[#4FC3FC]"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
               </div>
               {/* {passwordError && (
                 <p className="mt-1 text-sm text-red-500">{passwordError}</p>
@@ -328,13 +340,24 @@ export default function Login() {
                   <input
                     id="password-m"
                     name="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     value={formData.password}
                     onChange={handleChange}
                     required
                     className="w-full pl-10 pr-4 py-2 border border-border-light rounded-lg bg-background text-foreground placeholder:border-border-light focus:outline-none focus:border-blue-500"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
                 </div>
               </div>
 
